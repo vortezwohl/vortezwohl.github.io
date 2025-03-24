@@ -1,6 +1,9 @@
-- title: LinkedIn
-  url: https://linkedin.com/in/vortez-wohl-677225353
-  icon: fab fa-linkedin
 - title: GitHub
   url: https://github.com/vortezwohl
   icon: fab fa-github
+- title: LinkedIn
+  url: https://linkedin.com/in/vortez-wohl-677225353
+  icon: fab fa-linkedin
+- title: X
+  url: https://twitter.com/vortezwohl
+  icon: fab fa-x
