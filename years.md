@@ -1,9 +1,5 @@
-[//]: # (---)
-
-[//]: # (layout: archive-years)
-
-[//]: # (title: Years)
-
-[//]: # (permalink: /years/)
-
-[//]: # (---)
+---
+layout: archive-years
+title: Years
+permalink: /years/
+---
