@@ -2,7 +2,7 @@
 layout: post
 toc: true
 title: "MINI XCEPTION 模型学习"
-categories: DL/CV
+categories: CV
 tags: [AI, DeepLearning, CV, CNN]
 author:
   - Vortez Wohl
