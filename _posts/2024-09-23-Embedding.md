@@ -2,7 +2,7 @@
 layout: post
 toc: true
 title: "词嵌入模型(Embedding Model)是什么"
-categories: Note
+categories: DL/NLP
 tags: [AI, DeepLearning, NLP]
 author:
   - Vortez Wohl
