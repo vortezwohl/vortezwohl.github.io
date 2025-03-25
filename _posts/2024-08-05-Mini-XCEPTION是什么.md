@@ -7,11 +7,9 @@ tags: [AI, DeepLearning, CV, CNN]
 author:
   - Vortez Wohl
 ---
-# MINI XCEPTION 架构
-
 From 《Real-time Convolutional Neural Networks for Emotion and Gender Classification》 by Oscar Arrigapoulos in 2017
 
- MINI XCEPTION 架构是一种轻量级的卷积神经网络架构，它受到了 XCEPTION 架构的启发，并结合了残差模块和深度可分离卷积。这种架构可以用于减少参数数量，降低计算成本，同时保持较高的准确率，适合在计算资源有限的终端进行实时视觉任务
+MINI XCEPTION 架构是一种轻量级的卷积神经网络架构，它受到了 XCEPTION 架构的启发，并结合了残差模块和深度可分离卷积。这种架构可以用于减少参数数量，降低计算成本，同时保持较高的准确率，适合在计算资源有限的终端进行实时视觉任务
 
 ## 特点
 
