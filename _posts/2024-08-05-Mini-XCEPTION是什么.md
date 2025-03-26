@@ -5,7 +5,8 @@ title: "MINI XCEPTION 模型学习"
 categories: CV
 tags: [AI, DeepLearning, CV, CNN]
 author:
-  - Vortez Wohl
+  - vortezwohl
+  - 吴子豪
 ---
 From 《Real-time Convolutional Neural Networks for Emotion and Gender Classification》 by Oscar Arrigapoulos in 2017
 

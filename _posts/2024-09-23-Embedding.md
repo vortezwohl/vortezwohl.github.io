@@ -5,7 +5,8 @@ title: "词嵌入模型(Embedding Model)是什么"
 categories: NLP
 tags: [AI, DeepLearning, NLP]
 author:
-  - Vortez Wohl
+  - vortezwohl
+  - 吴子豪
 ---
 Embedding 是机器学习领域中的一个概念，主要用于将高维的数据嵌入到低维空间，以便于算法更好地处理和理解数据。通常用于将离散的、高维的特征转换为连续的、低维的向量表示
 
