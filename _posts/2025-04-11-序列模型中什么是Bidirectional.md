@@ -3,7 +3,7 @@ layout: post
 toc: false
 title: "序列模型中什么是 Bidirectional"
 categories: NLP
-tags: [MachineLearning, DeepLearning, NLP]
+tags: [DeepLearning, NLP]
 author:
   - vortezwohl
   - 吴子豪
