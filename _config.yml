@@ -10,7 +10,7 @@ plugins:
   - jekyll-sitemap
   - jekyll-paginate
 
-paginate: 8
+paginate: 12
 baseurl: ""
 
 # Uncomment the below line and set the tracking ID for enabling Google Analytics
