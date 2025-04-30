@@ -5,7 +5,7 @@ permalink: /about/
 ---
 
 - 👋 Hi, I’m @vortezwohl, an undergraduate student from Fujian University of Technology.
-- 🤖 I’m interested in AGI and LLMs.
-- 👨‍💻 I’m currently working on AI agent system.
-- 👀 I’m looking to collaborate on [CEO agentic AI framework](https://github.com/vortezwohl/CEO-Agentic-AI-Framework). 
+- 🤖 I’m interested in NLP/NLU and LLMs.
+- 👨‍💻 I’m currently working on NLU research.
+- 👀 I’m looking to collaborate on [Autono](https://github.com/vortezwohl/Autono). 
 - 📫 How to reach me: vortez.wohl@gmail.com 
