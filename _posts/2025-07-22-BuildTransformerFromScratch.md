@@ -91,7 +91,7 @@ author:
     attn = attn / (embed_dim ** .5)
     ```
 
-5. **将 $Logits$ 映射到概率域**: 缩放后的注意力分数可以被视作 $logits$, 通过应用 $softmax$ 算子, 将其映射到取值为 $[0, 1]$ 的概率域, 并将概率分布视作已有 Token 相对于挑战者 Token 的关联性权重分布.
+5. **将 $Logits$ 映射到概率域**: 缩放后的注意力分数可以被视作 [$logits$](https://vortezwohl.github.io/math/2025/07/17/%E4%BB%80%E4%B9%88%E6%98%AFlogit.html), 通过应用 $softmax$ 算子, 将其映射到取值为 $[0, 1]$ 的概率域, 并将概率分布视作已有 Token 相对于挑战者 Token 的关联性权重分布.
 
     $$
     weights = [w_1, w_2, w_3, ..., w_n] = \text{Softmax}(attn)
