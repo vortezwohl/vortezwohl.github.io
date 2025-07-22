@@ -1,7 +1,7 @@
 ---
 layout: post
 toc: true
-title: "从 0 开始, 构建 Transformer 模型."
+title: "从 0 开始, 构建 Transformer 模型"
 categories: DL
 tags: [Math, NLP, DeepLearning]
 author:
