@@ -12,7 +12,7 @@ author:
 
 ## 基础知识
 
-自注意力机制是 Transformer 架构的核心组成部分，它允许模型在处理序列数据时动态地关注输入序列的不同部分. 自注意力机制的基本思想是计算输入序列中每个位置与其他位置之间的关联程度，从而为每个位置生成一个**上下文向量**. 
+自注意力机制 (Self Attention) 是 Transformer 架构的核心组成部分，它允许模型在处理序列数据时动态地关注输入序列的不同部分. 自注意力机制的基本思想是计算输入序列中每个位置与其他位置之间的关联程度，从而为每个位置生成一个**上下文向量**. 
 
 ### 基础自注意力计算
 
@@ -121,9 +121,13 @@ author:
 
     最终，自注意力机制的最终计算结果是**上下文向量**，它综合了输入序列中所有位置的信息，其中每个位置的权重由注意力分数决定​.
 
+> 可以这样理解, 自注意力机制本质上是一种 "可学习的权重", 其本质作用是为序列中的某一项设置其余项对于该项的重要性权重.
+
 > 自注意力的计算复杂度为 $O(n^2)$.
 
 ### 基于 Torch 实现自注意力模块
+
+代码源: [`deeplotx.nn.self_attention`](https://github.com/vortezwohl/DeepLoTX/blob/main/deeplotx/nn/self_attention.py)
 
 首先, 引入必要依赖:
 
@@ -236,6 +240,103 @@ class SelfAttention(nn.Module):
         return torch.matmul(self._attention(x, mask), v)
 ```
 
+### 前馈神经网络
 
-...未完待续...
+前馈神经网络 (Feed-Forward Network，FFN) 是 Transformer 架构中的另一关键组件，它通常被放置在自注意力模块之后, FFN 的核心功能是对序列中的每个位置进行独立的非线性变换，它不考虑 Token 之间的依赖关系 (这与自注意力机制形成互补)，而是专注于挖掘单个 Token 内部的高阶特征.
 
+FFN 的结构并不复杂，通常由线性变换 (`nn.Linear`) 与非线性激活函数 (`ReLU` 及其变体) 组成，有时还会加入 `dropout` 机制以缓解过拟合. 其基本计算过程可以拆解为以下几个步骤：
+
+1. **升维线性变换**: 通过一个权重矩阵将输入向量投影到更高维的特征空间.
+
+    $$
+    x = W_1 \cdot x + b_1
+    $$
+
+    其中, $W_1$ 是升维权重矩阵, $b_1$ 是线性偏置项.
+
+2. **非线性变换**: 对升维后的向量应用非线性激活函数（通常是 `ReLU`），引入非线性特征变换能力，增强模型对复杂模式的捕捉能力.
+
+    $$
+    x = \text{max}(0, x)
+    $$
+
+    > 这里对向量 x 应用了简单 `ReLU` 函数.
+
+3. **降维线性变换**: 通过第二个全连接层将高维特征向量进行压缩, 投影回原始特征空间, 以确保 FFN 的输入维度与输出维度是一致的.
+
+    $$
+    x = W_2 \cdot x + b_2
+    $$
+
+    其中, $W_2$ 是升维权重矩阵, $b_2$ 是线性偏置项.
+
+在实际应用中，为了增强特征变换的深度，FFN 可以由多个相同结构的前馈层堆叠而成，形成多层 FFN. 每层独立进行升维、激活和降维操作，并通过残差连接保留原始输入信息，避免深层网络中的梯度消失问题.
+
+### 基于 Torch 实现前馈神经网络
+
+代码源: [`deeplotx.nn.feed_forward`](https://github.com/vortezwohl/DeepLoTX/blob/main/deeplotx/nn/feed_forward.py)
+
+引入必要依赖:
+
+```python
+from typing_extensions import override
+
+import torch
+from torch import nn
+
+from deeplotx.nn.base_neural_network import BaseNeuralNetwork
+```
+
+以下是一个较为完善的 FFN 实现, 其引入了残差连接 (Residual Connetion) 和 `dropout` 机制, 以适应更复杂的应用场景.
+
+```python
+class FeedForwardUnit(BaseNeuralNetwork):
+    def __init__(self, feature_dim: int, expansion_factor: int | float = 2,
+                 bias: bool = True, dropout_rate: float = 0.05, model_name: str | None = None,
+                 device: str | None = None, dtype: torch.dtype | None = None):
+        super().__init__(in_features=feature_dim, out_features=feature_dim, model_name=model_name, device=device, dtype=dtype)
+        self._dropout_rate = dropout_rate
+        self.fc1 = nn.Linear(feature_dim, int(feature_dim * expansion_factor), bias=bias,
+                             device=self.device, dtype=self.dtype)
+        self.fc2 = nn.Linear(int(feature_dim * expansion_factor), feature_dim, bias=bias,
+                             device=self.device, dtype=self.dtype)
+        self.parametric_relu_1 = nn.PReLU(num_parameters=1, init=5e-3,
+                                          device=self.device, dtype=self.dtype)
+        self.layer_norm = nn.LayerNorm(normalized_shape=self.fc1.in_features, eps=1e-9,
+                                       device=self.device, dtype=self.dtype)
+
+    @override
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = self.ensure_device_and_dtype(x, device=self.device, dtype=self.dtype)
+        residual = x
+        x = self.layer_norm(x)
+        x = self.fc1(x)
+        x = self.parametric_relu_1(x)
+        if self._dropout_rate > .0:
+            x = torch.dropout(x, p=self._dropout_rate, train=self.training)
+        return self.fc2(x) + residual
+
+
+class FeedForward(BaseNeuralNetwork):
+    def __init__(self, feature_dim: int, num_layers: int = 1, expansion_factor: int | float = 2,
+                 bias: bool = True, dropout_rate: float = 0.05, model_name: str | None = None,
+                 device: str | None = None, dtype: torch.dtype | None = None):
+        if num_layers < 1:
+            raise ValueError('num_layers cannot be less than 1.')
+        super().__init__(in_features=feature_dim, out_features=feature_dim, model_name=model_name, device=device, dtype=dtype)
+        self.ffn_layers = nn.ModuleList([FeedForwardUnit(feature_dim=feature_dim,
+                                                         expansion_factor=expansion_factor, bias=bias,
+                                                         dropout_rate=dropout_rate,
+                                                         device=self.device, dtype=self.dtype)] * num_layers)
+
+    @override
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = self.ensure_device_and_dtype(x, device=self.device, dtype=self.dtype)
+        for ffn in self.ffn_layers:
+            x = ffn(x)
+        return x
+```
+
+## 实现一个基础的 Transformer
+
+...
