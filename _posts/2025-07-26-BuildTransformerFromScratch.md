@@ -16,7 +16,7 @@ author:
 
 ### 位置编码
 
-...待开发...
+点击查看[位置编码的基础原理](https://vortezwohl.github.io/nlp/2025/05/22/%E8%AF%A6%E8%A7%A3%E6%97%8B%E8%BD%AC%E4%BD%8D%E7%BD%AE%E7%BC%96%E7%A0%81.html).
 
 ### 基础自注意力计算
 
