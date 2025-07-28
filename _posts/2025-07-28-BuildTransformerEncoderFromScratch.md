@@ -1,7 +1,7 @@
 ---
 layout: post
 toc: true
-title: "从 0 开始, 构建 Transformer 模型"
+title: "从 0 开始, 构建 Transformer Encoder 模型"
 categories: DL
 tags: [Math, NLP, DeepLearning]
 author:
@@ -14,9 +14,66 @@ author:
 
 自注意力机制 (Self Attention) 是 Transformer 架构的核心组成部分，它允许模型在处理序列数据时动态地关注输入序列的不同部分. 自注意力机制的基本思想是计算输入序列中每个位置与其他位置之间的关联程度，从而为每个位置生成一个**上下文向量**. 
 
-### 位置编码
+### 位置编码原理与计算
 
-点击查看[位置编码的基础原理](https://vortezwohl.github.io/nlp/2025/05/22/%E8%AF%A6%E8%A7%A3%E6%97%8B%E8%BD%AC%E4%BD%8D%E7%BD%AE%E7%BC%96%E7%A0%81.html).
+点击查看[*位置编码的基础原理与计算式*](https://vortezwohl.github.io/nlp/2025/05/22/%E8%AF%A6%E8%A7%A3%E6%97%8B%E8%BD%AC%E4%BD%8D%E7%BD%AE%E7%BC%96%E7%A0%81.html).
+
+### 基于 Torch 实现 RoPE 位置编码模块
+
+代码源: [`deeplotx.nn.rope`](https://github.com/vortezwohl/DeepLoTX/blob/main/deeplotx/nn/rope.py)
+
+引入必要依赖:
+
+```python
+from typing_extensions import override
+
+import torch
+
+from deeplotx.nn.base_neural_network import BaseNeuralNetwork
+```
+
+以下是一个标准 RoPE 编码模块实现, 特征维度分为 2 组 (奇数组与偶数组), 基数为 10000:
+
+```python
+from typing_extensions import override
+
+import torch
+
+from deeplotx.nn.base_neural_network import BaseNeuralNetwork
+
+
+class RoPE(BaseNeuralNetwork):
+    def __init__(self, feature_dim: int, base: int = 10000, device: str | None = None, dtype: torch.dtype | None = torch.float32):
+        super().__init__(in_features=feature_dim, out_features=feature_dim, model_name=None,
+                         device=device, dtype=dtype)
+        assert feature_dim % 2 == 0, f'feature_dim must be divisible by 2.'
+        self._base = base
+        self._num_groups = feature_dim // 2
+        self._inv_freq = 1.0 / (base ** (torch.arange(start=0, end=self._num_groups, step=1).float() / self._num_groups))
+        self.register_buffer('inv_freq', self._inv_freq)
+
+    @property
+    def dim(self):
+        return self._dim
+
+    @property
+    def base(self):
+        return self._base
+
+    def rotate_half(self, _t: torch.Tensor) -> torch.Tensor:
+        return torch.cat((- _t[..., self._num_groups:], _t[..., :self._num_groups]), dim=-1)
+
+    @override
+    def forward(self, x: torch.Tensor, mask: torch.Tensor | None = None) -> torch.Tensor:
+        x = self.ensure_device_and_dtype(x, device=self.device, dtype=self.dtype)
+        *other_dims, seq_len, feature_dim = x.shape
+        assert feature_dim == self.in_features, f"feature_dim of x doesn't match with defined feature_dim {self.in_features}."
+        t = torch.arange(start=0, end=seq_len, step=1, device=self.device, dtype=self.dtype)
+        freq = torch.outer(t, self._inv_freq)
+        emb = torch.cat((freq, freq), dim=-1)
+        sin_emb, cos_emb = emb.sin(), emb.cos()
+        return x * cos_emb + self.rotate_half(x) * sin_emb
+```
 
 ### 基础自注意力计算
 
@@ -35,7 +92,7 @@ author:
     v_proj = nn.Linear(embed_dim, embed_dim)
     ```
 
-    > `q_proj` `k_proj` `v_proj` 的权重由训练得到, 训练算法请参考[BERT预训练](https://vortezwohl.github.io/nlp/2025/04/30/%E6%B7%B1%E5%85%A5BERT.html#bert-%E9%A2%84%E8%AE%AD%E7%BB%83%E6%96%B9%E6%B3%95). 三个网络经训练得到的权重矩阵分别记为 $W_Q$ $W_K$ $W_V$.
+    > `q_proj` `k_proj` `v_proj` 的权重由训练得到, 训练算法请参考[*BERT预训练*](https://vortezwohl.github.io/nlp/2025/04/30/%E6%B7%B1%E5%85%A5BERT.html#bert-%E9%A2%84%E8%AE%AD%E7%BB%83%E6%96%B9%E6%B3%95). 三个网络经训练得到的权重矩阵分别记为 $W_Q$ $W_K$ $W_V$.
 
 2. **计算投影**: 分别计算输入序列对 $QKV$ 矩阵的乘积 (更一般地, 可以进行任意线性变换), 得到**查询向量** **键向量**和**值向量**.
 
@@ -97,7 +154,7 @@ author:
     attn = attn / (embed_dim ** .5)
     ```
 
-5. **将 $Logits$ 映射到概率域**: 缩放后的注意力分数可以被视作 [$logits$](https://vortezwohl.github.io/math/2025/07/17/%E4%BB%80%E4%B9%88%E6%98%AFlogit.html), 通过应用 $softmax$ 算子, 将其映射到取值为 $[0, 1]$ 的概率域, 并将概率分布视作已有 Token 相对于挑战者 Token 的关联性权重分布.
+5. **将 $Logits$ 映射到概率域**: 缩放后的注意力分数可以被视作 [*$logits$*](https://vortezwohl.github.io/math/2025/07/17/%E4%BB%80%E4%B9%88%E6%98%AFlogit.html), 通过应用 $softmax$ 算子, 将其映射到取值为 $[0, 1]$ 的概率域, 并将概率分布视作已有 Token 相对于挑战者 Token 的关联性权重分布.
 
     $$
     weights = [w_1, w_2, w_3, ..., w_n] = \text{Softmax}(attn)
