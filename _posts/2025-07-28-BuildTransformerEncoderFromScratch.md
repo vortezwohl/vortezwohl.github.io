@@ -46,11 +46,11 @@ class RoPE(BaseNeuralNetwork):
     def __init__(self, feature_dim: int, base: int = 10000, device: str | None = None, dtype: torch.dtype | None = torch.float32):
         super().__init__(in_features=feature_dim, out_features=feature_dim, model_name=None,
                          device=device, dtype=dtype)
-        assert feature_dim % 2 == 0, f'feature_dim must be divisible by 2.'
-        self._base = base
+        assert feature_dim % 2 == 0, f'feature_dim must be divisible by 2.'  # 特征维度必须是偶数
+        self._base = base  # 基数选择 10000, 与 doi.org/10.48550/arXiv.2104.09864 一致
         self._num_groups = feature_dim // 2
-        self._inv_freq = 1.0 / (base ** (torch.arange(start=0, end=self._num_groups, step=1).float() / self._num_groups))
-        self.register_buffer('inv_freq', self._inv_freq)
+        self._inv_freq = 1.0 / (base ** (torch.arange(start=0, end=self._num_groups, step=1).float() / self._num_groups))  # 计算逐维度的逆频率
+        self.register_buffer('inv_freq', self._inv_freq)  # 将张量注册到缓冲区, 其不会参与反向传播
 
     @property
     def dim(self):
@@ -61,19 +61,23 @@ class RoPE(BaseNeuralNetwork):
         return self._base
 
     def rotate_half(self, _t: torch.Tensor) -> torch.Tensor:
-        return torch.cat((- _t[..., self._num_groups:], _t[..., :self._num_groups]), dim=-1)
+        return torch.cat((- _t[..., self._num_groups:], _t[..., :self._num_groups]), dim=-1)  # 将向量旋转 -90 度, 准确的说, 是将特征的实部与虚部进行交叉重组, 为 RoPE 提供交叉项
 
     @override
-    def forward(self, x: torch.Tensor, mask: torch.Tensor | None = None) -> torch.Tensor:
-        x = self.ensure_device_and_dtype(x, device=self.device, dtype=self.dtype)
-        *other_dims, seq_len, feature_dim = x.shape
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = self.ensure_device_and_dtype(x, device=self.device, dtype=self.dtype)  # 确保 x 和本模块的其他张量在同一设备且同为一种数据类型
+        *other_dims, seq_len, feature_dim = x.shape  # x 的形状通常为 (batch_size, seq_len, feature_dim)
         assert feature_dim == self.in_features, f"feature_dim of x doesn't match with defined feature_dim {self.in_features}."
         t = torch.arange(start=0, end=seq_len, step=1, device=self.device, dtype=self.dtype)
-        freq = torch.outer(t, self._inv_freq)
-        emb = torch.cat((freq, freq), dim=-1)
-        sin_emb, cos_emb = emb.sin(), emb.cos()
-        return x * cos_emb + self.rotate_half(x) * sin_emb
+        freq = torch.outer(t, self._inv_freq)  # 使用外积 (叉乘) 计算位置和逆频率的乘积, 形状为 (seq_len, self._num_groups)
+        emb = torch.cat((freq, freq), dim=-1)  # 分别将各个向量的奇数维度位置编码向量与偶数维度位置编码向量进行拼接, 构建完整的位置编码矩阵, 形状为 (seq_len, feature_dim), 因为 feature_dim = 2 * self._num_group
+        sin_emb, cos_emb = emb.sin(), emb.cos()  # 分别对位置编码矩阵应用 sin 和 cos 函数, 得到两个形状完全相同的矩阵
+        return x * cos_emb + self.rotate_half(x) * sin_emb  # 将输入张量与余弦编码矩阵相乘, 将旋转 -90 度后的输入向量与正弦编码矩阵相乘, 最后相加, 得到被注入了相对位置信息的张量 x
 ```
+
+> **逆频率 (inverse frequency)** 是计算 RoPE 位置编码的核心参数之一，它决定了不同维度特征的周期性变化速率. 逆频率的本质是频率的倒数，而频率与周期成反比 ($周期 = \frac {1} {频率}$), 因此, 逆频率和周期成正比, 逆频率越大, 则周期越大, RoPE 位置编码的旋转越缓慢, 而逆频率越小, 其旋转就越剧烈. 
+
+> 在 RoPE 中, 不同维度会被分配不同的逆频率, 在低维特征上, RoPE 分配较小的逆频率, 所以在这些特征上位置编码的变化速度更快, 这样可以更好地捕获短期上下文, 而在高维特征上, RoPE 分配较大的逆频率, 所以位置编码变化的周期更大, 更缓和, 以捕获更长期的依赖.
 
 ### 基础自注意力计算
 
