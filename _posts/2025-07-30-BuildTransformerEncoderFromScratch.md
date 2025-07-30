@@ -9,7 +9,7 @@ author:
   - 吴子豪
 ---
 Transformer 架构凭借其强大的[*注意力机制 (Attention)*](
-https://doi.org/10.48550/arXiv.1706.03762)[1]，彻底改变了自然语言处理（NLP）领域的格局。与依赖序列顺序处理的 RNN 或受限于局部感受野的 CNN 不同，自注意力机制让模型能动态捕捉序列中任意位置的依赖关系，同时支持高效并行计算。本文将秉持 “从零开始” 的实践理念，逐步拆解 Transformer Encoder 的核心组件 —— 从自注意力机制的数学原理与代码实现，到位置编码（如 RoPE）如何注入序列位置信息，再到前馈神经网络的特征变换逻辑，最终手把手构建一个可运行的基础 Transformer Encoder，帮助读者深入理解这一经典架构的底层逻辑与工程实现细节.
+https://doi.org/10.48550/arXiv.1706.03762)[1]，彻底改变了自然语言处理（NLP）领域的格局。与依赖序列顺序处理的 RNN 或受限于局部感受野的 CNN 不同，自注意力机制让模型能动态捕捉序列中任意位置的依赖关系，同时支持高效并行计算。本文将秉持 “从零开始” 的实践理念，逐步拆解 Transformer Encoder 的核心组件 —— 从自注意力机制的数学原理与代码实现，到位置编码（如 RoPE）如何注入序列位置信息，再到前馈神经网络的特征变换逻辑，最终手把手构建一个可运行的 Transformer Encoder，帮助读者深入理解这一经典架构的底层逻辑与工程实现细节.
 
 ## 基础知识
 
@@ -449,7 +449,7 @@ class FeedForward(BaseNeuralNetwork):
         return x
 ```
 
-## 实现一个基础的 Transformer (Roformer 变体)
+## 实现一个 Transformer Encoder (*Roformer 变体*)
 
 接下来，我将基于这些已实现的组件，按照 [*Roformer*](https://doi.org/10.48550/arXiv.2104.09864)[2] 的架构逻辑，逐步拼接出一个完整的基础 Transformer (Roformer) Encoder:
 
