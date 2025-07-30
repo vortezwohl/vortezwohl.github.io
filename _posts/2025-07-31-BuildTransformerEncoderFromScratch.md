@@ -1,14 +1,14 @@
 ---
 layout: post
 toc: true
-title: "从 0 开始, 构建一个 Transformer Encoder"
+title: "从 0 开始, 手搓一个 Transformer (Roformer) Encoder"
 categories: DL
 tags: [Math, NLP, DeepLearning]
 author:
   - vortezwohl
   - 吴子豪
 ---
-Transformer 架构凭借其强大的[自注意力机制 (Self Attention)](
+Transformer 架构凭借其强大的[注意力机制 (Attention)](
 https://doi.org/10.48550/arXiv.1706.03762)，彻底改变了自然语言处理（NLP）领域的格局。与依赖序列顺序处理的 RNN 或受限于局部感受野的 CNN 不同，自注意力机制让模型能动态捕捉序列中任意位置的依赖关系，同时支持高效并行计算。本文将秉持 “从零开始” 的实践理念，逐步拆解 Transformer Encoder 的核心组件 —— 从自注意力机制的数学原理与代码实现，到位置编码（如 RoPE）如何注入序列位置信息，再到前馈神经网络的特征变换逻辑，最终手把手构建一个可运行的基础 Transformer Encoder，帮助读者深入理解这一经典架构的底层逻辑与工程实现细节.
 
 ## 基础知识
@@ -33,7 +33,7 @@ import torch
 from deeplotx.nn.base_neural_network import BaseNeuralNetwork
 ```
 
-以下是一个标准 RoPE 编码模块实现, 特征维度分为 2 组 (奇数组与偶数组), 基数为 10000:
+以下是一个标准 RoPE 编码[2]模块实现, 特征维度分为 2 组 (奇数组与偶数组), 基数为 10000:
 
 ```python
 from typing_extensions import override
@@ -50,7 +50,8 @@ class RoPE(BaseNeuralNetwork):
         assert feature_dim % 2 == 0, f'feature_dim must be divisible by 2.'  # 特征维度必须是偶数
         self._base = base  # 基数选择 10000, 与 doi.org/10.48550/arXiv.2104.09864 一致
         self._num_groups = feature_dim // 2
-        self._inv_freq = 1.0 / (base ** (torch.arange(start=0, end=self._num_groups, step=1).float() / self._num_groups))  # 计算逐维度的逆频率
+        self._inv_freq = 1.0 / (theta ** (torch.arange(start=0, end=self._num_groups, step=1,
+                                                       device=self.device, dtype=self.dtype).float() / self._num_groups))  # 计算逐维度的逆频率
         self.register_buffer('inv_freq', self._inv_freq)  # 将张量注册到缓冲区, 其不会参与反向传播
 
     @property
@@ -82,7 +83,7 @@ class RoPE(BaseNeuralNetwork):
 
 ### 基础自注意力计算
 
-自注意力机制 (Self Attention) 是 Transformer 架构的核心组成部分，它允许模型在处理序列数据时动态地关注输入序列的不同部分. 自注意力机制的基本思想是计算输入序列中每个位置与其他位置之间的关联程度，从而为每个位置生成一个**上下文向量**. 
+自注意力机制 (Self Attention) 是 Transformer 架构的核心组成部分[1]，它允许模型在处理序列数据时动态地关注输入序列的不同部分. 自注意力机制的基本思想是计算输入序列中每个位置与其他位置之间的关联程度，从而为每个位置生成一个**上下文向量**. 
 
 自注意力的计算可以拆解为以下 6 个步骤.
 
@@ -99,7 +100,7 @@ class RoPE(BaseNeuralNetwork):
     v_proj = nn.Linear(embed_dim, embed_dim)
     ```
 
-    > `q_proj` `k_proj` `v_proj` 的权重由训练得到, 训练算法请参考[*BERT预训练*](https://vortezwohl.github.io/nlp/2025/04/30/%E6%B7%B1%E5%85%A5BERT.html#bert-%E9%A2%84%E8%AE%AD%E7%BB%83%E6%96%B9%E6%B3%95). 三个网络经训练得到的权重矩阵分别记为 $W_Q$ $W_K$ $W_V$.
+    > `q_proj` `k_proj` `v_proj` 的权重由训练得到, 训练算法请参考[*BERT预训练*](https://vortezwohl.github.io/nlp/2025/04/30/%E6%B7%B1%E5%85%A5BERT.html#bert-%E9%A2%84%E8%AE%AD%E7%BB%83%E6%96%B9%E6%B3%95)[3]. 三个网络经训练得到的权重矩阵分别记为 $W_Q$ $W_K$ $W_V$.
 
 2. **计算投影**: 分别计算输入序列对 $QKV$ 矩阵的乘积 (更一般地, 可以进行任意线性变换), 得到**查询向量** **键向量**和**值向量**.
 
@@ -195,7 +196,7 @@ class RoPE(BaseNeuralNetwork):
 
 ### 基于 Torch 实现自注意力模块
 
-代码源: [`deeplotx.nn.self_attention`](https://github.com/vortezwohl/DeepLoTX/blob/main/deeplotx/nn/self_attention.py)
+代码源: [`deeplotx.nn.attention`](https://github.com/vortezwohl/DeepLoTX/blob/main/deeplotx/nn/attention.py)
 
 首先, 引入必要依赖:
 
@@ -308,6 +309,56 @@ class SelfAttention(nn.Module):
         return torch.matmul(self._attention(x, mask), v)
 ```
 
+### 多头注意力计算 (并行多头)
+
+多头注意力（Multi-Head Attention）是对基础自注意力机制的关键升级，其核心思想是将输入特征拆分到多个并行的 “注意力头” 中，让每个头独立学习不同子空间的注意力模式，最终通过拼接与线性变换融合多维度的关联信息。这种设计的优势在于：单一自注意力头可能仅捕捉到序列中某一类依赖关系（如语法关联或语义关联），而多头机制通过并行计算不同子空间的注意力分布，能同时挖掘 Token 间多样化的关联模式（例如长距离语义依赖、局部语法结构、上下文情感倾向等），显著提升模型对复杂序列特征的表达能力.
+
+### 基于 Torch 实现并行多头注意力 (非标准实现)
+
+代码源: [`deeplotx.nn.multi_head_attention`](https://github.com/vortezwohl/DeepLoTX/blob/main/deeplotx/nn/multi_head_attention.py)
+
+引入必要依赖:
+
+```python
+from typing_extensions import override
+
+import torch
+from torch import nn
+
+from deeplotx.nn.base_neural_network import BaseNeuralNetwork
+from deeplotx.nn.attention import Attention
+```
+
+以下是一个并行多头注意力的变体实现 (与最初提出的注意力实现[1]有所不同， 也与当下常见的联合多头注意力不同):
+
+```python
+class MultiHeadAttention(BaseNeuralNetwork):
+    def __init__(self, feature_dim: int, num_heads: int = 1, bias: bool = True, positional: bool = True,
+                 proj_layers: int = 1, proj_expansion_factor: int | float = 1.5, dropout_rate: float = 0.02,
+                 model_name: str | None = None, device: str | None = None, dtype: torch.dtype | None = None,
+                 **kwargs):
+        super().__init__(in_features=feature_dim, out_features=feature_dim, model_name=model_name,
+                         device=device, dtype=dtype)
+        self._num_heads = num_heads
+        self.expand_proj = nn.Linear(in_features=feature_dim, out_features=feature_dim * self._num_heads, bias=bias,
+                                     device=self.device, dtype=self.dtype)
+        self.attn_heads = nn.ModuleList([Attention(feature_dim=feature_dim, bias=bias, positional=positional,
+                                                   proj_layers=proj_layers, proj_expansion_factor=proj_expansion_factor,
+                                                   dropout_rate=dropout_rate, device=self.device, dtype=self.dtype,
+                                                   **kwargs) for _ in range(self._num_heads)])
+        self.out_proj = nn.Linear(in_features=feature_dim * self._num_heads, out_features=feature_dim, bias=bias,
+                                  device=self.device, dtype=self.dtype)
+
+    @override
+    def forward(self, x: torch.Tensor, y: torch.Tensor | None = None, mask: torch.Tensor | None = None) -> torch.Tensor:
+        x = self.ensure_device_and_dtype(x, device=self.device, dtype=self.dtype)
+        y = x if y is None else self.ensure_device_and_dtype(y, device=self.device, dtype=self.dtype)
+        x, y = self.expand_proj(x), self.expand_proj(y)
+        x_heads, y_heads = x.split(self.in_features, dim=-1), y.split(self.in_features, dim=-1)
+        head_outs = [self.attn_heads[_](x=x_heads[_], y=y_heads[_], mask=mask) for _ in range(self._num_heads)]
+        return self.out_proj(torch.concat(head_outs, dim=-1))
+```
+
 ### 前馈神经网络
 
 前馈神经网络 (Feed-Forward Network，FFN) 是 Transformer 架构中的另一关键组件，它通常被放置在自注意力模块之后, FFN 的核心功能是对序列中的每个位置进行独立的非线性变换，它不考虑 Token 之间的依赖关系 (这与自注意力机制形成互补)，而是专注于挖掘单个 Token 内部的高阶特征.
@@ -405,6 +456,188 @@ class FeedForward(BaseNeuralNetwork):
         return x
 ```
 
-## 实现一个基础的 Transformer
+## 实现一个基础的 Transformer (Roformer 变体)
 
-...待开发...
+接下来，我将基于这些已实现的组件，按照 [*Roformer*](https://doi.org/10.48550/arXiv.2104.09864)[2] 的架构逻辑，逐步拼接出一个完整的基础 Transformer (Roformer) Encoder:
+
+代码源: [`deeplotx.nn.roformer_encoder`](https://github.com/vortezwohl/DeepLoTX/blob/main/deeplotx/nn/roformer_encoder.py)
+
+引入必要依赖：
+
+```python
+from typing_extensions import override
+
+import torch
+from torch import nn
+
+from deeplotx.nn.base_neural_network import BaseNeuralNetwork
+from deeplotx.nn.feed_forward import FeedForward
+from deeplotx.nn.multi_head_attention import MultiHeadAttention
+```
+
+以下是一个集成了多头注意力、RoPE 位置编码以及 FFN 的 Roformer 编码器实现:
+
+```python
+class RoFormerEncoder(BaseNeuralNetwork):
+    def __init__(self, feature_dim: int, attn_heads: int = 2, bias: bool = True,
+                 ffn_layers: int = 1, ffn_expansion_factor: int | float = 2,
+                 dropout_rate: float = 0.02, model_name: str | None = None,
+                 device: str | None = None, dtype: torch.dtype | None = None, **kwargs):
+        super().__init__(in_features=feature_dim, out_features=feature_dim,
+                         model_name=model_name, device=device, dtype=dtype)
+        self.attn = MultiHeadAttention(feature_dim=feature_dim, num_heads=attn_heads,
+                                       bias=bias, positional=True,
+                                       proj_layers=kwargs.get('attn_ffn_layers', 1),
+                                       proj_expansion_factor=kwargs.get('attn_expansion_factor', ffn_expansion_factor),
+                                       dropout_rate=kwargs.get('attn_dropout_rate', dropout_rate),
+                                       device=self.device, dtype=self.dtype, **kwargs)
+        self.ffn = FeedForward(feature_dim=feature_dim * 2, num_layers=ffn_layers,
+                               expansion_factor=ffn_expansion_factor,
+                               bias=bias, dropout_rate=dropout_rate,
+                               device=self.device, dtype=self.dtype)
+        self.layer_norm = nn.LayerNorm(normalized_shape=feature_dim, eps=1e-9,
+                                       device=self.device, dtype=self.dtype)
+        self.out_proj = nn.Linear(in_features=feature_dim * 2, out_features=feature_dim,
+                                  bias=bias, device=self.device, dtype=self.dtype)
+
+    @override
+    def forward(self, x: torch.Tensor, mask: torch.Tensor | None = None) -> torch.Tensor:
+        x = self.ensure_device_and_dtype(x, device=self.device, dtype=self.dtype)
+        if mask is not None:
+            mask = self.ensure_device_and_dtype(mask, device=self.device, dtype=self.dtype)
+        attn = self.attn(x=self.layer_norm(x), y=None, mask=mask)  # 归一化并计算自注意力分数
+        x = torch.concat([attn, x], dim=-1)  # 将注意力分数与输入特征进行融合
+        return self.out_proj(self.ffn(x))  # 将融合后的 Embedding 进行非线性变换, 然后通过线性变换映射回原始特征空间, 以确保输出和输入形状一致
+```
+
+测试一下这个编码器:
+
+首先创建该编码器模型
+
+```python
+model = RoFormerEncoder(
+    feature_dim=512,  # 嵌入维度 512 维
+    attn_heads=12,  # 12 个注意力头
+    bias=True,  # 引入偏置项
+    ffn_layers=4,  # 4 层 FFN 非线性变换
+    ffn_expansion_factor=4  # FFN 的缩放系数为 4
+    )
+
+print(model)  # 把模型结构打印出来看看
+```
+
+不得不说这个模型真大, 共 116,033,576 参数 (0.1B)
+
+```
+===============================================================
+Model_Name: RoFormerEncoder
+In_Features: 512
+Out_Features: 512
+Device: cpu
+Dtype: torch.float32
+Total_Parameters: 116033576
+Trainable_Parameters: 116033576
+NonTrainable_Parameters: 0
+---------------------------------------------------------------
+RoFormerEncoder(
+  (attn): MultiHeadAttention(
+    (expand_proj): Linear(in_features=512, out_features=6144, bias=True)
+    (attn_heads): ModuleList(
+      (0-11): 12 x Attention(
+        (q_proj): FeedForward(
+          (ffn_layers): ModuleList(
+            (0): FeedForwardUnit(
+              (up_proj): Linear(in_features=512, out_features=2048, bias=True)
+              (down_proj): Linear(in_features=2048, out_features=512, bias=True)
+              (parametric_relu): PReLU(num_parameters=1)
+              (layer_norm): LayerNorm((512,), eps=1e-09, elementwise_affine=True)
+            )
+          )
+        )
+        (k_proj): FeedForward(
+          (ffn_layers): ModuleList(
+            (0): FeedForwardUnit(
+              (up_proj): Linear(in_features=512, out_features=2048, bias=True)
+              (down_proj): Linear(in_features=2048, out_features=512, bias=True)
+              (parametric_relu): PReLU(num_parameters=1)
+              (layer_norm): LayerNorm((512,), eps=1e-09, elementwise_affine=True)
+            )
+          )
+        )
+        (v_proj): FeedForward(
+          (ffn_layers): ModuleList(
+            (0): FeedForwardUnit(
+              (up_proj): Linear(in_features=512, out_features=2048, bias=True)
+              (down_proj): Linear(in_features=2048, out_features=512, bias=True)
+              (parametric_relu): PReLU(num_parameters=1)
+              (layer_norm): LayerNorm((512,), eps=1e-09, elementwise_affine=True)
+            )
+          )
+        )
+        (rope): RoPE()
+      )
+    )
+    (out_proj): Linear(in_features=6144, out_features=512, bias=True)
+  )
+  (ffn): FeedForward(
+    (ffn_layers): ModuleList(
+      (0-3): 4 x FeedForwardUnit(
+        (up_proj): Linear(in_features=1024, out_features=4096, bias=True)
+        (down_proj): Linear(in_features=4096, out_features=1024, bias=True)
+        (parametric_relu): PReLU(num_parameters=1)
+        (layer_norm): LayerNorm((1024,), eps=1e-09, elementwise_affine=True)
+      )
+    )
+  )
+  (layer_norm): LayerNorm((512,), eps=1e-09, elementwise_affine=True)
+  (out_proj): Linear(in_features=1024, out_features=512, bias=True)
+)
+===============================================================
+```
+
+现在我们创建一个用于测试的张量
+
+```python
+t = torch.randn(1, 32, 512)  # (batch_size, seq_len, feature_dim) 这里我创建了一个 batch 的 长度为 32 的 512 维 Embedding 序列
+print(t)
+```
+
+```
+tensor([[[-0.9948, -0.0349, -0.0292,  ...,  0.1072,  0.1905, -0.7041],
+         [-0.5063, -0.5237,  0.8143,  ..., -0.5679,  0.3080,  0.4045],
+         [-0.5734,  0.9023, -0.0459,  ...,  0.2895, -0.5912,  0.2613],
+         ...,
+         [-1.7784, -0.1019,  0.1402,  ...,  2.5297,  1.1557,  0.7828],
+         [-1.3071,  0.4030, -0.2874,  ..., -1.0355, -1.3376,  0.3785],
+         [-1.4015, -1.2260, -0.0717,  ...,  0.3206,  0.9351,  0.4492]]])
+```
+
+让我们用 `model` 算一算这个序列的自注意力加权特征
+
+```python
+emb = model.forward(t)
+print(emb)
+```
+
+不难发现, 模型的输出形状 (`shape`) 和输入序列完全相同, 输出后的张量已经融合了自注意力分数, 其序列中的每一个 Embedding 都融合了自己的上下文信息
+
+```
+tensor([[[ 0.0977, -0.8709, -0.9439,  ..., -0.1505, -0.1445, -0.0918],
+         [ 0.3352,  0.1858, -0.0060,  ..., -0.1324,  0.5277,  0.5881],
+         [ 0.2196, -0.8635, -1.0969,  ..., -0.1946, -0.4823,  0.2941],
+         ...,
+         [ 0.2569, -0.1919,  0.2975,  ..., -0.3115,  0.6879,  0.1908],
+         [-0.1365,  0.1804,  0.4099,  ...,  0.0668,  0.1690,  0.1809],
+         [-0.1341, -0.1368, -0.3354,  ..., -0.2252, -0.1670,  0.8261]]],
+       grad_fn=<ViewBackward0>)
+```
+
+## 参考文献
+
+**[[1](https://doi.org/10.48550/arXiv.1706.03762)]** Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Lukasz Kaiser, and Illia Polosukhin. Attention Is All You Need. *arXiv preprint*, 2017.
+
+**[[2](https://doi.org/10.48550/arXiv.2104.09864)]** Jianlin Su, Yu Lu, Shengfeng Pan, Ahmed Murtadha, Bo Wen, and Yunfeng Liu. RoFormer: Enhanced Transformer with Rotary Position Embedding. *arXiv preprint*, 2017.
+
+**[[3](https://doi.org/10.48550/arXiv.1810.04805)]** Jacob Devlin, Ming-Wei Chang, Kenton Lee, Kristina Toutanova. BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding. *arXiv preprint*, 2017.
+
+**[[4](https://github.com/vortezwohl/DeepLoTX)]** Zihao Wu. DeepLoTX: Easy-2-use long text NLP toolkit. *GitHub repository*. https://github.com/vortezwohl/DeepLoTX (Accessed: 2025-07-29).
