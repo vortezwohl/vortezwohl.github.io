@@ -8,8 +8,8 @@ author:
   - vortezwohl
   - 吴子豪
 ---
-Transformer 架构凭借其强大的[注意力机制 (Attention)](
-https://doi.org/10.48550/arXiv.1706.03762)，彻底改变了自然语言处理（NLP）领域的格局。与依赖序列顺序处理的 RNN 或受限于局部感受野的 CNN 不同，自注意力机制让模型能动态捕捉序列中任意位置的依赖关系，同时支持高效并行计算。本文将秉持 “从零开始” 的实践理念，逐步拆解 Transformer Encoder 的核心组件 —— 从自注意力机制的数学原理与代码实现，到位置编码（如 RoPE）如何注入序列位置信息，再到前馈神经网络的特征变换逻辑，最终手把手构建一个可运行的基础 Transformer Encoder，帮助读者深入理解这一经典架构的底层逻辑与工程实现细节.
+Transformer 架构凭借其强大的[*注意力机制 (Attention)*](
+https://doi.org/10.48550/arXiv.1706.03762)[1]，彻底改变了自然语言处理（NLP）领域的格局。与依赖序列顺序处理的 RNN 或受限于局部感受野的 CNN 不同，自注意力机制让模型能动态捕捉序列中任意位置的依赖关系，同时支持高效并行计算。本文将秉持 “从零开始” 的实践理念，逐步拆解 Transformer Encoder 的核心组件 —— 从自注意力机制的数学原理与代码实现，到位置编码（如 RoPE）如何注入序列位置信息，再到前馈神经网络的特征变换逻辑，最终手把手构建一个可运行的基础 Transformer Encoder，帮助读者深入理解这一经典架构的底层逻辑与工程实现细节.
 
 ## 基础知识
 
@@ -36,13 +36,6 @@ from deeplotx.nn.base_neural_network import BaseNeuralNetwork
 以下是一个标准 RoPE 编码[2]模块实现, 特征维度分为 2 组 (奇数组与偶数组), 基数为 10000:
 
 ```python
-from typing_extensions import override
-
-import torch
-
-from deeplotx.nn.base_neural_network import BaseNeuralNetwork
-
-
 class RoPE(BaseNeuralNetwork):
     def __init__(self, feature_dim: int, base: int = 10000, device: str | None = None, dtype: torch.dtype = torch.float32):
         super().__init__(in_features=feature_dim, out_features=feature_dim, model_name=None,
@@ -615,8 +608,8 @@ tensor([[[-0.9948, -0.0349, -0.0292,  ...,  0.1072,  0.1905, -0.7041],
 让我们用 `model` 算一算这个序列的自注意力加权特征
 
 ```python
-emb = model.forward(t)
-print(emb)
+emb = model.forward(t)  # 前向传播
+print(emb)  # 把输出打印出来看看
 ```
 
 不难发现, 模型的输出形状 (`shape`) 和输入序列完全相同, 输出后的张量已经融合了自注意力分数, 其序列中的每一个 Embedding 都融合了自己的上下文信息
