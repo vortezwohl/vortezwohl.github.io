@@ -8,7 +8,7 @@ author:
   - vortezwohl
   - 吴子豪
 ---
-来自美国马里兰大学的一项研究揭示的 DPP 偏差 (Demo’s Position in Prompt bias) 表明，prompt 中示例的 “空间位置” 是 ICL (In-Context Learning) 性能的关键调节因素。这一发现不仅推动了对 LLMs 上下文利用机制的理解，更为实践中提升 prompt 有效性提供了可操作的指南 ——prompt 工程需从 “内容设计” 扩展到 “结构优化”，结合模型特性和任务类型动态调整示例位置。
+来自美国马里兰大学的一项研究揭示的 DPP 偏差 (Demo’s Position in Prompt bias) 表明: 在提示词中嵌入的示例（demos）其位置会显著影响大语言模型的生成性能与稳定性。具体而言，当示例在提示词中的位置（如位于系统提示或用户提示的开头、结尾）发生变化时，模型的准确率可能出现高达 20% 的波动，近半数的预测结果甚至会发生翻转，而这种影响并非由示例内容本身导致，纯粹源于位置差异，这一现象即被称为 DPP 偏差。这一发现揭示了大语言模型在上下文学习过程中对示例位置的敏感性，为提示词工程的优化提供了全新方向，即需将示例位置纳入提示词设计的核心考量因素，而非仅关注示例内容、顺序等传统要素。
 
 Paper: [**Where to show Demos in Your Prompt**: A Positional Bias of In-Context Learning](https://doi.org/10.48550/arXiv.2507.22887)
 
