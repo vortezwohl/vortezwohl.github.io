@@ -247,7 +247,8 @@ PPO（Proximal Policy Optimization，近端策略优化）是一种基于策略�
             L^{CLIP+VF+S}(\theta) = \hat{\mathbb{E}}_t \left[ L^{CLIP}(\theta) - c_1 L^{VF}(\theta) + c_2 S[\pi_\theta](s_t) \right]
             $$
 
-            其中, $L^{CLIP}(\theta)$ 是策略损失, 用于限制策略的更新幅度, 避免过大的策略偏移, 而 $L^{VF}(\theta)$ 是价值函数损失, 用于优化状态价值函数 $V_{\theta}(s_t)$ 使其逼近实际奖励, $S[\pi_{\theta}](s_t)$ 则是策略的熵损失项, 用于鼓励探索 (熵越大, 策略越随机). 而 $c_1$ 和 $c_2$ 分别对应 `vf_coef` 和 `ent_coef`$^{[1]}$.
+            其中, $L^{CLIP}(\theta)$ 是策略损失, 用于限制策略的更新幅度, 避免过大的策略偏移, 而 $L^{VF}(\theta)$ 是价值函数损失, 用于优化状态价值函数 $V_{\theta}(s_t)$ 使其逼近实际奖励, $S{[}\pi_{\theta}{]}(s_t)$ 则是策略的熵损失项, 用于鼓励探索 (熵越大, 策略越随机). 
+            而 $c_1$, $c_2$ 分别对应 `vf_coef` 和 `ent_coef`$^{[1]}$.
 
         - `max_grad_norm`: 梯度裁剪最大范数
 
