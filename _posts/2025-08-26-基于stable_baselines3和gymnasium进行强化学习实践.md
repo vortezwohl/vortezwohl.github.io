@@ -1,7 +1,7 @@
 ---
 layout: post
 toc: true
-title: "基于 stable-baselines3 和 gymnasium 的强化学习 (PPO) 算法实践"
+title: "基于 Stable Baselines3 和 Gymnasium 的强化学习 (PPO) 算法实践"
 categories: RL
 tags: [RL, PPO, RLHF]
 author:
