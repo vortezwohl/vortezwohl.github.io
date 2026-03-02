@@ -1,7 +1,7 @@
 ---
 layout: post
 toc: true
-title: "深入理解 Agent Skills 开放标准"
+title: "理解 Agent Skills 开放标准"
 categories: Agent
 tags: [LLM, agent, agentic-ai, agi, ai]
 author:
