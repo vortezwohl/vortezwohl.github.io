@@ -23,7 +23,7 @@ ClaudeCode 是 Anthropic 公司推出的终端原生 AI 编程助手，基于 Cl
 2. **使用 `npm` 安装 Claude Code**
 
     ```
-    npm install -g @anthropic-ai/claude-code 
+    npm install -g @anthropic-ai/claude-code --registry=https://registry.npmmirror.com
     ```
 
 3. **验证安装**
