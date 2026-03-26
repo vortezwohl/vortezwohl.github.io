@@ -1,3 +1,13 @@
+---
+layout: post
+toc: true
+title: "Harness Engineering: 反馈闭环和熵治理, 构建可控的 LLM Agent"
+categories: Agent
+tags: [LLM, agent, agentic-ai, agi, ai]
+author:
+  - vortezwohl
+  - 吴子豪
+---
 Harness Engineering（驾驭工程）是 OpenAI 在 2026 年 2 月正式提出的面向 AI Agent 时代的新型软件工程方法论$^{[1]}$，"Harness"本意是马具 (如缰绳、马鞍)，把马的力气引到正确方向上。而 LLM 就像一匹蛮力十足但方向感不太行的马，跑得快但容易跑偏。其核心理念为 "Humans Steer, Agents Execute"（人类掌舵，智能体执行）。它彻底重构软件开发流程，将工程师角色从代码编写者转变为环境设计师、意图规范者和反馈回路构建者，通过精密的 Harness 引导 AI 智能体自主、可靠地完成软件工程任务。
 
 > harness [ˈhɑːnɪs] n.马具 v.利用
