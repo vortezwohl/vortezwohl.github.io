@@ -153,7 +153,7 @@ Claude Code 不是这么单薄。
 
 它不是把“允许”当成唯一控制点，而是做成一个多层判断流程。
 
-## 我理解的 Harness：不信任模型，所以对模型深度监管
+## 我理解的 Harness：不信任模型，所以对模型的工作过程深度监管
 
 如果一定要解释 harness，可以这样说：**harness 就是一层负责“接住模型输出、检查模型意图、限制模型行动、补偿模型失误”的系统外壳。** 它的核心不是提高模型自由度，恰恰相反，它在控制模型的权限边界。
 
@@ -219,6 +219,111 @@ Claude Code 并不只是“把命令发出去然后等结果”。
 - 验证不是说“代码在那儿”，而是要证明“代码真的能跑、边界情况也成立”。
 
 这就把 agent 系统从“会行动”拉到了“会自证”。
+
+### Claude Code 的 agent loop
+
+如果把 Claude Code 整体看成一个 agent，它的主循环其实不复杂，可以概括成一句话：**先把用户输入交给 `QueryEngine` 开一轮 turn，然后不断重复“问模型 -> 发现要不要调工具 -> 执行工具 -> 把结果塞回上下文 -> 再问模型”，直到这一轮真的可以结束。**
+
+`QueryEngine` 负责“每轮从哪里开始”，`query.ts` 负责“这一轮里面怎么循环”。源码里先把这个边界说得很清楚：
+
+```ts
+// Source: src/QueryEngine.ts:180-182,209-212
+
+// One QueryEngine per conversation. Each submitMessage() call starts a new
+// turn within the same conversation. State (messages, file cache, usage, etc.)
+// persists across turns.
+async *submitMessage(
+  prompt: string | ContentBlockParam[],
+  options?: { uuid?: string; isMeta?: boolean },
+): AsyncGenerator<SDKMessage, void, unknown> {
+```
+
+这段代码可以直接读成：**一个 `QueryEngine` 管一整个会话，而每次 `submitMessage()` 都是在这个会话里开启新的一轮。** 所以 Claude Code 不是“每次都从零开始”，而是会保留消息历史、文件状态、usage 等上下文。
+
+真正的 agent loop 在 `query.ts` 里更明显。它会先准备一个 `toolUseBlocks` 容器，然后进入主循环；如果模型输出了 `tool_use`，就记下来，并把 `needsFollowUp` 设为 `true`；如果这一轮没有后续动作要做，就结束；否则就去跑工具，再把结果喂回模型：
+
+```ts
+// Source: src/query.ts:557-558,652-654,833-834,1062,1382
+
+const toolUseBlocks: ToolUseBlock[] = []
+let needsFollowUp = false
+
+queryCheckpoint('query_api_loop_start')
+try {
+  while (attemptWithFallback) {
+    // ...
+    toolUseBlocks.push(...msgToolUseBlocks)
+    needsFollowUp = true
+  }
+}
+
+if (!needsFollowUp) {
+  // 这一轮可以结束
+}
+
+// 否则执行工具，然后把 tool_result 继续送回后续流程
+runTools(toolUseBlocks, assistantMessages, canUseTool, toolUseContext)
+```
+
+这就是 Claude Code 最核心的运行方式：**模型不是一次性把答案全部产出来，而是在 harness 的监管下，分多步推进任务。** 模型每往前走一步，系统都会重新检查它是不是要调用工具、这个调用能不能放行、执行结果要不要继续进入下一轮。
+
+大致流程如下：
+
+```text
+User Input
+    |
+    v
+QueryEngine.submitMessage()
+    |
+    v
+构造这一轮的上下文
+(messages / system prompt / state)
+    |
+    v
+query.ts 主循环
+    |
+    v
+调用模型（流式）
+    |
+    +---------------------> 没有 tool_use
+    |                         |
+    |                         v
+    |                    这一轮结束并返回
+    |
+    v
+发现 tool_use
+    |
+    v
+记录 toolUseBlocks
+    |
+    v
+权限检查 / 参数校验 / 沙箱约束
+    |
+    v
+runTools(...) 执行工具
+    |
+    v
+生成 tool_result
+    |
+    v
+把结果写回消息历史
+    |
+    v
+再次调用模型
+```
+
+而且这里最能体现 Claude Code 的“零信任”原则。它并不是听到模型说“我要调工具了”就盲信，而是把模型输出当成一个**待审申请**：先收集，再检查，再执行，再把执行结果作为事实写回上下文。甚至在流程中断时，它还会主动补齐缺失的 `tool_result`，避免消息轨迹留下“半截记录”：
+
+```ts
+// Source: src/query.ts:900,984
+
+yield* yieldMissingToolResultBlocks(
+  assistantMessages,
+  errorMessage,
+)
+```
+
+所以，从总 loop 的角度看，Claude Code 的 agent 不是“模型自己一路跑下去”，而是**模型每走一步，都要重新回到 harness 这层零信任控制面里接受审查。**
 
 ## Claude Code 是在“对模型零信任”的基础上构建的
 
