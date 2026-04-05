@@ -2,7 +2,7 @@
 layout: post
 toc: true
 title: "深入 Claude Code 源码：学会与你不信任的伙伴（LLM）共事"
-categories: LLM
+categories: Agent
 tags: [LLM, Code Agent, Claude Code, Harness Engineering]
 author:
   - vortezwohl
