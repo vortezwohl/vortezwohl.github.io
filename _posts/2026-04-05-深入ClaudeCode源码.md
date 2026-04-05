@@ -23,6 +23,8 @@ author:
 
 如果写在 Paper 中，我们说 agent runtime、policy enforcement、verification pipeline；换成更易懂的话，就是：**它认定了模型会犯错，所以系统从一开始就在“不信任模型”的前提上设计。**
 
+> [点此跳到 Claude Code 的主循环逻辑](#claude-code-的-agent-loop)
+
 ## Claude Code 在解决什么问题？
 
 ### 模型经常会把工具参数写错
