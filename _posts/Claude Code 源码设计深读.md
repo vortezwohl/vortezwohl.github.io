@@ -2,10 +2,11 @@
 layout: post
 toc: true
 title: "Claude Code 源码学习笔记: 它是怎么把不可靠的模型管住的"
-categories: AI
-tags: [Agent, Claude Code, Harness, Security, Engineering]
+categories: LLM
+tags: [LLM, Code Agent, Claude Code, Harness Engineering]
 author:
   - vortezwohl
+  - 吴子豪
   - Codex
 ---
 
