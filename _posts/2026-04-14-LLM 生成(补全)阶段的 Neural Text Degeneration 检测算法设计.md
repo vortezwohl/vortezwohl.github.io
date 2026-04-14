@@ -1,28 +1,28 @@
 ---
 layout: post
 toc: true
-title: "LLM long-tail 输出检测算法设计"
+title: "LLM 生成(补全)阶段的 Neural Text Degeneration 检测算法设计"
 categories: LLM
-tags: [LLM, NLP, decoding, longtail, z-algorithm, kmp, harness-engineering]
+tags: [LLM, NLP, decoding, neural-text-degeneration, z-algorithm, kmp, repetition-penalty, min-p-sampling, harness-engineering]
 author:
   - vortezwohl
   - 吴子豪
   - Codex
 ---
 
-这里说的 longtail 输出，不是统计学语境下的长尾分布，而是 LLM 生成到尾部时进入失控重复：同一句话、同一段标点、同一个 JSON 片段、同一个提示模板或者同一小段乱码被连续复制很多次。它看起来像“模型还在正常输出”，实际上已经从任务空间滑进了重复循环。工程上最危险的地方是，这种错误不一定会触发 HTTP 失败，也不一定会破坏纯文本类型约束；如果调用方只检查“非空字符串”或“请求成功”，长尾内容就会继续流入摘要、翻译、入库、消息发送和后续 agent 工具调用。解决它的关键不是相信模型自觉停止，而是在推理结果进入业务逻辑前做一层可解释、低成本的重复模式检测。
+**Neural Text Degeneration（神经文本退化）** 现象由 Holtzman 等人在同名论文中提出, 论文中它被描述为语言模型解码时生成 bland、incoherent 或陷入 repetitive loops 的退化现象$^{[9]}$。本文聚焦其中最容易工程化检测的一类：LLM 生成到尾部时进入失控重复，同一句话、同一段标点、同一个 JSON 片段、同一个提示模板或者同一小段乱码被连续复制很多次。它看起来像“模型还在正常输出”，实际上已经从任务空间滑进了重复循环。工程上最危险的地方是，这种错误不一定会触发 HTTP 失败，也不一定会破坏纯文本类型约束；如果调用方只检查“非空字符串”或“请求成功”，退化内容就会继续流入摘要、翻译、入库、消息发送和后续 agent 工具调用。解决它的关键不是相信模型自觉停止，而是在推理结果进入业务逻辑前做一层可解释、低成本的重复模式检测。
 
 ## 业界痛点
 
-LLM 的长尾输出通常出现在开放式生成、长文本改写、翻译、代码补全、JSON/Markdown 结构化输出和多轮 agent 轨迹中。它的表象很多：有时是“好的，下面是……”无限重复；有时是 `}`、`</think>`、列表序号、分隔线反复出现；有时是一个看似合理的短句被拼接几十次；还有时是模型在接近 `max_tokens` 时没有收束，继续用高概率模板填满剩余 token。
+Neural Text Degeneration 通常出现在开放式生成、长文本改写、翻译、代码补全、JSON/Markdown 结构化输出和多轮 agent 轨迹中。它的表象很多：有时是“好的，下面是……”无限重复；有时是 `}`、`</think>`、列表序号、分隔线反复出现；有时是一个看似合理的短句被拼接几十次；还有时是模型在接近 `max_tokens` 时没有收束，继续用高概率模板填满剩余 token。
 
 这类问题的麻烦在于它介于“模型质量问题”和“工程故障”之间。
 
 1. **它不总是语法错误**: 一个重复 40 次的短句仍然是合法字符串，一个重复字段的 Markdown 也可能被渲染出来，甚至一个重复片段拼出来的 JSON 可能在局部看起来是合法的。
 
-2. **它会放大成本**: 长尾输出往往在尾部发生，如果没有流式截断或生成后检测，调用方已经为无效 token 付费；如果后续还有 LLM judge、embedding、翻译、入库或人工审核，成本会被继续放大。
+2. **它会放大成本**: 退化输出往往在尾部发生，如果没有流式截断或生成后检测，调用方已经为无效 token 付费；如果后续还有 LLM judge、embedding、翻译、入库或人工审核，成本会被继续放大。
 
-3. **它会污染下游**: 摘要任务可能把重复尾巴当成事实，翻译任务可能把重复句子当成原文内容，agent 任务可能把重复工具调用当成可执行计划。对自动化系统来说，长尾输出不是“文风差一点”，而是需要阻断的异常结果。
+3. **它会污染下游**: 摘要任务可能把重复尾巴当成事实，翻译任务可能把重复句子当成原文内容，agent 任务可能把重复工具调用当成可执行计划。对自动化系统来说，Neural Text Degeneration 不是“文风差一点”，而是需要阻断的异常结果。
 
 4. **它很难靠单一提示词消除**: 提示词里写“不要重复”可以降低概率，但不能作为可靠约束。模型采样依然受 `temperature`、`top_p`、`max_tokens`、停止词、上下文长度、服务端解码实现和模型本身退化模式影响。更稳妥的做法是把它当成 harness engineering 问题：生成后必须检查，检查失败必须重试、降级或阻断。
 
@@ -101,7 +101,7 @@ def z_algorithm(text: str) -> list[int]:
     return z
 ```
 
-在 long-tail 检测里，我们不一定有外部给定的 `pattern`，所以实现对每个起点 `start` 取一个后缀 `suffix = text[start:]`，对这个后缀计算 Z 数组。然后枚举候选模式长度 `pattern_len`：
+在 Neural Text Degeneration 的重复模式检测里，我们不一定有外部给定的 `pattern`，所以实现对每个起点 `start` 取一个后缀 `suffix = text[start:]`，对这个后缀计算 Z 数组。然后枚举候选模式长度 `pattern_len`：
 
 ```text
 suffix = text[start:]
@@ -230,7 +230,7 @@ step = len(pattern)
 直到下一段不再出现。
 ```
 
-这种做法能区分“同一个短句在文章不同位置出现很多次”和“同一个短句在尾部连续重复很多次”。longtail 检测真正关心的是后者，因为连续重复才更像解码退化。
+这种做法能区分“同一个短句在文章不同位置出现很多次”和“同一个短句在尾部连续重复很多次”。Neural Text Degeneration 的重复模式检测真正关心的是后者，因为连续重复才更像解码退化。
 
 从数学上看，设所有匹配起点集合为：
 
@@ -297,7 +297,7 @@ def __longest_contiguous_repeat_substring(
     return best
 ```
 
-### Long-tail 检测算法的数学表示和程序实现
+### Neural Text Degeneration 检测算法的数学表示和程序实现
 
 把 Z 算法和候选排序合起来，`detect(text)` 实际是在求一个最优重复候选。设归一化后的文本为 $$T$$，长度为 $$n$$，最小候选模式长度为 $$p_{\min}$$，最大候选模式长度为 $$p_{\max}$$。如果没有显式传入 `max_pattern_len`，则：
 
@@ -341,10 +341,10 @@ $$
 M^*=\arg\max_{(a,p)} K(a,p)
 $$
 
-业务层再用阈值 $$\tau$$ 判定是否 long-tail：
+业务层再用阈值 $$\tau$$ 判定是否出现重复型 Neural Text Degeneration：
 
 $$
-\operatorname{is\_longtail}(x)=
+\operatorname{is\_degenerate}(x)=
 \begin{cases}
 \operatorname{true}, & M^*\neq \varnothing \land M^*.\operatorname{repeat}>\tau \\
 \operatorname{false}, & \text{otherwise}
@@ -412,18 +412,22 @@ def __is_better_match(candidate: PatternMatch, best: PatternMatch | None) -> boo
 
 ### 在 LLM 调用链路里使用
 
-在 `any_llm.llm.LLM.__call__` 的实践里，检测器被放在 HTTP 调用成功、响应非空之后：
+在 `any_llm.llm.LLM.__call__` 的实践里，检测器被放在 HTTP 调用成功、响应非空之后。更推荐的命名方式是使用 Neural Text Degeneration 语义，并兼容旧的 `LONG_TAIL_REPEAT_THRESHOLD` 环境变量：
 
 ```python
+threshold = int(os.getenv(
+    'NEURAL_TEXT_DEGENERATION_REPEAT_THRESHOLD',
+    os.getenv('LONG_TAIL_REPEAT_THRESHOLD', 32)
+))
 pattern_match = repeat_pattern_detector(res)
-if pattern_match:
-    if pattern_match.repeat > int(os.getenv('LONG_TAIL_REPEAT_THRESHOLD', 32)):
-        raise ValueError(
-            'Long-tail pattern detected. Try reducing your `top_p` parameter.'
-        )
+if pattern_match and pattern_match.repeat > threshold:
+    raise ValueError(
+        'Neural Text Degeneration pattern detected. '
+        'Try reducing your `top_p` parameter.'
+    )
 ```
 
-这里默认阈值是 `LONG_TAIL_REPEAT_THRESHOLD=32`。它的语义很直接：如果任意连续重复模式超过阈值，就把这次 LLM 输出视为无效结果。由于外层重试装饰器会捕获 `ValueError`，这类异常可以进入统一重试逻辑，而不是把坏结果返回给业务层。
+这里默认阈值是 `32`。旧变量名 `LONG_TAIL_REPEAT_THRESHOLD` 是历史命名，更准确的语义是“重复型 Neural Text Degeneration 的重复次数阈值”：如果任意连续重复模式超过阈值，就把这次 LLM 输出视为无效结果。由于外层重试装饰器会捕获 `ValueError`，这类异常可以进入统一重试逻辑，而不是把坏结果返回给业务层。
 
 这个阈值不应该被理解为普适常数。不同任务要分开调：
 
@@ -436,12 +440,12 @@ if pattern_match:
 
 ### 重试机制的实现
 
-long-tail 检测本身只负责把坏输出变成确定的失败信号。要让系统自动恢复，还需要把这个失败信号接入重试机制。`vortezwohl.func.Retry` 提供了两种边界校验方式$^{[8]}$：
+重复型 Neural Text Degeneration 检测本身只负责把坏输出变成确定的失败信号。要让系统自动恢复，还需要把这个失败信号接入重试机制。`vortezwohl.func.Retry` 提供了两种边界校验方式$^{[8]}$：
 
 1. `on_return(validator)`：函数正常返回，但返回值不满足校验器时重试。
 2. `on_exceptions(*exceptions)`：函数抛出指定异常类型时重试，抛出其它异常时直接重新抛出。
 
-`any_llm` 的 long-tail 检测走的是第二种：检测到重复模式超过阈值后抛出 `ValueError`，而 `LLM.__call__` 外层装饰器把 `ValueError` 纳入可重试异常集合$^{[7]}$。
+`any_llm` 的 Neural Text Degeneration 检测走的是第二种：检测到重复模式超过阈值后抛出 `ValueError`，而 `LLM.__call__` 外层装饰器把 `ValueError` 纳入可重试异常集合$^{[7]}$。
 
 ```python
 retry = Retry(max_retries=2, delay=True)
@@ -450,10 +454,13 @@ retry = Retry(max_retries=2, delay=True)
 @retry.on_exceptions(ValueError, HTTPError, ConnectionError, SSLError, Timeout, ConnectTimeout, ReadTimeout)
 def __call__(self, user_message: str, system_message: str | None = None, **kwargs):
     ...
+    threshold = int(os.getenv(
+        'NEURAL_TEXT_DEGENERATION_REPEAT_THRESHOLD',
+        os.getenv('LONG_TAIL_REPEAT_THRESHOLD', 32)
+    ))
     pattern_match = repeat_pattern_detector(res)
-    if pattern_match:
-        if pattern_match.repeat > int(os.getenv('LONG_TAIL_REPEAT_THRESHOLD', 32)):
-            raise ValueError('Long-tail pattern detected. Try reducing your `top_p` parameter.')
+    if pattern_match and pattern_match.repeat > threshold:
+        raise ValueError('Neural Text Degeneration pattern detected.')
     return res
 ```
 
@@ -551,29 +558,50 @@ $$
 \operatorname{valid}(Y_a)=g(Y_a)
 $$
 
-当 $$g(Y_a)=\operatorname{false}$$ 时重试，直到某次返回值通过校验，或者重试次数耗尽后抛出 `MaxRetriesReachedError`。这类模式适合“HTTP 成功但业务响应为空”“JSON 能解析但 schema 不合格”这类失败；long-tail 检测则更适合在业务函数内部抛出 `ValueError`，让它和 HTTP 错误、超时错误进入同一条异常重试链路。
+当 $$g(Y_a)=\operatorname{false}$$ 时重试，直到某次返回值通过校验，或者重试次数耗尽后抛出 `MaxRetriesReachedError`。这类模式适合“HTTP 成功但业务响应为空”“JSON 能解析但 schema 不合格”这类失败；重复型 Neural Text Degeneration 检测则更适合在业务函数内部抛出 `ValueError`，让它和 HTTP 错误、超时错误进入同一条异常重试链路。
 
 ## 如何缓解
 
-检测只能阻断坏输出，缓解要回到解码参数和调用策略。
+检测只能阻断坏输出，缓解要回到解码参数和调用策略。Neural Text Degeneration 不是单一原因造成的，不能只靠一个参数兜底；更稳妥的做法是把长度约束、停止条件、截断采样、重复惩罚和失败重试组合起来。
 
-1. **控制 `max_tokens`**: 长尾输出经常发生在模型已经回答完、但仍被允许继续生成的时候。对摘要、分类、抽取、短翻译这类任务，不要给一个过大的输出上限。能用 300 token 完成的任务，不应该默认给 4000 token。
+1. **控制 `max_tokens`**: 退化输出经常发生在模型已经回答完、但仍被允许继续生成的时候。对摘要、分类、抽取、短翻译这类任务，不要给一个过大的输出上限。能用 300 token 完成的任务，不应该默认给 4000 token。
 
 2. **设置停止条件**: 对于结构化输出，可以用明确的 stop sequence、闭合标签或 JSON schema 解析作为终止依据。流式调用时，如果检测到同一片段开始连续重复，可以提前 abort，避免等到整个 `max_tokens` 用完。
 
-3. **调整 `top_p`**: Top-P 采样会选择累积概率达到阈值 `P` 的最小候选集合，再在这个集合里采样；它本来就是为了在开放域生成中平衡多样性和退化问题而被广泛使用$^{[5]}$。如果长尾来自过宽的候选空间和低质量尾部 token，可以尝试降低 `top_p`，例如从 `1.0` 降到 `0.9`、`0.8`，让采样空间更集中。这也是当前 `any_llm` 实践里检测失败后给出的默认建议。
+3. **调整 `top_p`**: Top-P / Nucleus Sampling 会选择累积概率达到阈值 `P` 的最小候选集合，再在这个集合里采样；它本来就是为缓解开放域生成中的 Neural Text Degeneration 而提出的采样策略之一$^{[5]}$ $^{[9]}$。如果退化来自过宽的候选空间和低质量尾部 token，可以尝试降低 `top_p`，例如从 `1.0` 降到 `0.9`、`0.8`，让采样空间更集中。这也是当前 `any_llm` 实践里检测失败后给出的默认建议。
 
-4. **调整 `temperature`**: Temperature 通过缩放 logits 改变概率分布：`T < 1` 会让分布更陡峭，输出更确定；`T > 1` 会让分布更平坦，输出更多样但也更不稳定$^{[5]}$。如果重复来自高温采样导致的跑偏，可以降低 temperature；如果重复来自极低温或贪心式的固定模板自循环，则可以小幅提高 temperature，或者配合 repetition penalty、frequency penalty、presence penalty 等服务端参数。不要机械地把所有任务都调成同一个温度。
+4. **使用 Min-p Sampling**: Min-p Sampling 是一种动态截断策略，它不使用固定累计概率阈值，而是用当前最高概率 token 作为参照，只保留相对概率足够高的候选 token$^{[11]}$。设当前步归一化概率为 $$p_i$$，最高概率为 $$p_{\max}=\max_j p_j$$，Min-p 阈值为 $$\alpha$$，候选集合为：
 
-5. **失败后改变参数重试，而不是原样重试**: 如果检测器已经证明某个参数组合产生了长尾，原样重试可能只是再次采样到同类坏结果。更好的策略是按任务类型选择降级路径：降低 `top_p`、收紧 `max_tokens`、加入 stop sequence、提高 `min_pattern_len` 后复检、改用更强模型，或者返回可解释错误。
+$$
+V_{\operatorname{min-p}}=\{i \mid p_i \geq \alpha \cdot p_{\max}\}
+$$
 
-6. **把 longtail 检测放到统一验证层**: 我的偏好是把它和“空响应检测、格式检测、schema 校验、业务语义校验”放在同一层：HTTP 成功只代表模型服务返回了东西，不代表输出可用。LLM 可能返回错误格式、错误事实、重复尾巴或半截 JSON；调用方必须把这些都当成不同的失败类型来处理。
+然后在 $$V_{\operatorname{min-p}}$$ 上重新归一化并采样。它的直觉是：当模型很确定时，候选集合会更窄；当模型本来就不确定时，候选集合会保留更多合理分支。对于高温采样下的创意生成，它通常比单纯固定 `top_p` 更自适应，但仍然需要按任务调参。
+
+5. **使用 Repetition Penalty**: Repetition Penalty 会对已经生成过的 token 降低再次出现的倾向，CTRL 论文中也使用了这种重复惩罚思路来减少退化重复$^{[10]}$。一种常见实现是在采样前修改 logits。设原始 logit 为 $$z_i$$，已生成 token 集合为 $$G$$，惩罚系数为 $$\theta \geq 1$$，则可以用下面的符号表示：
+
+$$
+z'_i=
+\begin{cases}
+z_i/\theta, & i\in G \land z_i>0 \\
+z_i\cdot\theta, & i\in G \land z_i\leq 0 \\
+z_i, & i\notin G
+\end{cases}
+$$
+
+再用 $$z'_i$$ 进入 softmax 和后续采样。`repetition_penalty` 太低时几乎不起作用，太高时会压制必要复现，例如术语、变量名、表格列名和诗歌回环，因此它更适合作为重复退化的软约束，而不是替代输出校验。
+
+6. **调整 `temperature`**: Temperature 通过缩放 logits 改变概率分布：`T < 1` 会让分布更陡峭，输出更确定；`T > 1` 会让分布更平坦，输出更多样但也更不稳定$^{[5]}$。如果重复来自高温采样导致的跑偏，可以降低 temperature；如果重复来自极低温或贪心式的固定模板自循环，则可以小幅提高 temperature，或者配合 Repetition Penalty、Min-p Sampling、frequency penalty、presence penalty 等服务端参数。不要机械地把所有任务都调成同一个温度。
+
+7. **失败后改变参数重试，而不是原样重试**: 如果检测器已经证明某个参数组合产生了退化重复，原样重试可能只是再次采样到同类坏结果。更好的策略是按任务类型选择降级路径：降低 `top_p`、切换或收紧 `min_p`、提高 `repetition_penalty`、收紧 `max_tokens`、加入 stop sequence、提高 `min_pattern_len` 后复检、改用更强模型，或者返回可解释错误。
+
+8. **把 Neural Text Degeneration 检测放到统一验证层**: 我的偏好是把它和“空响应检测、格式检测、schema 校验、业务语义校验”放在同一层：HTTP 成功只代表模型服务返回了东西，不代表输出可用。LLM 可能返回错误格式、错误事实、重复尾巴或半截 JSON；调用方必须把这些都当成不同的失败类型来处理。
 
 一个可执行的默认策略可以是：
 
 ```text
 1. 生成后检查空响应。
-2. 检查重复模式，repeat > threshold 则判定 longtail。
+2. 检查重复模式，repeat > threshold 则判定重复型 Neural Text Degeneration。
 3. 检查任务格式，例如 JSON schema、Markdown section、代码块闭合。
 4. 失败时带上错误类型重试，并按错误类型调整参数。
 5. 重试仍失败时返回结构化错误，不把坏文本交给下游。
@@ -595,6 +623,12 @@ $$
 
 [[6](https://github.com/vortezwohl/MyToolSuite/blob/main/vortezwohl/nlp/repeat_pattern_detector.py)] vortezwohl. BasePatternDetector and RepeatPatternDetector source code. *MyToolSuite / GitHub*, 2026.
 
-[7] vortezwohl. LLM long-tail output detection practice in `LLM.__call__`. *any-llm-sdk / local source code*, 2026. `~\project\any-llm-sdk\any_llm\llm.py`.
+[7] vortezwohl. Neural Text Degeneration repeat-pattern detection practice in `LLM.__call__`. *any-llm-sdk / local source code*, 2026. `~\project\any-llm-sdk\any_llm\llm.py`.
 
 [[8](https://github.com/vortezwohl/MyToolSuite/blob/main/vortezwohl/func/retry.py)] vortezwohl. Retry source code. *MyToolSuite / GitHub*, 2026.
+
+[[9](https://openreview.net/forum?id=rygGQyrFvH)] Ari Holtzman, Jan Buys, Li Du, Maxwell Forbes, and Yejin Choi. The Curious Case of Neural Text Degeneration. *ICLR*, 2020.
+
+[[10](https://arxiv.org/abs/1909.05858)] Nitish Shirish Keskar, Bryan McCann, Lav R. Varshney, Caiming Xiong, and Richard Socher. CTRL: A Conditional Transformer Language Model for Controllable Generation. *arXiv*, 2019.
+
+[[11](https://arxiv.org/abs/2407.01082)] Minh Nhat Nguyen, Andrew Baker, Clement Neo, Allen Roush, Andreas Kirsch, and Ravid Shwartz-Ziv. Turning Up the Heat: Min-p Sampling for Creative and Coherent LLM Outputs. *ICLR*, 2025.
