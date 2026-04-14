@@ -50,17 +50,15 @@ PatternMatch(
 
 Z 算法的核心是为字符串 `s` 计算一个 Z 数组：`z[i]` 表示从位置 `i` 开始的后缀与整个字符串前缀能匹配多长。常见字符串匹配场景会构造 `pattern + 分隔符 + text`，再用 Z 数组找出模式出现位置；Z 数组本身可以在线性时间内计算，因为它维护了一个最靠右的 Z-box，并复用窗口内已经算过的前缀匹配信息$^{[1]}$ $^{[2]}$。
 
-数学上，给定字符串 $$S=s_0s_1\cdots s_{n-1}$$，Z 数组定义为：
-
+数学上，给定字符串 $S=s_0s_1\cdots s_{n-1}$，Z 数组定义为：
 $$
 Z[0]=n
 $$
-
 $$
 Z[i]=\max\{\ell \mid 0 \leq \ell \leq n-i,\ S[0:\ell]=S[i:i+\ell]\},\quad 1 \leq i < n
 $$
 
-也就是说，$$Z[i]$$ 是后缀 $$S[i:n]$$ 与原串前缀 $$S[0:n]$$ 的最长公共前缀长度。朴素计算每个 $$Z[i]$$ 需要反复比较前缀，最坏会退化到 $$O(n^2)$$；Z 算法用一个右端点最远的匹配窗口 $$[L, R]$$ 缓存已经知道的匹配区间。当 $$i \leq R$$ 时，先复用窗口内的历史结果：
+也就是说，$Z[i]$ 是后缀 $S[i:n]$ 与原串前缀 $S[0:n]$ 的最长公共前缀长度。朴素计算每个 $Z[i]$ 需要反复比较前缀，最坏会退化到 $O(n^2)$；Z 算法用一个右端点最远的匹配窗口 $[L, R]$ 缓存已经知道的匹配区间。当 $i \leq R$ 时，先复用窗口内的历史结果：
 
 $$
 Z[i] \leftarrow \min(R-i+1,\ Z[i-L])
@@ -72,7 +70,7 @@ $$
 \text{while } i+Z[i]<n \text{ and } S[Z[i]]=S[i+Z[i]],\quad Z[i]\leftarrow Z[i]+1
 $$
 
-如果扩展后的新窗口超过旧的 $$R$$，就更新：
+如果扩展后的新窗口超过旧的 $R$，就更新：
 
 $$
 L\leftarrow i,\quad R\leftarrow i+Z[i]-1
@@ -115,13 +113,15 @@ repeat_count = 1 + z[pattern_len] // pattern_len
 
 举例说，后缀是 `abcabcabcx`，候选 `pattern_len = 3`，那么候选模式是 `abc`。`z[3] = 6`，因为从第 3 位开始的 `abcabc...` 和前缀 `abcabc...` 能匹配 6 个字符，所以重复次数是 `1 + 6 // 3 = 3`。
 
-写成数学表达式就是：对原始文本 $$T$$、起点 $$a$$、候选模式长度 $$p$$，令后缀 $$U=T[a:|T|]$$，对 $$U$$ 计算 Z 数组，则连续重复次数为：
+其数学表达如下：
+
+对原始文本 $T$、起点 $a$、候选模式长度 $p$，令后缀 $U=T[a:|T|]$，对 $U$ 计算 Z 数组，则连续重复次数为：
 
 $$
 r(a,p)=1+\left\lfloor \frac{Z_U[p]}{p}\right\rfloor
 $$
 
-只有当 $$r(a,p)\geq 2$$ 时，它才是一个有效重复候选。候选片段和区间为：
+只有当 $r(a,p)\geq 2$ 时，它才是一个有效重复候选。候选片段和区间为：
 
 $$
 \operatorname{pattern}(a,p)=T[a:a+p]
@@ -145,31 +145,31 @@ $$
 
 KMP 的关键是先为 `pattern` 构造 LPS 表，也就是每个前缀位置上“最长 proper prefix 同时也是 suffix”的长度。匹配时一旦发生不一致，就不用把文本指针回退到朴素算法的下一个窗口，而是利用 LPS 把模式指针跳到可以继续比较的位置，因此整体复杂度是 `O(n + m)`$^{[3]}$ $^{[4]}$。
 
-数学上，给定模式串 $$P=p_0p_1\cdots p_{m-1}$$，LPS 数组可以写成：
+数学上，给定模式串 $P=p_0p_1\cdots p_{m-1}$，LPS 数组可以写成：
 
 $$
 \operatorname{lps}[i]=\max\{k \mid 0 \leq k < i+1,\ P[0:k]=P[i-k+1:i+1]\}
 $$
 
-这里的 $$k < i+1$$ 排除了整个字符串本身，所以它是 proper prefix。匹配文本 $$T$$ 时，设 $$i$$ 是文本指针，$$j$$ 是模式指针：
+这里的 $k < i+1$ 排除了整个字符串本身，所以它是 proper prefix。匹配文本 $T$ 时，设 $i$ 是文本指针，$j$ 是模式指针：
 
 $$
 T[i]=P[j]\Rightarrow i\leftarrow i+1,\ j\leftarrow j+1
 $$
 
-当 $$j=m$$ 时，说明在 $$i-m$$ 位置找到一次完整匹配，然后用 $$\operatorname{lps}[j-1]$$ 继续寻找重叠匹配：
+当 $j=m$ 时，说明在 $i-m$ 位置找到一次完整匹配，然后用 $\operatorname{lps}[j-1]$ 继续寻找重叠匹配：
 
 $$
 \operatorname{match\_start}=i-m,\quad j\leftarrow \operatorname{lps}[j-1]
 $$
 
-当 $$T[i]\neq P[j]$$ 时，如果 $$j>0$$，不回退文本指针，只回退模式指针：
+当 $T[i]\neq P[j]$ 时，如果 $j>0$，不回退文本指针，只回退模式指针：
 
 $$
 j\leftarrow \operatorname{lps}[j-1]
 $$
 
-如果 $$j=0$$，说明当前文本字符无法作为任何匹配前缀，文本指针前进：
+如果 $j=0$，说明当前文本字符无法作为任何匹配前缀，文本指针前进：
 
 $$
 i\leftarrow i+1
@@ -232,19 +232,19 @@ step = len(pattern)
 
 这种做法能区分“同一个短句在文章不同位置出现很多次”和“同一个短句在尾部连续重复很多次”。Neural Text Degeneration 的重复模式检测真正关心的是后者，因为连续重复才更像解码退化。
 
-从数学上看，设所有匹配起点集合为：
+其数学意义是，设所有匹配起点集合为：
 
 $$
 A=\{i \mid T[i:i+m]=P\}
 $$
 
-其中 $$m=|P|$$。连续重复链的链头集合是：
+其中 $m=|P|$。连续重复链的链头集合是：
 
 $$
 H=\{h \in A \mid h-m \notin A\}
 $$
 
-从链头 $$h$$ 出发，连续重复次数为：
+从链头 $h$ 出发，连续重复次数为：
 
 $$
 c(h)=\max\{q \mid q\geq 1,\ \forall 0\leq t<q,\ h+t\cdot m \in A\}
@@ -297,21 +297,21 @@ def __longest_contiguous_repeat_substring(
     return best
 ```
 
-### Neural Text Degeneration 检测算法的数学表示和程序实现
+### Neural Text Degeneration 检测算法的设计与实现
 
-把 Z 算法和候选排序合起来，`detect(text)` 实际是在求一个最优重复候选。设归一化后的文本为 $$T$$，长度为 $$n$$，最小候选模式长度为 $$p_{\min}$$，最大候选模式长度为 $$p_{\max}$$。如果没有显式传入 `max_pattern_len`，则：
+把 Z 算法和候选排序合起来，`detect(text)` 实际是在求一个最优重复候选。设归一化后的文本为 $T$，长度为 $n$，最小候选模式长度为 $p_{\min}$，最大候选模式长度为 $p_{\max}$。如果没有显式传入 `max_pattern_len`，则：
 
 $$
 p_{\max}=\left\lfloor \frac{n}{2}\right\rfloor
 $$
 
-对每个起点 $$a$$，只要后缀长度还足够容纳两段最小模式，就继续扫描：
+对每个起点 $a$，只要后缀长度还足够容纳两段最小模式，就继续扫描：
 
 $$
 n-a \geq 2p_{\min}
 $$
 
-对每个候选长度 $$p$$，有效范围是：
+对每个候选长度 $p$，有效范围是：
 
 $$
 p_{\min}\leq p\leq \min\left(p_{\max},\left\lfloor\frac{n-a}{2}\right\rfloor\right)
@@ -323,7 +323,7 @@ $$
 r(a,p)=1+\left\lfloor \frac{Z_{T[a:n]}[p]}{p}\right\rfloor
 $$
 
-如果 $$r(a,p)<2$$，它不是连续重复候选；否则得到候选：
+如果 $r(a,p)<2$，它不是连续重复候选；否则得到候选：
 
 $$
 M(a,p)=(T[a:a+p],\ r(a,p),\ a,\ a+p\cdot r(a,p))
@@ -341,7 +341,7 @@ $$
 M^*=\arg\max_{(a,p)} K(a,p)
 $$
 
-业务层再用阈值 $$\tau$$ 判定是否出现重复型 Neural Text Degeneration：
+业务层再用阈值 $\tau$ 判定是否出现重复型 Neural Text Degeneration：
 
 $$
 \operatorname{is\_degenerate}(x)=
@@ -410,15 +410,12 @@ def __is_better_match(candidate: PatternMatch, best: PatternMatch | None) -> boo
     return candidate_key > best_key
 ```
 
-### 在 LLM 调用链路里使用
+### 集成到 LLM 调用链路
 
-在 `any_llm.llm.LLM.__call__` 的实践里，检测器被放在 HTTP 调用成功、响应非空之后。更推荐的命名方式是使用 Neural Text Degeneration 语义，并兼容旧的 `LONG_TAIL_REPEAT_THRESHOLD` 环境变量：
+在 `any_llm.llm.LLM.__call__` 的实践里，检测器被放在 HTTP 调用成功、响应非空之后：
 
 ```python
-threshold = int(os.getenv(
-    'NEURAL_TEXT_DEGENERATION_REPEAT_THRESHOLD',
-    os.getenv('LONG_TAIL_REPEAT_THRESHOLD', 32)
-))
+threshold = 32
 pattern_match = repeat_pattern_detector(res)
 if pattern_match and pattern_match.repeat > threshold:
     raise ValueError(
@@ -427,7 +424,7 @@ if pattern_match and pattern_match.repeat > threshold:
     )
 ```
 
-这里默认阈值是 `32`。旧变量名 `LONG_TAIL_REPEAT_THRESHOLD` 是历史命名，更准确的语义是“重复型 Neural Text Degeneration 的重复次数阈值”：如果任意连续重复模式超过阈值，就把这次 LLM 输出视为无效结果。由于外层重试装饰器会捕获 `ValueError`，这类异常可以进入统一重试逻辑，而不是把坏结果返回给业务层。
+这里默认阈值是 `32`，如果任意连续重复模式超过阈值，就把这次 LLM 输出视为无效结果。由于外层重试装饰器会捕获 `ValueError`，这类异常可以进入统一重试逻辑，而不是把坏结果返回给业务层。
 
 这个阈值不应该被理解为普适常数。不同任务要分开调：
 
@@ -436,7 +433,7 @@ if pattern_match and pattern_match.repeat > threshold:
 - 字符级检测容易命中标点和换行，可以提高 `min_pattern_len` 或在业务层忽略纯标点模式。
 - 长文生成最好同时看 `repeat` 和重复片段覆盖长度。`"。" * 40` 与一个 50 字短句重复 6 次，风险形态不同。
 
-也要承认这个算法的边界。它擅长发现逐字连续重复，不擅长发现语义重复，例如“我理解了 / 明白了 / 可以的”这种变体循环；它也不判断输出是否事实正确、格式是否完整、是否符合业务 schema。因此它应该和 JSON schema、正则结构检查、关键词黑名单、最大长度、流式 early stop、业务语义校验一起使用，而不是单独承担全部质量控制。
+同时，这个算法也有明确的边界。它擅长发现逐字连续重复，不擅长发现语义重复，例如“我理解了 / 明白了 / 可以的”这种变体循环；它也不判断输出是否事实正确、格式是否完整、是否符合业务 schema。因此它应该和 JSON schema、正则结构检查、关键词黑名单、最大长度、流式 early stop、业务语义校验一起使用，而不是单独承担全部质量控制。
 
 ### 重试机制的实现
 
@@ -454,35 +451,32 @@ retry = Retry(max_retries=2, delay=True)
 @retry.on_exceptions(ValueError, HTTPError, ConnectionError, SSLError, Timeout, ConnectTimeout, ReadTimeout)
 def __call__(self, user_message: str, system_message: str | None = None, **kwargs):
     ...
-    threshold = int(os.getenv(
-        'NEURAL_TEXT_DEGENERATION_REPEAT_THRESHOLD',
-        os.getenv('LONG_TAIL_REPEAT_THRESHOLD', 32)
-    ))
+    threshold = 32
     pattern_match = repeat_pattern_detector(res)
     if pattern_match and pattern_match.repeat > threshold:
         raise ValueError('Neural Text Degeneration pattern detected.')
     return res
 ```
 
-数学上，可以把异常重试写成一个有限状态过程。设被包装函数为 $$f$$，可重试异常集合为 $$E$$，最大重试次数为 $$R$$。注意这里的 $$R$$ 是失败后的 retry 次数，不是总尝试次数；总尝试次数最多是：
+可以把异常重试理解为一个有限状态过程。设被包装函数为 $f$，可重试异常集合为 $E$，最大重试次数为 $R$。注意这里的 $R$ 是失败后的 retry 次数，不是总尝试次数；总尝试次数最多是：
 
 $$
 A_{\max}=R+1
 $$
 
-第 $$a$$ 次尝试的结果为：
+第 $a$ 次尝试的结果为：
 
 $$
 Y_a=f(x)
 $$
 
-如果 $$Y_a$$ 正常返回，则直接返回；如果抛出异常 $$e_a$$，判断：
+如果 $Y_a$ 正常返回，则直接返回；如果抛出异常 $e_a$，判断：
 
 $$
 \operatorname{retryable}(e_a)=\exists E_i\in E,\ e_a \text{ is instance of } E_i
 $$
 
-当 $$\operatorname{retryable}(e_a)=\operatorname{false}$$ 时，异常立即向上抛出；当它为真且 $$a<R$$ 时进入下一次尝试；当它为真且 $$a=R$$ 时，抛出 `MaxRetriesReachedError`。
+当 $\operatorname{retryable}(e_a)=\operatorname{false}$ 时，异常立即向上抛出；当它为真且 $a<R$ 时进入下一次尝试；当它为真且 $a=R$ 时，抛出 `MaxRetriesReachedError`。
 
 如果启用 `delay=True`，每次重试前会进入指数退避加随机抖动。源码中的 `sleep(retries, base=2., max_delay=600.)` 可以写成：
 
@@ -552,13 +546,13 @@ raise MaxRetriesReachedError(
 )
 ```
 
-`on_return()` 的形式类似，只是失败信号来自返回值校验器而不是异常集合。设校验器为 $$g$$，则：
+`on_return()` 的形式类似，只是失败信号来自返回值校验器而不是异常集合。设校验器为 $g$，则：
 
 $$
 \operatorname{valid}(Y_a)=g(Y_a)
 $$
 
-当 $$g(Y_a)=\operatorname{false}$$ 时重试，直到某次返回值通过校验，或者重试次数耗尽后抛出 `MaxRetriesReachedError`。这类模式适合“HTTP 成功但业务响应为空”“JSON 能解析但 schema 不合格”这类失败；重复型 Neural Text Degeneration 检测则更适合在业务函数内部抛出 `ValueError`，让它和 HTTP 错误、超时错误进入同一条异常重试链路。
+当 $g(Y_a)=\operatorname{false}$ 时重试，直到某次返回值通过校验，或者重试次数耗尽后抛出 `MaxRetriesReachedError`。这类模式适合“HTTP 成功但业务响应为空”“JSON 能解析但 schema 不合格”这类失败；重复型 Neural Text Degeneration 检测则更适合在业务函数内部抛出 `ValueError`，让它和 HTTP 错误、超时错误进入同一条异常重试链路。
 
 ## 如何缓解
 
@@ -570,26 +564,26 @@ $$
 
 3. **调整 `top_p`**：Top-P / Nucleus Sampling 会选择累积概率达到阈值 `P` 的最小候选集合，再在这个集合里采样；它本来就是为缓解开放域生成中的 Neural Text Degeneration 而提出的采样策略之一$^{[5]}$ $^{[9]}$。如果退化来自过宽的候选空间和低质量尾部 token，可以尝试降低 `top_p`，例如从 `1.0` 降到 `0.9`、`0.8`，让采样空间更集中。这也是当前 `any_llm` 实践里检测失败后给出的默认建议。
 
-4. **使用 Min-p Sampling**：Min-p Sampling 是一种动态截断策略，它不使用固定累计概率阈值，而是用当前最高概率 token 作为参照，只保留相对概率足够高的候选 token$^{[11]}$。设当前步归一化概率为 $$p_i$$，最高概率为 $$p_{\max}=\max_j p_j$$，Min-p 阈值为 $$\alpha$$，候选集合为：
+4. **使用 Min-p Sampling**：Min-p Sampling 是一种动态截断策略，它不使用固定累计概率阈值，而是用当前最高概率 token 作为参照，只保留相对概率足够高的候选 token$^{[11]}$。设当前步归一化概率为 $p_i$，最高概率为 $p_{\max}=\max_j p_j$，Min-p 阈值为 $\alpha$，候选集合为：
 
-$$
-V_{\operatorname{min-p}}=\{i \mid p_i \geq \alpha \cdot p_{\max}\}
-$$
+    $$
+    V_{\operatorname{min-p}}=\{i \mid p_i \geq \alpha \cdot p_{\max}\}
+    $$
 
-然后在 $$V_{\operatorname{min-p}}$$ 上重新归一化并采样。它的直觉是：当模型很确定时，候选集合会更窄；当模型本来就不确定时，候选集合会保留更多合理分支。对于高温采样下的创意生成，它通常比单纯固定 `top_p` 更自适应，但仍然需要按任务调参。
+    然后在 $V_{\operatorname{min-p}}$ 上重新归一化并采样。它的直觉是：当模型很确定时，候选集合会更窄；当模型本来就不确定时，候选集合会保留更多合理分支。对于高温采样下的创意生成，它通常比单纯固定 `top_p` 更自适应，但仍然需要按任务调参。
 
-5. **使用 Repetition Penalty**：Repetition Penalty 会对已经生成过的 token 降低再次出现的倾向，CTRL 论文中也使用了这种重复惩罚思路来减少退化重复$^{[10]}$。一种常见实现是在采样前修改 logits。设原始 logit 为 $$z_i$$，已生成 token 集合为 $$G$$，惩罚系数为 $$\theta \geq 1$$，则可以用下面的符号表示：
+5. **使用 Repetition Penalty**：Repetition Penalty 会对已经生成过的 token 降低再次出现的倾向，CTRL 论文中也使用了这种重复惩罚思路来减少退化重复$^{[10]}$。一种常见实现是在采样前修改 logits。设原始 logit 为 $z_i$，已生成 token 集合为 $G$，惩罚系数为 $\theta \geq 1$，则可以用下面的符号表示：
 
-$$
-z'_i=
-\begin{cases}
-z_i/\theta, & i\in G \land z_i>0 \\
-z_i\cdot\theta, & i\in G \land z_i\leq 0 \\
-z_i, & i\notin G
-\end{cases}
-$$
+    $$
+    z'_i=
+    \begin{cases}
+    z_i/\theta, & i\in G \land z_i>0 \\
+    z_i\cdot\theta, & i\in G \land z_i\leq 0 \\
+    z_i, & i\notin G
+    \end{cases}
+    $$
 
-再用 $$z'_i$$ 进入 softmax 和后续采样。`repetition_penalty` 太低时几乎不起作用，太高时会压制必要复现，例如术语、变量名、表格列名和诗歌回环，因此它更适合作为重复退化的软约束，而不是替代输出校验。
+    再用 $z'_i$ 进入 softmax 和后续采样。`repetition_penalty` 太低时几乎不起作用，太高时会压制必要复现，例如术语、变量名、表格列名和诗歌回环，因此它更适合作为重复退化的软约束，而不是替代输出校验。
 
 6. **调整 `temperature`**：Temperature 通过缩放 logits 改变概率分布：`T < 1` 会让分布更陡峭，输出更确定；`T > 1` 会让分布更平坦，输出更多样但也更不稳定$^{[5]}$。如果重复来自高温采样导致的跑偏，可以降低 temperature；如果重复来自极低温或贪心式的固定模板自循环，则可以小幅提高 temperature，或者配合 Repetition Penalty、Min-p Sampling、frequency penalty、presence penalty 等服务端参数。不要机械地把所有任务都调成同一个温度。
 
@@ -597,17 +591,17 @@ $$
 
 8. **把 Neural Text Degeneration 检测放到统一验证层**：我的偏好是把它和“空响应检测、格式检测、schema 校验、业务语义校验”放在同一层：HTTP 成功只代表模型服务返回了东西，不代表输出可用。LLM 可能返回错误格式、错误事实、重复尾巴或半截 JSON；调用方必须把这些都当成不同的失败类型来处理。
 
-一个可执行的默认策略可以是：
+    一个可执行的默认策略可以是：
 
-```text
-1. 生成后检查空响应。
-2. 检查重复模式，repeat > threshold 则判定重复型 Neural Text Degeneration。
-3. 检查任务格式，例如 JSON schema、Markdown section、代码块闭合。
-4. 失败时带上错误类型重试，并按错误类型调整参数。
-5. 重试仍失败时返回结构化错误，不把坏文本交给下游。
-```
+    ```text
+    1. 生成后检查空响应。
+    2. 检查重复模式，repeat > threshold 则判定重复型 Neural Text Degeneration。
+    3. 检查任务格式，例如 JSON schema、Markdown section、代码块闭合。
+    4. 失败时带上错误类型重试，并按错误类型调整参数。
+    5. 重试仍失败时返回结构化错误，不把坏文本交给下游。
+    ```
 
-这套策略的核心不是某个字符串算法有多聪明，而是“不信任 LLM 的最后一公里”。Z 算法和 KMP 只是让这层不信任变得便宜、确定、可解释。
+    **这套策略的核心不是某个字符串算法有多聪明，而是“不信任 LLM 的最后一公里”。Z 算法和 KMP 只是让这层不信任变得便宜、确定、可解释。**
 
 ## 参考文献
 
