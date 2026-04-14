@@ -1,7 +1,7 @@
 ---
 layout: post
 toc: true
-title: "LLM 生成(补全)阶段的 Neural Text Degeneration 检测算法设计: 缓解 Repetition Curse 问题"
+title: "LLM 生成（补全）阶段的 Neural Text Degeneration 检测算法设计: 缓解 Repetition Curse 问题"
 categories: LLM
 tags: [LLM, NLP, decoding, neural-text-degeneration, z-algorithm, kmp, repetition-penalty, min-p-sampling, harness-engineering]
 author:
