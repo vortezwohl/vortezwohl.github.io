@@ -113,9 +113,7 @@ repeat_count = 1 + z[pattern_len] // pattern_len
 
 举例说，后缀是 `abcabcabcx`，候选 `pattern_len = 3`，那么候选模式是 `abc`。`z[3] = 6`，因为从第 3 位开始的 `abcabc...` 和前缀 `abcabc...` 能匹配 6 个字符，所以重复次数是 `1 + 6 // 3 = 3`。
 
-其数学表达如下所示.
-
-对原始文本 $T$、起点 $a$、候选模式长度 $p$，令后缀 $U=T[a:|T|]$，对 $U$ 计算 Z 数组，则连续重复次数为：
+其数学表达如下所示. 对原始文本 $T$、起点 $a$、候选模式长度 $p$，令后缀 $U=T[a:|T|]$，对 $U$ 计算 Z 数组，则连续重复次数为：
 
 $$
 r(a,p)=1+\left\lfloor \frac{Z_U[p]}{p}\right\rfloor
@@ -235,10 +233,11 @@ step = len(pattern)
 其数学意义是，设所有匹配起点集合为：
 
 $$
-A=\{i \mid T[i:i+m]=P\}
+A=\{i \mid T[i:i+m]=P\} \\
+m=|P|
 $$
 
-其中 $m=|P|$。连续重复链的链头集合是：
+连续重复链的链头集合是：
 
 $$
 H=\{h \in A \mid h-m \notin A\}
