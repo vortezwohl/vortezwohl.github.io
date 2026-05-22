@@ -1,0 +1,767 @@
+---
+layout: post
+title: "AI Coding 时代, 理解设计模式变得更加重要"
+toc: true
+math: false
+academic_article: true
+categories: software-engineering
+tags:
+  - design-patterns
+  - ai-coding
+  - python
+  - software-architecture
+author:
+  - vortezwohl
+  - Codex
+---
+
+<div class="academic-article" data-academic-article>
+  <section class="article-hero">
+    <p><strong>摘要。</strong> 在 AI Coding 时代，代码生成变得便宜，设计失误却变得更贵。因为今天最稀缺的资源已经不是“把代码敲出来”，而是“让一批代码能够长期演化、可验证、可替换、可协作”。设计模式不是过时的面向对象遗产，而是一套压缩过的工程经验：它们把常见变化点、协作边界、替换方式和失败模式编码成了可复用结构。理解设计模式，等于理解“为什么这段代码未来会失控”，以及“怎样提前把失控点关进笼子里”。</p>
+    <p>这篇文章顺着标题往下讲，不把设计模式当成背诵题，而把它们放回 AI 时代的真实软件开发环境里：代码生成、框架组装、微服务协同、开源集成、测试回归、长期维护。全文选取 10 个最常用、最值得掌握的模式，从思想、结构、辨析、实践、知名框架案例一直讲到 Python 展示性 demo，并补上“何时不该用”的反模式警示。</p>
+  </section>
+
+  <div class="insight-panel">
+    <strong>先给结论。</strong> AI 让“写代码”这件事更容易，但也让“把错误结构写得又快又多”更容易。设计模式的重要性不是下降了，而是上升了。因为当模型能瞬间生成十个版本时，真正决定系统质量的，是你有没有能力判断：哪里该抽象，哪里不该抽象；哪里该解耦，哪里该直写；哪里需要稳定接口，哪里允许临时拼接。
+  </div>
+
+  <h2>一、为什么是 AI Coding 时代，设计模式反而更重要？</h2>
+
+  <p>传统教材里讲设计模式，通常从“类之间怎么组织”开始。今天如果还只这么讲，会显得偏窄。因为在 AI Coding 时代，设计模式首先不是语言技巧，而是<strong>系统约束语言</strong>。它帮助人类和模型同时回答四个关键问题：</p>
+
+  <ul class="takeaway-list">
+    <li>变化点在哪里？是算法会变、通知链会变、依赖对象会变，还是接入系统会变。</li>
+    <li>变化如何被隔离？是通过接口替换、组合增强、创建延迟，还是统一入口。</li>
+    <li>系统如何被验证？是可以单测一个策略、替换一个工厂，还是只能从头到尾集成测。</li>
+    <li>多人协作如何避免互相踩踏？是通过边界清晰的对象族、事件总线、门面层来收敛影响面，还是让每个人都在全局 if-else 上叠补丁。</li>
+  </ul>
+
+  <p>过去，一个开发者写代码慢一些，往往还有时间在实现过程中意识到结构正在腐化。今天，AI 能在一分钟内生成上百行“看上去没错”的代码。如果缺少结构判断，系统会迅速滑向三种常见局面：</p>
+
+  <div class="comparison-panel">
+    <table>
+      <thead>
+        <tr>
+          <th>局面</th>
+          <th>表面现象</th>
+          <th>根本问题</th>
+          <th>设计模式能提供什么</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>功能堆叠</td>
+          <td>需求来了就继续加分支</td>
+          <td>变化点没有被抽象</td>
+          <td><code>Strategy</code>、<code>Template Method</code></td>
+        </tr>
+        <tr>
+          <td>依赖扩散</td>
+          <td>模块到处直接 new、直接调</td>
+          <td>创建和使用没有分离</td>
+          <td><code>Factory Method</code>、<code>Abstract Factory</code></td>
+        </tr>
+        <tr>
+          <td>横切失控</td>
+          <td>日志、鉴权、缓存散落全局</td>
+          <td>横切关注点没有统一收束</td>
+          <td><code>Decorator</code>、<code>Proxy</code>、<code>Facade</code></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>从论文综述到工业框架文档，一个稳定结论是：设计模式之所以长期有效，不是因为类图优雅，而是因为它们和软件中的<strong>重复变化结构</strong>高度同构。Spring 之所以大量使用模板方法、工厂、代理、观察者，不是为了展示 GoF 教科书，而是因为 IOC、AOP、事件驱动、本地与远程资源访问，本身就需要这些结构。</p>
+
+  <h2>二、理解设计模式的正确姿势</h2>
+
+  <p>判断自己是否真的理解一个模式，不是看能不能背出定义，而是看能不能回答下面五个问题：</p>
+
+  <ol>
+    <li>这个模式要解决的<strong>变化点</strong>是什么？</li>
+    <li>它的<strong>结构代价</strong>是什么？多了一层接口？多了一个对象族？多了一个代理链？</li>
+    <li>它和相邻模式的<strong>边界</strong>在哪里？比如 Proxy 和 Decorator，Factory Method 和 Abstract Factory。</li>
+    <li>它在现代框架里通常以什么形式出现？显式类层级，还是配置、容器、回调、装饰器语法糖。</li>
+    <li>如果不用它，会退化成什么坏味道？巨型条件分支、构造器污染、横切逻辑复制，还是模块间硬编码耦合。</li>
+  </ol>
+
+  <div class="reference-note">
+    <strong>本文的选型标准。</strong> 经典 GoF 是 23 个模式，但并不是每一个在今天都同等重要。这里选择 10 个模式，标准不是“最传统”，而是“最常出现在真实工程、AI 代码生成、主流框架和开源生态里”。因此本文聚焦：<code>Strategy</code>、<code>Observer</code>、<code>Factory Method</code>、<code>Abstract Factory</code>、<code>Singleton</code>、<code>Adapter</code>、<code>Decorator</code>、<code>Proxy</code>、<code>Template Method</code>、<code>Facade</code>。
+  </div>
+
+  <h2>三、10 大设计模式速览</h2>
+
+  <div class="pattern-grid">
+    <section class="pattern-card">
+      <h3>创建型</h3>
+      <p>关注“对象如何被创建”，重点是把创建决策从使用方移走。</p>
+      <div class="pattern-meta">
+        <span>Factory Method</span>
+        <span>Abstract Factory</span>
+        <span>Singleton</span>
+      </div>
+    </section>
+    <section class="pattern-card">
+      <h3>结构型</h3>
+      <p>关注“对象如何组织与包裹”，重点是兼容、增强、控制和简化。</p>
+      <div class="pattern-meta">
+        <span>Adapter</span>
+        <span>Decorator</span>
+        <span>Proxy</span>
+        <span>Facade</span>
+      </div>
+    </section>
+    <section class="pattern-card">
+      <h3>行为型</h3>
+      <p>关注“职责如何流动”，重点是算法替换、消息传播与流程骨架。</p>
+      <div class="pattern-meta">
+        <span>Strategy</span>
+        <span>Observer</span>
+        <span>Template Method</span>
+      </div>
+    </section>
+    <section class="pattern-card">
+      <h3>AI 时代的额外价值</h3>
+      <p>这些模式能把 AI 生成代码限制在清晰边界里，使单点替换、局部测试和自动回归变得现实。</p>
+    </section>
+  </div>
+
+  <div class="pattern-switcher" role="tablist" aria-label="设计模式切换">
+    <button type="button" data-pattern-tab="strategy" role="tab" aria-selected="false">Strategy</button>
+    <button type="button" data-pattern-tab="observer" role="tab" aria-selected="false">Observer</button>
+    <button type="button" data-pattern-tab="factory-method" role="tab" aria-selected="false">Factory Method</button>
+    <button type="button" data-pattern-tab="abstract-factory" role="tab" aria-selected="false">Abstract Factory</button>
+    <button type="button" data-pattern-tab="singleton" role="tab" aria-selected="false">Singleton</button>
+    <button type="button" data-pattern-tab="adapter" role="tab" aria-selected="false">Adapter</button>
+    <button type="button" data-pattern-tab="decorator" role="tab" aria-selected="false">Decorator</button>
+    <button type="button" data-pattern-tab="proxy" role="tab" aria-selected="false">Proxy</button>
+    <button type="button" data-pattern-tab="template-method" role="tab" aria-selected="false">Template Method</button>
+    <button type="button" data-pattern-tab="facade" role="tab" aria-selected="false">Facade</button>
+  </div>
+
+  <section class="pattern-detail" data-pattern-detail="strategy">
+    <div id="pattern-strategy" class="pattern-anchor"></div>
+    <h2>四、Strategy：把变化算法从主流程里拔出来</h2>
+    <p><strong>一句话定义。</strong> 定义一组可互换算法，把它们封装起来，并使它们可以在运行时替换。</p>
+    <p><strong>它解决什么问题。</strong> 当一个业务流程的骨架稳定，但其中“计算规则、排序规则、决策逻辑”经常变化时，最糟糕的写法是让主流程充满 <code>if / elif / else</code>。Strategy 的核心不是面向对象炫技，而是承认：<strong>算法是一个一等变化点</strong>。</p>
+    <p>AI 时代里，Strategy 特别重要，因为模型极其擅长生成分支逻辑，却不擅长主动为你识别“这些分支其实是同一接口下的多种策略”。如果没有人类收束，折扣策略、路由策略、召回策略、审核策略会在几轮迭代后变成条件泥潭。</p>
+
+    <h3>思想拆解</h3>
+    <ul>
+      <li>稳定的部分：调用时机、输入输出协议、主业务流程。</li>
+      <li>变化的部分：具体算法实现。</li>
+      <li>隔离方式：定义统一接口，由上下文对象组合一个具体策略。</li>
+    </ul>
+
+    <h3>什么时候该用</h3>
+    <ul>
+      <li>同一个目标需要多种算法，例如定价、排序、推荐、筛选、压缩、鉴权。</li>
+      <li>规则切换有显式条件，且未来可能继续增加。</li>
+      <li>你希望单独测试某个算法，而不是每次都跑完整业务链路。</li>
+    </ul>
+
+    <h3>什么时候不该用</h3>
+    <ul>
+      <li>只有两个极稳定分支，且几乎不可能扩展时，直接 <code>if</code> 更简单。</li>
+      <li>策略之间输入输出差异太大，硬套统一接口只会制造抽象噪音。</li>
+    </ul>
+
+    <h3>框架与开源案例</h3>
+    <ul>
+      <li>Spring 的事务管理器、资源访问策略、Bean 解析链路中广泛存在“面向接口替换具体策略”的设计。</li>
+      <li>SQLAlchemy 的不同方言、不同连接后端也体现出策略式替换思想。</li>
+      <li>机器学习框架中的优化器、学习率调度器，本质也是策略家族。</li>
+    </ul>
+
+    <div class="demo-panel" data-demo-panel>
+      <div class="demo-toolbar">
+        <button type="button" data-demo-run="strategy" data-amount="1000" data-rate="0.2">运行 Strategy Demo</button>
+        <button type="button" class="copy-demo-button" data-copy-demo="code-strategy">复制代码</button>
+      </div>
+      <p class="demo-note">点击后会在下方模拟“上下文切换折扣策略”的运行效果。</p>
+      <pre id="code-strategy"><code class="language-python">from abc import ABC, abstractmethod
+
+
+class PricingStrategy(ABC):
+    @abstractmethod
+    def price(self, amount: float) -> float:
+        raise NotImplementedError
+
+
+class NoDiscount(PricingStrategy):
+    def price(self, amount: float) -> float:
+        return amount
+
+
+class PercentageDiscount(PricingStrategy):
+    def __init__(self, percent: float) -> None:
+        self.percent = percent
+
+    def price(self, amount: float) -> float:
+        return round(amount * (1 - self.percent), 2)
+
+
+class Checkout:
+    def __init__(self, strategy: PricingStrategy) -> None:
+        self.strategy = strategy
+
+    def total(self, amount: float) -> float:
+        return self.strategy.price(amount)</code></pre>
+      <div class="demo-output" data-demo-output>等待运行...</div>
+    </div>
+
+    <div class="insight-panel">
+      <strong>真正的理解标准。</strong> 你不是会写一个 <code>ABC</code> 就算懂 Strategy。真正懂，是你能在看到一段十几个分支的业务代码时，判断出“这里的变化点其实是算法而不是流程”，并且敢于把它拔出来。
+    </div>
+  </section>
+
+  <section class="pattern-detail" data-pattern-detail="observer" hidden>
+    <div id="pattern-observer" class="pattern-anchor"></div>
+    <h2>五、Observer：把“发生了什么”与“谁来响应”拆开</h2>
+    <p><strong>一句话定义。</strong> 定义对象间一对多依赖关系，当一个对象状态变化时，所有依赖者都会收到通知并自动更新。</p>
+    <p>Observer 的核心是事件驱动思想。系统里经常有这样的需求：订单支付成功后，要通知库存、优惠券、审计、消息中心、风控。最差的实现是支付函数里一个个直接调用这些模块。那样每增加一个动作，主流程就被改一次；每下线一个动作，也要改主流程。</p>
+    <p>Observer 不是“让系统变复杂”，而是让发布方只表达事件本身，而不拥有订阅者的业务知识。它真正抽掉的不是函数调用，而是<strong>认知耦合</strong>。</p>
+
+    <h3>思想拆解</h3>
+    <ul>
+      <li>发布者只负责发事件，不负责决定谁来消费。</li>
+      <li>订阅者独立注册、独立演进、独立失败隔离。</li>
+      <li>事件是协作协议，因此命名、载荷和时序要比代码本身更重要。</li>
+    </ul>
+
+    <h3>AI 时代为什么更重要</h3>
+    <p>AI 生成代码时很容易把“支付后顺手做点别的”不断往主链路里塞，结果导致主流程逐渐承担越来越多副作用。Observer 提供了一种结构化约束：主流程只发布事实，附加逻辑在订阅侧扩展。</p>
+
+    <h3>框架与开源案例</h3>
+    <ul>
+      <li>Spring 的 <code>ApplicationEventPublisher</code> 是工业级 Observer。</li>
+      <li>Django Signals 是 Web 开发中最广为人知的观察者机制之一。</li>
+      <li>前端状态管理、消息总线、Webhook 派发都属于这一思想延伸。</li>
+    </ul>
+
+    <div class="demo-panel" data-demo-panel>
+      <div class="demo-toolbar">
+        <button type="button" data-demo-run="observer">运行 Observer Demo</button>
+        <button type="button" class="copy-demo-button" data-copy-demo="code-observer">复制代码</button>
+      </div>
+      <pre id="code-observer"><code class="language-python">from collections.abc import Callable
+
+
+class EventBus:
+    def __init__(self) -> None:
+        self._subscribers: dict[str, list[Callable[[dict], None]]] = {}
+
+    def subscribe(self, event: str, fn: Callable[[dict], None]) -> None:
+        self._subscribers.setdefault(event, []).append(fn)
+
+    def publish(self, event: str, payload: dict) -> None:
+        for fn in self._subscribers.get(event, []):
+            fn(payload)</code></pre>
+      <div class="demo-output" data-demo-output>等待运行...</div>
+    </div>
+
+    <div class="comparison-panel">
+      <strong>Observer 的常见误区。</strong> 事件驱动不是把所有事情都异步化。若核心业务必须强一致、可回滚、顺序敏感，就不能因为“解耦”而盲目丢进事件总线。Observer 解耦的是职责，不自动解决事务一致性。
+    </div>
+  </section>
+
+  <section class="pattern-detail" data-pattern-detail="factory-method" hidden>
+    <div id="pattern-factory-method" class="pattern-anchor"></div>
+    <h2>六、Factory Method：把“创建哪一种对象”推迟出去</h2>
+    <p><strong>一句话定义。</strong> 定义一个用于创建对象的接口，让子类决定实例化哪一个类。</p>
+    <p>Factory Method 看上去像“多写一层”，但它解决的是一个很现实的问题：当调用方只关心“我要一个报表对象”“我要一个解析器”“我要一个存储客户端”时，不应该同时承担“创建哪一种具体实现”的决定。</p>
+    <p>如果使用方直接 <code>JsonReport()</code>、<code>HtmlReport()</code>、<code>PdfReport()</code> 到处 new，那么每增加一种实现，都要修改很多地方。Factory Method 把变化点集中到工厂层，使用方只依赖抽象产品。</p>
+
+    <h3>适用场景</h3>
+    <ul>
+      <li>产品对象有多种实现，但调用方只关心统一行为。</li>
+      <li>创建逻辑不只是简单构造，可能包含配置读取、依赖装配、资源检查。</li>
+      <li>你希望新类型接入时，主要修改点集中在工厂体系，而不是散落全局。</li>
+    </ul>
+
+    <h3>框架案例</h3>
+    <ul>
+      <li>Spring Bean 创建链路大量体现“框架决定何时如何创建对象”。</li>
+      <li>Flask 官方推荐的 Application Factory 模式，本质上也是将应用对象创建延迟并集中管理。</li>
+    </ul>
+
+    <div class="demo-panel" data-demo-panel>
+      <div class="demo-toolbar">
+        <button type="button" data-demo-run="factory">运行 Factory Method Demo</button>
+        <button type="button" class="copy-demo-button" data-copy-demo="code-factory-method">复制代码</button>
+      </div>
+      <pre id="code-factory-method"><code class="language-python">from abc import ABC, abstractmethod
+
+
+class Report(ABC):
+    @abstractmethod
+    def render(self) -> str:
+        raise NotImplementedError
+
+
+class JsonReport(Report):
+    def render(self) -> str:
+        return '{"status": "ok"}'
+
+
+class HtmlReport(Report):
+    def render(self) -> str:
+        return "&lt;p&gt;ok&lt;/p&gt;"
+
+
+class ReportCreator(ABC):
+    @abstractmethod
+    def create_report(self) -> Report:
+        raise NotImplementedError
+
+    def export(self) -> str:
+        return self.create_report().render()</code></pre>
+      <div class="demo-output" data-demo-output>等待运行...</div>
+    </div>
+  </section>
+
+  <section class="pattern-detail" data-pattern-detail="abstract-factory" hidden>
+    <div id="pattern-abstract-factory" class="pattern-anchor"></div>
+    <h2>七、Abstract Factory：创建的不是一个对象，而是一整套对象族</h2>
+    <p><strong>一句话定义。</strong> 提供一个接口，用于创建相关或相互依赖对象的家族，而不必指定它们的具体类。</p>
+    <p>Factory Method 解决“这个对象怎么创建”，Abstract Factory 解决“这一组对象必须彼此兼容时，如何成套创建”。最常见的例子是 UI 主题：深色主题下，按钮、对话框、输入框必须同时是深色体系；你不能只换按钮而不换对话框。</p>
+    <p>AI 生成界面代码时，很容易出现局部风格漂移。Abstract Factory 的价值在于把“成套一致性”变成结构约束，而不是靠开发者记忆。</p>
+
+    <h3>典型场景</h3>
+    <ul>
+      <li>主题系统、数据库方言、云厂商 SDK 适配层。</li>
+      <li>多平台 UI 组件族，例如 Windows / macOS / Web。</li>
+      <li>需要保证兼容性矩阵时，例如某套对象必须一起切换。</li>
+    </ul>
+
+    <div class="demo-panel" data-demo-panel>
+      <div class="demo-toolbar">
+        <button type="button" data-demo-run="abstract_factory">运行 Abstract Factory Demo</button>
+        <button type="button" class="copy-demo-button" data-copy-demo="code-abstract-factory">复制代码</button>
+      </div>
+      <pre id="code-abstract-factory"><code class="language-python">from abc import ABC, abstractmethod
+
+
+class Button(ABC):
+    @abstractmethod
+    def draw(self) -> str:
+        raise NotImplementedError
+
+
+class Dialog(ABC):
+    @abstractmethod
+    def draw(self) -> str:
+        raise NotImplementedError
+
+
+class ThemeFactory(ABC):
+    @abstractmethod
+    def create_button(self) -> Button:
+        raise NotImplementedError
+
+    @abstractmethod
+    def create_dialog(self) -> Dialog:
+        raise NotImplementedError</code></pre>
+      <div class="demo-output" data-demo-output>等待运行...</div>
+    </div>
+
+    <div class="insight-panel">
+      <strong>一个判断口诀。</strong> 如果你只是“创建一个对象”，优先想 Factory Method；如果你要“切换整套兼容组件”，优先想 Abstract Factory。
+    </div>
+  </section>
+
+  <section class="pattern-detail" data-pattern-detail="singleton" hidden>
+    <div id="pattern-singleton" class="pattern-anchor"></div>
+    <h2>八、Singleton：全局唯一的诱惑与陷阱</h2>
+    <p><strong>一句话定义。</strong> 保证一个类只有一个实例，并提供全局访问点。</p>
+    <p>Singleton 是最容易被初学者过度使用的模式，也是最需要在今天重新解释的模式。它不是“全局变量的高级版”，而是为了表达：某类资源在系统语义上应该唯一，例如全局配置、注册表、进程内缓存门面。</p>
+    <p>但现代工程里，很多时候真正应该做的不是手写单例，而是让依赖注入容器管理生命周期。Spring 默认的 singleton scope 就说明了这一点：<strong>唯一性最好由容器保证，而不是业务类自己偷偷实现</strong>。</p>
+
+    <h3>什么时候合理</h3>
+    <ul>
+      <li>系统级配置对象。</li>
+      <li>有限资源管理门面，如连接池注册中心。</li>
+      <li>明确要求进程内唯一时。</li>
+    </ul>
+
+    <h3>什么时候危险</h3>
+    <ul>
+      <li>测试需要隔离时，单例状态会污染用例。</li>
+      <li>全局可变状态太多时，系统行为会变得难以预测。</li>
+      <li>开发者只是图省事，把依赖传递问题伪装成“全局访问”。</li>
+    </ul>
+
+    <div class="demo-panel" data-demo-panel>
+      <div class="demo-toolbar">
+        <button type="button" data-demo-run="singleton">运行 Singleton Demo</button>
+        <button type="button" class="copy-demo-button" data-copy-demo="code-singleton">复制代码</button>
+      </div>
+      <pre id="code-singleton"><code class="language-python">class AppConfig:
+    _instance = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+            cls._instance.debug = False
+        return cls._instance</code></pre>
+      <div class="demo-output" data-demo-output>等待运行...</div>
+    </div>
+  </section>
+
+  <section class="pattern-detail" data-pattern-detail="adapter" hidden>
+    <div id="pattern-adapter" class="pattern-anchor"></div>
+    <h2>九、Adapter：旧系统不改，新系统照样接</h2>
+    <p><strong>一句话定义。</strong> 将一个类的接口转换成客户希望的另一个接口，使原本由于接口不兼容而不能一起工作的类可以协同。</p>
+    <p>软件工程里，最常见的现实不是从零开始，而是和遗留代码、第三方 SDK、外部 API 打交道。Adapter 的价值不是优雅，而是实用：<strong>你不需要重写旧系统，只需要补一层翻译</strong>。</p>
+    <p>这在 AI Coding 时代更常见。因为模型很容易根据“理想接口”生成新模块，但你的真实环境往往是一堆不理想的旧接口。Adapter 正是两者之间的减震层。</p>
+
+    <h3>工业案例</h3>
+    <ul>
+      <li>Spring MVC 的 <code>HandlerAdapter</code>。</li>
+      <li>Requests 的 <code>HTTPAdapter</code>。</li>
+      <li>支付网关、短信服务、不同 LLM Provider SDK 的统一封装。</li>
+    </ul>
+
+    <div class="demo-panel" data-demo-panel>
+      <div class="demo-toolbar">
+        <button type="button" data-demo-run="adapter">运行 Adapter Demo</button>
+        <button type="button" class="copy-demo-button" data-copy-demo="code-adapter">复制代码</button>
+      </div>
+      <pre id="code-adapter"><code class="language-python">from abc import ABC, abstractmethod
+
+
+class LegacySmsService:
+    def send_sms(self, mobile: str, content: str) -> str:
+        return f"SMS to {mobile}: {content}"
+
+
+class Notifier(ABC):
+    @abstractmethod
+    def send(self, user: str, message: str) -> str:
+        raise NotImplementedError
+
+
+class SmsAdapter(Notifier):
+    def __init__(self, legacy: LegacySmsService) -> None:
+        self.legacy = legacy
+
+    def send(self, user: str, message: str) -> str:
+        return self.legacy.send_sms(user, message)</code></pre>
+      <div class="demo-output" data-demo-output>等待运行...</div>
+    </div>
+  </section>
+
+  <section class="pattern-detail" data-pattern-detail="decorator" hidden>
+    <div id="pattern-decorator" class="pattern-anchor"></div>
+    <h2>十、Decorator：不用改原类，也能一层层加能力</h2>
+    <p><strong>一句话定义。</strong> 动态地给对象添加一些额外职责，就扩展功能而言，Decorator 比生成子类更灵活。</p>
+    <p>Decorator 非常适合处理日志、缓存、重试、鉴权、压缩、埋点这类横切增强。它和继承相比的优势是：能力可以按需叠加，而不是预先组合出一堆子类。</p>
+    <p>Python 世界里，“装饰器”语法糖把这个思想推广到了极致。一个 <code>@retry</code>、<code>@cache</code>、<code>@trace</code>，本质上都在做 Decorator 的事情。</p>
+
+    <h3>和 Proxy 的区别</h3>
+    <ul>
+      <li>Decorator 侧重“增强职责”。</li>
+      <li>Proxy 侧重“控制访问”。</li>
+      <li>二者结构相似，但意图不同。意图不同，就不该混为一谈。</li>
+    </ul>
+
+    <div class="demo-panel" data-demo-panel>
+      <div class="demo-toolbar">
+        <button type="button" data-demo-run="decorator">运行 Decorator Demo</button>
+        <button type="button" class="copy-demo-button" data-copy-demo="code-decorator">复制代码</button>
+      </div>
+      <pre id="code-decorator"><code class="language-python">from abc import ABC, abstractmethod
+
+
+class MessageSender(ABC):
+    @abstractmethod
+    def send(self, message: str) -> str:
+        raise NotImplementedError
+
+
+class BasicSender(MessageSender):
+    def send(self, message: str) -> str:
+        return f"send:{message}"
+
+
+class TimestampDecorator(MessageSender):
+    def __init__(self, wrapped: MessageSender) -> None:
+        self.wrapped = wrapped
+
+    def send(self, message: str) -> str:
+        return self.wrapped.send(f"[2026-05-22] {message}")</code></pre>
+      <div class="demo-output" data-demo-output>等待运行...</div>
+    </div>
+  </section>
+
+  <section class="pattern-detail" data-pattern-detail="proxy" hidden>
+    <div id="pattern-proxy" class="pattern-anchor"></div>
+    <h2>十一、Proxy：同样的接口，不同的访问控制</h2>
+    <p><strong>一句话定义。</strong> 为其他对象提供一种代理以控制对这个对象的访问。</p>
+    <p>Proxy 常见于权限控制、远程调用、懒加载、缓存前置、事务边界。调用方以为自己在访问真实对象，实际上中间先经过一层控制器。</p>
+    <p>这类结构在现代后端框架里极其重要。Spring AOP 就大量依赖代理机制；ORM 的延迟加载也是典型代理。它们的共同点不是“包装了一层”，而是“访问行为被重新定义了”。</p>
+
+    <div class="demo-panel" data-demo-panel>
+      <div class="demo-toolbar">
+        <button type="button" data-demo-run="proxy">运行 Proxy Demo</button>
+        <button type="button" class="copy-demo-button" data-copy-demo="code-proxy">复制代码</button>
+      </div>
+      <pre id="code-proxy"><code class="language-python">class FileStore:
+    def read(self, path: str) -> str:
+        return f"content({path})"
+
+
+class AccessProxy:
+    def __init__(self, store: FileStore, allowed: set[str]) -> None:
+        self.store = store
+        self.allowed = allowed
+
+    def read(self, path: str) -> str:
+        if path not in self.allowed:
+            raise PermissionError(path)
+        return self.store.read(path)</code></pre>
+      <div class="demo-output" data-demo-output>等待运行...</div>
+    </div>
+
+    <div class="comparison-panel">
+      <strong>工程提醒。</strong> 很多系统里你会看到“代理 + 装饰 + 适配”外形相似。不要只按结构看，要按意图看。是否在翻译接口、增强职责、控制访问，这三件事分别决定了它究竟是哪一个模式。
+    </div>
+  </section>
+
+  <section class="pattern-detail" data-pattern-detail="template-method" hidden>
+    <div id="pattern-template-method" class="pattern-anchor"></div>
+    <h2>十二、Template Method：先固定流程骨架，再开放局部步骤</h2>
+    <p><strong>一句话定义。</strong> 在一个方法中定义算法骨架，而将某些步骤延迟到子类中，使子类不改变算法结构即可重定义该算法的某些步骤。</p>
+    <p>这是一种非常“工程化”的模式。它承认一个事实：许多流程的大部分步骤是稳定的，只有少数节点变化。如果把全部流程散成自由函数，调用方需要自己组装；如果把每个环节都写死，扩展又会痛苦。Template Method 取中间路线：骨架稳定，局部可变。</p>
+    <p>Spring 的 <code>JdbcTemplate</code> 是最经典案例之一。连接获取、异常处理、资源释放由模板保证，调用方只提供核心查询逻辑。</p>
+
+    <div class="demo-panel" data-demo-panel>
+      <div class="demo-toolbar">
+        <button type="button" data-demo-run="template_method">运行 Template Method Demo</button>
+        <button type="button" class="copy-demo-button" data-copy-demo="code-template-method">复制代码</button>
+      </div>
+      <pre id="code-template-method"><code class="language-python">from abc import ABC, abstractmethod
+
+
+class DataPipeline(ABC):
+    def run(self) -> str:
+        raw = self.extract()
+        clean = self.transform(raw)
+        return self.load(clean)
+
+    @abstractmethod
+    def extract(self) -> str:
+        raise NotImplementedError
+
+    @abstractmethod
+    def transform(self, raw: str) -> str:
+        raise NotImplementedError
+
+    @abstractmethod
+    def load(self, clean: str) -> str:
+        raise NotImplementedError</code></pre>
+      <div class="demo-output" data-demo-output>等待运行...</div>
+    </div>
+  </section>
+
+  <section class="pattern-detail" data-pattern-detail="facade" hidden>
+    <div id="pattern-facade" class="pattern-anchor"></div>
+    <h2>十三、Facade：给复杂子系统一个清晰入口</h2>
+    <p><strong>一句话定义。</strong> 为子系统中的一组接口提供一个一致的界面，Facade 定义一个高层接口，使子系统更容易使用。</p>
+    <p>Facade 不是隐藏复杂性本身，而是隐藏调用方不该承担的复杂性。下单、支付、视频转码、搜索聚合、文档导出，这些业务背后通常有多个子系统协作。调用方若必须了解全部细节，就会出现强耦合和大量重复编排。</p>
+    <p>在 AI 时代，这种问题更加突出。因为模型很容易在多个地方重复写一遍“预订库存 -> 扣款 -> 创建物流”的编排代码。Facade 的意义是把高频编排收束到统一入口，避免业务流程碎片化。</p>
+
+    <div class="demo-panel" data-demo-panel>
+      <div class="demo-toolbar">
+        <button type="button" data-demo-run="facade">运行 Facade Demo</button>
+        <button type="button" class="copy-demo-button" data-copy-demo="code-facade">复制代码</button>
+      </div>
+      <pre id="code-facade"><code class="language-python">class Inventory:
+    def reserve(self, sku: str) -> str:
+        return f"reserved:{sku}"
+
+
+class Payment:
+    def charge(self, user: str, amount: float) -> str:
+        return f"charged:{user}:{amount}"
+
+
+class Shipping:
+    def create(self, sku: str) -> str:
+        return f"ship:{sku}"
+
+
+class OrderFacade:
+    def __init__(self) -> None:
+        self.inventory = Inventory()
+        self.payment = Payment()
+        self.shipping = Shipping()
+
+    def place(self, user: str, sku: str, amount: float) -> list[str]:
+        return [
+            self.inventory.reserve(sku),
+            self.payment.charge(user, amount),
+            self.shipping.create(sku),
+        ]</code></pre>
+      <div class="demo-output" data-demo-output>等待运行...</div>
+    </div>
+  </section>
+
+  <h2>十四、把 10 个模式放在一起，怎样快速判断该用哪一个？</h2>
+
+  <div class="comparison-panel">
+    <table>
+      <thead>
+        <tr>
+          <th>你真正面对的问题</th>
+          <th>优先想到的模式</th>
+          <th>核心判断句</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>同一目标有多种算法</td>
+          <td>Strategy</td>
+          <td>变化的是算法，不是主流程</td>
+        </tr>
+        <tr>
+          <td>对象创建逻辑会变</td>
+          <td>Factory Method</td>
+          <td>使用方不该知道具体创建细节</td>
+        </tr>
+        <tr>
+          <td>要切换一整套兼容对象</td>
+          <td>Abstract Factory</td>
+          <td>需要成套一致，而不是单个对象替换</td>
+        </tr>
+        <tr>
+          <td>事件发生后有多个响应者</td>
+          <td>Observer</td>
+          <td>发布方不应认识所有消费者</td>
+        </tr>
+        <tr>
+          <td>旧接口与新接口不兼容</td>
+          <td>Adapter</td>
+          <td>补翻译层，不动旧系统</td>
+        </tr>
+        <tr>
+          <td>横切能力需要可叠加</td>
+          <td>Decorator</td>
+          <td>增强职责，而不是复制子类</td>
+        </tr>
+        <tr>
+          <td>访问前要加控制</td>
+          <td>Proxy</td>
+          <td>接口不变，访问行为改变</td>
+        </tr>
+        <tr>
+          <td>流程骨架稳定、局部步骤可变</td>
+          <td>Template Method</td>
+          <td>先定框架，再留扩展点</td>
+        </tr>
+        <tr>
+          <td>子系统太复杂，需要统一入口</td>
+          <td>Facade</td>
+          <td>调用方不该承担编排复杂度</td>
+        </tr>
+        <tr>
+          <td>确实需要全局唯一对象</td>
+          <td>Singleton</td>
+          <td>但先确认是否应交给容器管理</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>十五、AI Coding 时代最常见的模式误用</h2>
+
+  <p>模式本身不会过时，但误用会。今天最常见的问题不是“不会模式”，而是“模型一旦学到模式名字，就开始到处套壳”。下面这些误用尤其需要警惕：</p>
+
+  <ul class="takeaway-list">
+    <li><strong>为了抽象而抽象。</strong> 明明只有一个实现，却先造接口、工厂、代理，最后把简单问题做复杂。</li>
+    <li><strong>用 Singleton 掩盖依赖传递。</strong> 本该显式注入的对象，被偷偷做成全局状态。</li>
+    <li><strong>把事件驱动当成银弹。</strong> 任何事都发事件，最终系统时序和一致性失控。</li>
+    <li><strong>把 Decorator、Proxy、Adapter 混着叫。</strong> 结构像不代表意图一样，意图才是模式的灵魂。</li>
+    <li><strong>把 Template Method 用成继承地狱。</strong> 子类层级过深，扩展点越来越多，最后反而不如组合。</li>
+  </ul>
+
+  <div class="insight-panel">
+    <strong>一个更务实的原则。</strong> 设计模式不是先验宗教，而是“变化管理工具”。如果变化尚未出现、成本很低、代码范围很小，直接写也完全合理。真正高水平的工程判断，不是能背 23 个模式，而是知道什么时候别用。
+  </div>
+
+  <h2>十六、为什么主流框架会反复使用这些模式？</h2>
+
+  <p>因为这些模式和框架的底层问题天然同构。Spring 要解决 IOC，所以必须把创建逻辑抽离出来，于是工厂和单例作用域大量出现；它要解决横切逻辑，于是代理成为 AOP 的基础；它要解决事件传播，于是观察者模式自然出现；它要把数据库访问模板化，于是模板方法模式成为核心骨架。Django、Flask、Requests、SQLAlchemy 同样如此。</p>
+
+  <p>这件事对 AI Coding 的意义非常直接：如果你不知道框架内部依赖的设计思想，就会让模型生成“能跑但不顺着框架哲学”的代码。短期也许没问题，长期一定难维护。</p>
+
+  <h2>十七、从思想到实践：一份最小可运行的 Python 汇总示例</h2>
+
+  <p>下面这份代码把文中 10 个模式压缩进一个可运行脚本中，适合做讲解或二次改写。它不是生产代码，而是用于展示各模式的最小结构核心。</p>
+
+  <pre id="code-full-demo"><code class="language-python">from abc import ABC, abstractmethod
+
+
+class PricingStrategy(ABC):
+    @abstractmethod
+    def price(self, amount: float) -> float:
+        raise NotImplementedError
+
+
+class PercentageDiscount(PricingStrategy):
+    def __init__(self, percent: float) -> None:
+        self.percent = percent
+
+    def price(self, amount: float) -> float:
+        return round(amount * (1 - self.percent), 2)
+
+
+class Checkout:
+    def __init__(self, strategy: PricingStrategy) -> None:
+        self.strategy = strategy
+
+    def total(self, amount: float) -> float:
+        return self.strategy.price(amount)
+
+
+class EventBus:
+    def __init__(self) -> None:
+        self._subscribers: dict[str, list] = {}
+
+    def subscribe(self, event: str, fn) -> None:
+        self._subscribers.setdefault(event, []).append(fn)
+
+    def publish(self, event: str, payload: dict) -> None:
+        for fn in self._subscribers.get(event, []):
+            fn(payload)</code></pre>
+
+  <p>如果把这份总 demo 真正扩展到工程里，关键不在于继续加代码，而在于：<strong>每个模式只管理自己的变化点，不要互相越权</strong>。例如策略不负责对象创建，工厂不负责业务流程，门面不负责底层算法。</p>
+
+  <h2>十八、结语：AI 让“模式思维”从加分项变成基本功</h2>
+
+  <p>在手工编码时代，设计模式像是经验丰富开发者的“进阶技巧”。在 AI Coding 时代，它更像是每个人都该具备的<strong>结构判断能力</strong>。因为模型可以生成实现，却不会天然为你的长期维护负责；模型可以模仿框架写法，却不会自动判断哪一种抽象是多余的；模型可以把功能迅速拼起来，却不会主动替你承担未来三个月的重构成本。</p>
+
+  <p>因此，理解设计模式真正重要的地方，不在于你能不能说出 GoF 的标准定义，而在于你能不能看见一段代码背后的变化结构。你一旦能看见，AI 就会从“快速堆代码的机器”变成“在清晰边界内高效实现的助手”；你一旦看不见，AI 只会把错误结构更快放大。</p>
+
+  <div class="reference-note">
+    <strong>一句压轴判断。</strong> AI Coding 时代最值钱的能力，不是写出第一版代码，而是写出“第五次需求变化后仍然站得住”的代码。设计模式就是帮助你做到这件事的最短知识路径之一。
+  </div>
+
+  <h2>参考文献</h2>
+
+  <div class="ref-list">
+    <p>[[1](https://refactoring.guru/design-patterns/catalog)] Refactoring.Guru. <em>Design Patterns Catalog</em>.</p>
+    <p>[[2](https://martinfowler.com/articles/injection.html)] Fowler, M. <em>Inversion of Control Containers and the Dependency Injection pattern</em>.</p>
+    <p>[[3](https://docs.spring.io/spring-framework/reference/core/beans/factory-scopes.html)] Spring Framework Reference. <em>Bean Scopes</em>.</p>
+    <p>[[4](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/context/ApplicationEventPublisher.html)] Spring Framework Javadoc. <em>ApplicationEventPublisher</em>.</p>
+    <p>[[5](https://docs.spring.io/spring-framework/reference/core/aop/proxying.html)] Spring Framework Reference. <em>Proxying Mechanisms</em>.</p>
+    <p>[[6](https://docs.spring.io/spring-framework/reference/data-access/jdbc/core.html)] Spring Framework Reference. <em>JDBC Core and JdbcTemplate</em>.</p>
+    <p>[[7](https://docs.djangoproject.com/en/stable/topics/signals/)] Django Documentation. <em>Signals</em>.</p>
+    <p>[[8](https://flask.palletsprojects.com/en/stable/patterns/appfactories/)] Flask Documentation. <em>Application Factories</em>.</p>
+    <p>[[9](https://requests.readthedocs.io/en/latest/user/advanced/#transport-adapters)] Requests Documentation. <em>Transport Adapters</em>.</p>
+    <p>[[10](https://docs.python.org/3/library/abc.html)] Python Documentation. <em>abc</em>.</p>
+    <p>[[11](https://docs.python.org/3/library/contextlib.html)] Python Documentation. <em>contextlib</em>.</p>
+    <p>[[12](https://doi.org/10.1016/j.infsof.2015.05.006)] Ampatzoglou, A., Chatzigeorgiou, A., Charalampidou, S., and Avgeriou, P. The effect of GoF design patterns on stability: A case study. <em>Information and Software Technology</em>, 2015.</p>
+    <p>[[13](https://www.sciencedirect.com/science/article/pii/S0164121216302321)] Ampatzoglou, A., et al. The state of the art on software engineering design patterns: A systematic mapping study. <em>Journal of Systems and Software</em>, 2016.</p>
+  </div>
+</div>
