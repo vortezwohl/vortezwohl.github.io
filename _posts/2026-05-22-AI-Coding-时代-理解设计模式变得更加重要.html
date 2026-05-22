@@ -305,6 +305,18 @@ author:
       min-width: 2.2rem;
     }
 
+    #design-patterns-essay .cite-ref {
+      display: inline-block;
+      margin-left: 0.18rem;
+      font-size: 0.82em;
+      vertical-align: super;
+      line-height: 1;
+    }
+
+    #design-patterns-essay .cite-ref a {
+      border-bottom: 0;
+    }
+
     #design-patterns-essay a {
       color: #675743;
       text-decoration: none;
@@ -479,7 +491,7 @@ author:
           <ul>
             <li>适合：定价、排序、调度、推荐、规则匹配、审核。</li>
             <li>不适合：只有两个稳定分支且几乎不扩展的简单逻辑。</li>
-            <li>典型框架感知：Spring 中大量面向接口的资源访问和策略替换思想都能映射到它。</li>
+            <li>典型框架感知：Spring 中大量面向接口的资源访问和策略替换思想都能映射到它。<span class="cite-ref"><a href="#ref-3">[3]</a></span></li>
           </ul>
 
           <div class="demo-box">
@@ -529,7 +541,7 @@ class Checkout:
           <ul>
             <li>适合：通知、事件扩展点、插件机制、领域事件。</li>
             <li>风险：不能把它当成一致性银弹，事务语义仍需单独设计。</li>
-            <li>典型案例：Spring <code>ApplicationEventPublisher</code>、Django Signals。</li>
+            <li>典型案例：Spring <code>ApplicationEventPublisher</code>、Django Signals。<span class="cite-ref"><a href="#ref-4">[4]</a><a href="#ref-7">[7]</a></span></li>
           </ul>
 
           <div class="demo-box">
@@ -564,7 +576,7 @@ class Checkout:
           </p>
           <ul>
             <li>适合：导出器、解析器、存储后端、客户端实例。</li>
-            <li>典型案例：Flask Application Factory，Spring Bean 创建思想。</li>
+            <li>典型案例：Flask Application Factory，Spring Bean 创建思想。<span class="cite-ref"><a href="#ref-8">[8]</a><a href="#ref-3">[3]</a></span></li>
           </ul>
 
           <div class="demo-box">
@@ -682,7 +694,7 @@ class LightThemeFactory:
           </p>
           <ul>
             <li>适合：遗留系统整合、第三方 SDK 统一封装、支付短信网关接入。</li>
-            <li>典型案例：Spring MVC <code>HandlerAdapter</code>，Requests <code>HTTPAdapter</code>。</li>
+            <li>典型案例：Spring MVC <code>HandlerAdapter</code>，Requests <code>HTTPAdapter</code>。<span class="cite-ref"><a href="#ref-5">[5]</a><a href="#ref-9">[9]</a></span></li>
           </ul>
 
           <div class="demo-box">
@@ -751,7 +763,7 @@ class TimestampDecorator:
             你看上去在访问真实对象，实际上先经过一个控制层，它可以负责权限校验、懒加载、缓存命中、远程调用、事务包裹。
           </p>
           <p>
-            现代框架里，Proxy 极其重要。Spring AOP 的很多能力都基于代理机制；ORM 的懒加载对象本身也是代理思想的工程化体现。
+            现代框架里，Proxy 极其重要。Spring AOP 的很多能力都基于代理机制；ORM 的懒加载对象本身也是代理思想的工程化体现。<span class="cite-ref"><a href="#ref-5">[5]</a></span>
           </p>
           <ul>
             <li>适合：权限控制、事务代理、远程服务、本地缓存前置。</li>
@@ -791,7 +803,7 @@ class AccessProxy:
             例如抽取、转换、加载，或者获取连接、执行核心逻辑、清理资源。你不希望调用方每次都自己拼整个流程，也不希望所有细节都被写死在同一个实现里。
           </p>
           <p>
-            它的魅力在于：流程顺序由模板保证，变化点则交给子类实现。Spring 的 <code>JdbcTemplate</code> 正是这种思想的经典工业案例。
+            它的魅力在于：流程顺序由模板保证，变化点则交给子类实现。Spring 的 <code>JdbcTemplate</code> 正是这种思想的经典工业案例。<span class="cite-ref"><a href="#ref-6">[6]</a></span>
           </p>
           <ul>
             <li>适合：ETL、数据库访问、固定业务管道。</li>
@@ -957,7 +969,7 @@ class OrderFacade:
         <h2>六、为什么 Spring、Django、Flask、Requests 这些框架会反复使用这些模式</h2>
         <p>
           因为这些模式和框架面对的问题天然同构。Spring 需要 IOC，于是创建逻辑必须抽离；它需要 AOP，于是代理机制成为核心；它需要模板化数据库访问，于是 Template Method 变成基础骨架。
-          Django 需要信号系统，于是 Observer 思想自然出现；Flask 需要延迟创建应用对象，于是工厂思想很自然；Requests 需要对不同传输层做统一封装，于是 Adapter 结构非常合理。
+          Django 需要信号系统，于是 Observer 思想自然出现；Flask 需要延迟创建应用对象，于是工厂思想很自然；Requests 需要对不同传输层做统一封装，于是 Adapter 结构非常合理。<span class="cite-ref"><a href="#ref-3">[3]</a><a href="#ref-5">[5]</a><a href="#ref-6">[6]</a><a href="#ref-7">[7]</a><a href="#ref-8">[8]</a><a href="#ref-9">[9]</a></span>
         </p>
         <p>
           这件事对 AI Coding 的意义非常直接：如果你不理解框架底层依赖的是哪类结构，模型就会为你生成“能跑，但不顺着框架哲学”的代码。短期可能能过，长期会非常难维护。
@@ -986,19 +998,19 @@ class OrderFacade:
         <h2>参考文献</h2>
         <div class="ref-box">
           <div class="ref-list-html">
-            <p class="ref-item"><a class="ref-index" href="https://refactoring.guru/design-patterns/catalog" target="_blank" rel="noopener noreferrer">[1]</a> Refactoring.Guru. <em>Design Patterns Catalog</em>.</p>
-            <p class="ref-item"><a class="ref-index" href="https://martinfowler.com/articles/injection.html" target="_blank" rel="noopener noreferrer">[2]</a> Fowler, M. <em>Inversion of Control Containers and the Dependency Injection Pattern</em>.</p>
-            <p class="ref-item"><a class="ref-index" href="https://docs.spring.io/spring-framework/reference/core/beans/factory-scopes.html" target="_blank" rel="noopener noreferrer">[3]</a> Spring Framework Reference. <em>Bean Scopes</em>.</p>
-            <p class="ref-item"><a class="ref-index" href="https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/context/ApplicationEventPublisher.html" target="_blank" rel="noopener noreferrer">[4]</a> Spring Framework Javadoc. <em>ApplicationEventPublisher</em>.</p>
-            <p class="ref-item"><a class="ref-index" href="https://docs.spring.io/spring-framework/reference/core/aop/proxying.html" target="_blank" rel="noopener noreferrer">[5]</a> Spring Framework Reference. <em>Proxying Mechanisms</em>.</p>
-            <p class="ref-item"><a class="ref-index" href="https://docs.spring.io/spring-framework/reference/data-access/jdbc/core.html" target="_blank" rel="noopener noreferrer">[6]</a> Spring Framework Reference. <em>JDBC Core and JdbcTemplate</em>.</p>
-            <p class="ref-item"><a class="ref-index" href="https://docs.djangoproject.com/en/stable/topics/signals/" target="_blank" rel="noopener noreferrer">[7]</a> Django Documentation. <em>Signals</em>.</p>
-            <p class="ref-item"><a class="ref-index" href="https://flask.palletsprojects.com/en/stable/patterns/appfactories/" target="_blank" rel="noopener noreferrer">[8]</a> Flask Documentation. <em>Application Factories</em>.</p>
-            <p class="ref-item"><a class="ref-index" href="https://requests.readthedocs.io/en/latest/user/advanced/#transport-adapters" target="_blank" rel="noopener noreferrer">[9]</a> Requests Documentation. <em>Transport Adapters</em>.</p>
-            <p class="ref-item"><a class="ref-index" href="https://docs.python.org/3/library/abc.html" target="_blank" rel="noopener noreferrer">[10]</a> Python Documentation. <em>abc</em>.</p>
-            <p class="ref-item"><a class="ref-index" href="https://docs.python.org/3/library/contextlib.html" target="_blank" rel="noopener noreferrer">[11]</a> Python Documentation. <em>contextlib</em>.</p>
-            <p class="ref-item"><a class="ref-index" href="https://doi.org/10.1016/j.infsof.2015.05.006" target="_blank" rel="noopener noreferrer">[12]</a> Ampatzoglou, A., Chatzigeorgiou, A., Charalampidou, S., and Avgeriou, P. The effect of GoF design patterns on stability: A case study. <em>Information and Software Technology</em>, 2015.</p>
-            <p class="ref-item"><a class="ref-index" href="https://www.sciencedirect.com/science/article/pii/S0164121216302321" target="_blank" rel="noopener noreferrer">[13]</a> Ampatzoglou, A., et al. The state of the art on software engineering design patterns: A systematic mapping study. <em>Journal of Systems and Software</em>, 2016.</p>
+            <p class="ref-item" id="ref-1"><a class="ref-index" href="https://refactoring.guru/design-patterns/catalog" target="_blank" rel="noopener noreferrer">[1]</a> Refactoring.Guru. <em>Design Patterns Catalog</em>.</p>
+            <p class="ref-item" id="ref-2"><a class="ref-index" href="https://martinfowler.com/articles/injection.html" target="_blank" rel="noopener noreferrer">[2]</a> Fowler, M. <em>Inversion of Control Containers and the Dependency Injection Pattern</em>.</p>
+            <p class="ref-item" id="ref-3"><a class="ref-index" href="https://docs.spring.io/spring-framework/reference/core/beans/factory-scopes.html" target="_blank" rel="noopener noreferrer">[3]</a> Spring Framework Reference. <em>Bean Scopes</em>.</p>
+            <p class="ref-item" id="ref-4"><a class="ref-index" href="https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/context/ApplicationEventPublisher.html" target="_blank" rel="noopener noreferrer">[4]</a> Spring Framework Javadoc. <em>ApplicationEventPublisher</em>.</p>
+            <p class="ref-item" id="ref-5"><a class="ref-index" href="https://docs.spring.io/spring-framework/reference/core/aop/proxying.html" target="_blank" rel="noopener noreferrer">[5]</a> Spring Framework Reference. <em>Proxying Mechanisms</em>.</p>
+            <p class="ref-item" id="ref-6"><a class="ref-index" href="https://docs.spring.io/spring-framework/reference/data-access/jdbc/core.html" target="_blank" rel="noopener noreferrer">[6]</a> Spring Framework Reference. <em>JDBC Core and JdbcTemplate</em>.</p>
+            <p class="ref-item" id="ref-7"><a class="ref-index" href="https://docs.djangoproject.com/en/stable/topics/signals/" target="_blank" rel="noopener noreferrer">[7]</a> Django Documentation. <em>Signals</em>.</p>
+            <p class="ref-item" id="ref-8"><a class="ref-index" href="https://flask.palletsprojects.com/en/stable/patterns/appfactories/" target="_blank" rel="noopener noreferrer">[8]</a> Flask Documentation. <em>Application Factories</em>.</p>
+            <p class="ref-item" id="ref-9"><a class="ref-index" href="https://requests.readthedocs.io/en/latest/user/advanced/#transport-adapters" target="_blank" rel="noopener noreferrer">[9]</a> Requests Documentation. <em>Transport Adapters</em>.</p>
+            <p class="ref-item" id="ref-10"><a class="ref-index" href="https://docs.python.org/3/library/abc.html" target="_blank" rel="noopener noreferrer">[10]</a> Python Documentation. <em>abc</em>.</p>
+            <p class="ref-item" id="ref-11"><a class="ref-index" href="https://docs.python.org/3/library/contextlib.html" target="_blank" rel="noopener noreferrer">[11]</a> Python Documentation. <em>contextlib</em>.</p>
+            <p class="ref-item" id="ref-12"><a class="ref-index" href="https://doi.org/10.1016/j.infsof.2015.05.006" target="_blank" rel="noopener noreferrer">[12]</a> Ampatzoglou, A., Chatzigeorgiou, A., Charalampidou, S., and Avgeriou, P. The effect of GoF design patterns on stability: A case study. <em>Information and Software Technology</em>, 2015.</p>
+            <p class="ref-item" id="ref-13"><a class="ref-index" href="https://www.sciencedirect.com/science/article/pii/S0164121216302321" target="_blank" rel="noopener noreferrer">[13]</a> Ampatzoglou, A., et al. The state of the art on software engineering design patterns: A systematic mapping study. <em>Journal of Systems and Software</em>, 2016.</p>
           </div>
         </div>
       </section>
