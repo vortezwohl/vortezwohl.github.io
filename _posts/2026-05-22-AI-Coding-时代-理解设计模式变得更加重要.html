@@ -11,6 +11,7 @@ tags:
   - software-architecture
 author:
   - vortezwohl
+  - 吴子豪
   - Codex
 ---
 
@@ -287,6 +288,21 @@ author:
     #design-patterns-essay .ref-box p {
       margin: 0.55rem 0;
       font-size: 0.98rem;
+    }
+
+    #design-patterns-essay .ref-list-html {
+      margin: 0;
+      padding: 0;
+    }
+
+    #design-patterns-essay .ref-item {
+      margin: 0.7rem 0;
+      font-size: 0.98rem;
+    }
+
+    #design-patterns-essay .ref-index {
+      display: inline-block;
+      min-width: 2.2rem;
     }
 
     #design-patterns-essay a {
@@ -969,19 +985,21 @@ class OrderFacade:
       <section class="section-block">
         <h2>参考文献</h2>
         <div class="ref-box">
-          <p>[[1](https://refactoring.guru/design-patterns/catalog)] Refactoring.Guru. <em>Design Patterns Catalog</em>.</p>
-          <p>[[2](https://martinfowler.com/articles/injection.html)] Fowler, M. <em>Inversion of Control Containers and the Dependency Injection pattern</em>.</p>
-          <p>[[3](https://docs.spring.io/spring-framework/reference/core/beans/factory-scopes.html)] Spring Framework Reference. <em>Bean Scopes</em>.</p>
-          <p>[[4](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/context/ApplicationEventPublisher.html)] Spring Framework Javadoc. <em>ApplicationEventPublisher</em>.</p>
-          <p>[[5](https://docs.spring.io/spring-framework/reference/core/aop/proxying.html)] Spring Framework Reference. <em>Proxying Mechanisms</em>.</p>
-          <p>[[6](https://docs.spring.io/spring-framework/reference/data-access/jdbc/core.html)] Spring Framework Reference. <em>JDBC Core and JdbcTemplate</em>.</p>
-          <p>[[7](https://docs.djangoproject.com/en/stable/topics/signals/)] Django Documentation. <em>Signals</em>.</p>
-          <p>[[8](https://flask.palletsprojects.com/en/stable/patterns/appfactories/)] Flask Documentation. <em>Application Factories</em>.</p>
-          <p>[[9](https://requests.readthedocs.io/en/latest/user/advanced/#transport-adapters)] Requests Documentation. <em>Transport Adapters</em>.</p>
-          <p>[[10](https://docs.python.org/3/library/abc.html)] Python Documentation. <em>abc</em>.</p>
-          <p>[[11](https://docs.python.org/3/library/contextlib.html)] Python Documentation. <em>contextlib</em>.</p>
-          <p>[[12](https://doi.org/10.1016/j.infsof.2015.05.006)] Ampatzoglou, A., Chatzigeorgiou, A., Charalampidou, S., and Avgeriou, P. The effect of GoF design patterns on stability: A case study. <em>Information and Software Technology</em>, 2015.</p>
-          <p>[[13](https://www.sciencedirect.com/science/article/pii/S0164121216302321)] Ampatzoglou, A., et al. The state of the art on software engineering design patterns: A systematic mapping study. <em>Journal of Systems and Software</em>, 2016.</p>
+          <div class="ref-list-html">
+            <p class="ref-item"><a class="ref-index" href="https://refactoring.guru/design-patterns/catalog" target="_blank" rel="noopener noreferrer">[1]</a> Refactoring.Guru. <em>Design Patterns Catalog</em>.</p>
+            <p class="ref-item"><a class="ref-index" href="https://martinfowler.com/articles/injection.html" target="_blank" rel="noopener noreferrer">[2]</a> Fowler, M. <em>Inversion of Control Containers and the Dependency Injection Pattern</em>.</p>
+            <p class="ref-item"><a class="ref-index" href="https://docs.spring.io/spring-framework/reference/core/beans/factory-scopes.html" target="_blank" rel="noopener noreferrer">[3]</a> Spring Framework Reference. <em>Bean Scopes</em>.</p>
+            <p class="ref-item"><a class="ref-index" href="https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/context/ApplicationEventPublisher.html" target="_blank" rel="noopener noreferrer">[4]</a> Spring Framework Javadoc. <em>ApplicationEventPublisher</em>.</p>
+            <p class="ref-item"><a class="ref-index" href="https://docs.spring.io/spring-framework/reference/core/aop/proxying.html" target="_blank" rel="noopener noreferrer">[5]</a> Spring Framework Reference. <em>Proxying Mechanisms</em>.</p>
+            <p class="ref-item"><a class="ref-index" href="https://docs.spring.io/spring-framework/reference/data-access/jdbc/core.html" target="_blank" rel="noopener noreferrer">[6]</a> Spring Framework Reference. <em>JDBC Core and JdbcTemplate</em>.</p>
+            <p class="ref-item"><a class="ref-index" href="https://docs.djangoproject.com/en/stable/topics/signals/" target="_blank" rel="noopener noreferrer">[7]</a> Django Documentation. <em>Signals</em>.</p>
+            <p class="ref-item"><a class="ref-index" href="https://flask.palletsprojects.com/en/stable/patterns/appfactories/" target="_blank" rel="noopener noreferrer">[8]</a> Flask Documentation. <em>Application Factories</em>.</p>
+            <p class="ref-item"><a class="ref-index" href="https://requests.readthedocs.io/en/latest/user/advanced/#transport-adapters" target="_blank" rel="noopener noreferrer">[9]</a> Requests Documentation. <em>Transport Adapters</em>.</p>
+            <p class="ref-item"><a class="ref-index" href="https://docs.python.org/3/library/abc.html" target="_blank" rel="noopener noreferrer">[10]</a> Python Documentation. <em>abc</em>.</p>
+            <p class="ref-item"><a class="ref-index" href="https://docs.python.org/3/library/contextlib.html" target="_blank" rel="noopener noreferrer">[11]</a> Python Documentation. <em>contextlib</em>.</p>
+            <p class="ref-item"><a class="ref-index" href="https://doi.org/10.1016/j.infsof.2015.05.006" target="_blank" rel="noopener noreferrer">[12]</a> Ampatzoglou, A., Chatzigeorgiou, A., Charalampidou, S., and Avgeriou, P. The effect of GoF design patterns on stability: A case study. <em>Information and Software Technology</em>, 2015.</p>
+            <p class="ref-item"><a class="ref-index" href="https://www.sciencedirect.com/science/article/pii/S0164121216302321" target="_blank" rel="noopener noreferrer">[13]</a> Ampatzoglou, A., et al. The state of the art on software engineering design patterns: A systematic mapping study. <em>Journal of Systems and Software</em>, 2016.</p>
+          </div>
         </div>
       </section>
     </div>
