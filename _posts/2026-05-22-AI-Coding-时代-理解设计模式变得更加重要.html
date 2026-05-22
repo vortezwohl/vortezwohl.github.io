@@ -18,9 +18,62 @@ author:
 <article id="design-patterns-essay" lang="zh-CN">
   <style>
     #design-patterns-essay {
-      color: #1c1b18;
+      --essay-text: #1c1b18;
+      --essay-text-strong: #141310;
+      --essay-text-muted: #3f3a34;
+      --essay-kicker: #7b705f;
+      --essay-border: #ddd7cc;
+      --essay-border-soft: #e2ddd4;
+      --essay-panel-bg: #fbf9f5;
+      --essay-panel-strong-bg: #f2ede5;
+      --essay-hero-bg-start: #f8f5ef;
+      --essay-hero-bg-end: #f4efe6;
+      --essay-hero-grid: rgba(80, 72, 60, 0.03);
+      --essay-summary-bg: rgba(255, 253, 249, 0.9);
+      --essay-button-bg: #f8f4ed;
+      --essay-button-text: #231f19;
+      --essay-button-active-bg: #1f1d19;
+      --essay-button-active-text: #fbf8f2;
+      --essay-code-bg: #f3eee5;
+      --essay-code-inline-bg: #f0eadf;
+      --essay-code-text: #1f1d19;
+      --essay-output-bg: #1d1b18;
+      --essay-output-text: #f5efe5;
+      --essay-link: #675743;
+      --essay-link-border: rgba(103, 87, 67, 0.35);
+      --essay-link-border-hover: rgba(103, 87, 67, 0.8);
+      --essay-accent: #8f7d66;
+      color: var(--essay-text);
       font-family: "Georgia", "Times New Roman", "Noto Serif SC", serif;
       line-height: 1.85;
+    }
+
+    #design-patterns-essay[data-tone="dark"] {
+      --essay-text: #e6dfd4;
+      --essay-text-strong: #fbf7ef;
+      --essay-text-muted: #d1c7b8;
+      --essay-kicker: #b9ab97;
+      --essay-border: rgba(239, 229, 213, 0.18);
+      --essay-border-soft: rgba(239, 229, 213, 0.14);
+      --essay-panel-bg: rgba(33, 30, 26, 0.92);
+      --essay-panel-strong-bg: rgba(47, 42, 36, 0.96);
+      --essay-hero-bg-start: rgba(33, 29, 24, 0.98);
+      --essay-hero-bg-end: rgba(24, 22, 19, 0.98);
+      --essay-hero-grid: rgba(241, 232, 216, 0.05);
+      --essay-summary-bg: rgba(53, 47, 40, 0.88);
+      --essay-button-bg: rgba(48, 42, 36, 0.96);
+      --essay-button-text: #f0e7db;
+      --essay-button-active-bg: #f2e6d6;
+      --essay-button-active-text: #1f1c18;
+      --essay-code-bg: rgba(28, 26, 23, 0.98);
+      --essay-code-inline-bg: rgba(71, 61, 51, 0.82);
+      --essay-code-text: #f2ece2;
+      --essay-output-bg: #efe4d2;
+      --essay-output-text: #1f1b17;
+      --essay-link: #8fd6e5;
+      --essay-link-border: rgba(143, 214, 229, 0.45);
+      --essay-link-border-hover: rgba(143, 214, 229, 0.95);
+      --essay-accent: #d1b48a;
     }
 
     #design-patterns-essay .essay-shell {
@@ -32,15 +85,15 @@ author:
     #design-patterns-essay .essay-hero {
       position: relative;
       padding: 2.4rem 2rem 1.8rem;
-      border: 1px solid #d8d2c7;
-      background: linear-gradient(180deg, #f8f5ef 0%, #f4efe6 100%);
+      border: 1px solid var(--essay-border);
+      background: linear-gradient(180deg, var(--essay-hero-bg-start) 0%, var(--essay-hero-bg-end) 100%);
     }
 
     #design-patterns-essay .essay-hero::before {
       content: "";
       position: absolute;
       inset: 0;
-      background-image: linear-gradient(rgba(80, 72, 60, 0.03) 1px, transparent 1px);
+      background-image: linear-gradient(var(--essay-hero-grid) 1px, transparent 1px);
       background-size: 100% 1.8rem;
       pointer-events: none;
     }
@@ -50,7 +103,7 @@ author:
       font-size: 0.82rem;
       letter-spacing: 0.18em;
       text-transform: uppercase;
-      color: #7b705f;
+      color: var(--essay-kicker);
     }
 
     #design-patterns-essay .hero-title {
@@ -65,7 +118,7 @@ author:
       max-width: 52rem;
       margin: 1.25rem 0 0;
       font-size: 1.05rem;
-      color: #3f3a34;
+      color: var(--essay-text-muted);
     }
 
     #design-patterns-essay .hero-summary {
@@ -77,8 +130,8 @@ author:
 
     #design-patterns-essay .hero-summary-item {
       padding: 0.9rem 1rem;
-      border: 1px solid #ded8cc;
-      background: rgba(255, 253, 249, 0.9);
+      border: 1px solid var(--essay-border);
+      background: var(--essay-summary-bg);
     }
 
     #design-patterns-essay .hero-summary-item strong {
@@ -94,7 +147,7 @@ author:
     #design-patterns-essay .section-block {
       margin-top: 2.2rem;
       padding-top: 1.4rem;
-      border-top: 1px solid #e2ddd4;
+      border-top: 1px solid var(--essay-border-soft);
     }
 
     #design-patterns-essay .section-block:first-child {
@@ -108,7 +161,7 @@ author:
     #design-patterns-essay h4 {
       font-family: "Georgia", "Times New Roman", "Noto Serif SC", serif;
       line-height: 1.32;
-      color: #141310;
+      color: var(--essay-text-strong);
     }
 
     #design-patterns-essay h2 {
@@ -140,8 +193,8 @@ author:
     #design-patterns-essay .demo-box,
     #design-patterns-essay .pattern-card,
     #design-patterns-essay .ref-box {
-      border: 1px solid #ddd7cc;
-      background: #fbf9f5;
+      border: 1px solid var(--essay-border);
+      background: var(--essay-panel-bg);
     }
 
     #design-patterns-essay .argument-box,
@@ -155,7 +208,7 @@ author:
     #design-patterns-essay .argument-box strong,
     #design-patterns-essay .note-box strong,
     #design-patterns-essay .ref-box strong {
-      color: #141310;
+      color: var(--essay-text-strong);
     }
 
     #design-patterns-essay .comparison-table {
@@ -168,13 +221,13 @@ author:
     #design-patterns-essay .comparison-table th,
     #design-patterns-essay .comparison-table td {
       padding: 0.8rem 0.9rem;
-      border: 1px solid #ddd7cc;
+      border: 1px solid var(--essay-border);
       vertical-align: top;
       text-align: left;
     }
 
     #design-patterns-essay .comparison-table th {
-      background: #f2ede5;
+      background: var(--essay-panel-strong-bg);
       font-weight: 700;
     }
 
@@ -203,18 +256,18 @@ author:
     }
 
     #design-patterns-essay .pattern-nav button {
-      border: 1px solid #cfc7ba;
-      background: #f8f4ed;
-      color: #231f19;
+      border: 1px solid var(--essay-border);
+      background: var(--essay-button-bg);
+      color: var(--essay-button-text);
       padding: 0.42rem 0.75rem;
       font: inherit;
       cursor: pointer;
     }
 
     #design-patterns-essay .pattern-nav button.is-active {
-      background: #1f1d19;
-      color: #fbf8f2;
-      border-color: #1f1d19;
+      background: var(--essay-button-active-bg);
+      color: var(--essay-button-active-text);
+      border-color: var(--essay-button-active-bg);
     }
 
     #design-patterns-essay .pattern-panel {
@@ -227,7 +280,7 @@ author:
     }
 
     #design-patterns-essay .pattern-head {
-      border-left: 3px solid #8f7d66;
+      border-left: 3px solid var(--essay-accent);
       padding-left: 0.9rem;
       margin-bottom: 1rem;
     }
@@ -241,9 +294,9 @@ author:
     }
 
     #design-patterns-essay .demo-toolbar button {
-      border: 1px solid #cfc7ba;
-      background: #f7f2ea;
-      color: #201d18;
+      border: 1px solid var(--essay-border);
+      background: var(--essay-button-bg);
+      color: var(--essay-button-text);
       padding: 0.42rem 0.8rem;
       font: inherit;
       cursor: pointer;
@@ -253,9 +306,9 @@ author:
       margin: 0;
       padding: 1rem;
       overflow-x: auto;
-      background: #f3eee5;
-      border: 1px solid #d9d3c8;
-      color: #1f1d19;
+      background: var(--essay-code-bg);
+      border: 1px solid var(--essay-border);
+      color: var(--essay-code-text);
       line-height: 1.6;
     }
 
@@ -266,14 +319,14 @@ author:
 
     #design-patterns-essay :not(pre) > code {
       padding: 0.08rem 0.32rem;
-      background: #f0eadf;
+      background: var(--essay-code-inline-bg);
     }
 
     #design-patterns-essay .demo-output {
       margin-top: 0.8rem;
       padding: 0.95rem 1rem;
-      background: #1d1b18;
-      color: #f5efe5;
+      background: var(--essay-output-bg);
+      color: var(--essay-output-text);
       min-height: 3.4rem;
       white-space: pre-wrap;
       font-family: "Consolas", "Courier New", monospace;
@@ -282,7 +335,7 @@ author:
     #design-patterns-essay .essay-divider {
       margin: 2rem 0 1.5rem;
       border: 0;
-      border-top: 1px solid #ddd7cc;
+      border-top: 1px solid var(--essay-border);
     }
 
     #design-patterns-essay .ref-box p {
@@ -318,13 +371,13 @@ author:
     }
 
     #design-patterns-essay a {
-      color: #675743;
+      color: var(--essay-link);
       text-decoration: none;
-      border-bottom: 1px solid rgba(103, 87, 67, 0.35);
+      border-bottom: 1px solid var(--essay-link-border);
     }
 
     #design-patterns-essay a:hover {
-      border-bottom-color: rgba(103, 87, 67, 0.8);
+      border-bottom-color: var(--essay-link-border-hover);
     }
 
     @media (max-width: 860px) {
@@ -1019,8 +1072,118 @@ class OrderFacade:
 
   <script>
     (function () {
+      const article = document.getElementById("design-patterns-essay");
       const navButtons = Array.from(document.querySelectorAll("#pattern-nav button"));
       const panels = Array.from(document.querySelectorAll("[data-pattern-panel]"));
+
+      function parseRgb(colorValue) {
+        const match = colorValue && colorValue.match(/\d+(\.\d+)?/g);
+        if (!match || match.length < 3) {
+          return null;
+        }
+        return match.slice(0, 3).map(Number);
+      }
+
+      function luminance(rgb) {
+        return (0.299 * rgb[0]) + (0.587 * rgb[1]) + (0.114 * rgb[2]);
+      }
+
+      function mixRgb(source, target, weight) {
+        return source.map(function (channel, index) {
+          return Math.round((channel * (1 - weight)) + (target[index] * weight));
+        });
+      }
+
+      function toRgbString(rgb) {
+        return "rgb(" + rgb.join(", ") + ")";
+      }
+
+      function toRgbaString(rgb, alpha) {
+        return "rgba(" + rgb.join(", ") + ", " + alpha + ")";
+      }
+
+      function applyEssayPalette(backgroundRgb) {
+        const isDark = luminance(backgroundRgb) < 156;
+        const warmLight = [250, 243, 231];
+        const warmDark = [28, 26, 23];
+        const textBase = isDark ? mixRgb(backgroundRgb, [255, 248, 239], 0.84) : mixRgb(backgroundRgb, [24, 22, 19], 0.94);
+        const textStrong = isDark ? mixRgb(backgroundRgb, [255, 252, 245], 0.92) : mixRgb(backgroundRgb, [15, 14, 12], 0.97);
+        const textMuted = isDark ? mixRgb(textBase, backgroundRgb, 0.22) : mixRgb(textBase, backgroundRgb, 0.3);
+        const kicker = isDark ? mixRgb(textBase, [214, 191, 158], 0.38) : mixRgb(textMuted, [116, 98, 76], 0.48);
+        const border = isDark ? toRgbaString(mixRgb(backgroundRgb, [255, 239, 214], 0.28), 0.34) : toRgbaString(mixRgb(backgroundRgb, [118, 101, 81], 0.82), 0.22);
+        const borderSoft = isDark ? toRgbaString(mixRgb(backgroundRgb, [255, 239, 214], 0.18), 0.24) : toRgbaString(mixRgb(backgroundRgb, [118, 101, 81], 0.58), 0.14);
+        const panelBg = isDark ? toRgbString(mixRgb(backgroundRgb, warmLight, 0.11)) : toRgbString(mixRgb(backgroundRgb, warmLight, 0.58));
+        const panelStrongBg = isDark ? toRgbString(mixRgb(backgroundRgb, warmLight, 0.18)) : toRgbString(mixRgb(backgroundRgb, [236, 226, 212], 0.7));
+        const heroStart = isDark ? toRgbString(mixRgb(backgroundRgb, warmLight, 0.09)) : toRgbString(mixRgb(backgroundRgb, [251, 247, 239], 0.74));
+        const heroEnd = isDark ? toRgbString(mixRgb(backgroundRgb, warmDark, 0.2)) : toRgbString(mixRgb(backgroundRgb, [244, 238, 227], 0.68));
+        const heroGrid = isDark ? toRgbaString(mixRgb(backgroundRgb, warmLight, 0.4), 0.08) : toRgbaString(mixRgb(backgroundRgb, [98, 84, 68], 0.6), 0.045);
+        const summaryBg = isDark ? toRgbaString(mixRgb(backgroundRgb, warmLight, 0.16), 0.88) : toRgbaString(mixRgb(backgroundRgb, [255, 252, 247], 0.72), 0.94);
+        const buttonBg = isDark ? toRgbString(mixRgb(backgroundRgb, warmLight, 0.14)) : toRgbString(mixRgb(backgroundRgb, [248, 242, 234], 0.62));
+        const buttonText = toRgbString(textStrong);
+        const buttonActiveBg = isDark ? toRgbString(mixRgb(backgroundRgb, warmLight, 0.84)) : toRgbString(mixRgb(backgroundRgb, warmDark, 0.92));
+        const buttonActiveText = isDark ? toRgbString(mixRgb(backgroundRgb, warmDark, 0.94)) : toRgbString(mixRgb(backgroundRgb, [255, 249, 241], 0.96));
+        const codeBg = isDark ? toRgbString(mixRgb(backgroundRgb, [17, 16, 14], 0.42)) : toRgbString(mixRgb(backgroundRgb, [243, 237, 228], 0.74));
+        const codeInlineBg = isDark ? toRgbString(mixRgb(backgroundRgb, [76, 67, 56], 0.48)) : toRgbString(mixRgb(backgroundRgb, [240, 233, 222], 0.78));
+        const codeText = isDark ? toRgbString(mixRgb(backgroundRgb, [248, 239, 227], 0.92)) : toRgbString(mixRgb(backgroundRgb, [30, 28, 24], 0.94));
+        const outputBg = isDark ? toRgbString(mixRgb(backgroundRgb, [244, 228, 205], 0.86)) : toRgbString(mixRgb(backgroundRgb, [29, 27, 24], 0.92));
+        const outputText = isDark ? toRgbString(mixRgb(backgroundRgb, [26, 24, 20], 0.94)) : toRgbString(mixRgb(backgroundRgb, [247, 239, 228], 0.94));
+        const link = isDark ? toRgbString(mixRgb(backgroundRgb, [151, 223, 237], 0.88)) : toRgbString(mixRgb(backgroundRgb, [101, 83, 63], 0.92));
+        const linkBorder = isDark ? toRgbaString(mixRgb(backgroundRgb, [151, 223, 237], 0.84), 0.52) : toRgbaString(mixRgb(backgroundRgb, [101, 83, 63], 0.9), 0.34);
+        const linkBorderHover = isDark ? toRgbaString(mixRgb(backgroundRgb, [151, 223, 237], 0.96), 0.96) : toRgbaString(mixRgb(backgroundRgb, [101, 83, 63], 0.96), 0.84);
+        const accent = isDark ? toRgbString(mixRgb(backgroundRgb, [221, 188, 145], 0.82)) : toRgbString(mixRgb(backgroundRgb, [143, 125, 102], 0.9));
+
+        article.style.setProperty("--essay-text", toRgbString(textBase));
+        article.style.setProperty("--essay-text-strong", toRgbString(textStrong));
+        article.style.setProperty("--essay-text-muted", toRgbString(textMuted));
+        article.style.setProperty("--essay-kicker", toRgbString(kicker));
+        article.style.setProperty("--essay-border", border);
+        article.style.setProperty("--essay-border-soft", borderSoft);
+        article.style.setProperty("--essay-panel-bg", panelBg);
+        article.style.setProperty("--essay-panel-strong-bg", panelStrongBg);
+        article.style.setProperty("--essay-hero-bg-start", heroStart);
+        article.style.setProperty("--essay-hero-bg-end", heroEnd);
+        article.style.setProperty("--essay-hero-grid", heroGrid);
+        article.style.setProperty("--essay-summary-bg", summaryBg);
+        article.style.setProperty("--essay-button-bg", buttonBg);
+        article.style.setProperty("--essay-button-text", buttonText);
+        article.style.setProperty("--essay-button-active-bg", buttonActiveBg);
+        article.style.setProperty("--essay-button-active-text", buttonActiveText);
+        article.style.setProperty("--essay-code-bg", codeBg);
+        article.style.setProperty("--essay-code-inline-bg", codeInlineBg);
+        article.style.setProperty("--essay-code-text", codeText);
+        article.style.setProperty("--essay-output-bg", outputBg);
+        article.style.setProperty("--essay-output-text", outputText);
+        article.style.setProperty("--essay-link", link);
+        article.style.setProperty("--essay-link-border", linkBorder);
+        article.style.setProperty("--essay-link-border-hover", linkBorderHover);
+        article.style.setProperty("--essay-accent", accent);
+        article.dataset.tone = isDark ? "dark" : "light";
+      }
+
+      function resolveBackgroundColor(node) {
+        let current = node;
+        while (current) {
+          const style = window.getComputedStyle(current);
+          const rgb = parseRgb(style.backgroundColor);
+          if (rgb && style.backgroundColor !== "rgba(0, 0, 0, 0)" && style.backgroundColor !== "transparent") {
+            return rgb;
+          }
+          current = current.parentElement;
+        }
+        return [255, 255, 255];
+      }
+
+      function applyEssayTone() {
+        if (!article) {
+          return;
+        }
+        const rgb = resolveBackgroundColor(article.parentElement || document.body);
+        applyEssayPalette(rgb);
+      }
+
+      applyEssayTone();
+      window.addEventListener("load", applyEssayTone);
+      window.addEventListener("resize", applyEssayTone);
 
       function activatePanel(name) {
         navButtons.forEach((button) => {
