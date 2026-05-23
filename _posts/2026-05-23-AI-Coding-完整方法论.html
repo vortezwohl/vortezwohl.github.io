@@ -1,0 +1,1054 @@
+---
+layout: post
+title: "AI Coding 完整方法论: 从让模型写代码, 到建立受约束的工程协作系统"
+toc: false
+math: false
+excerpt: >-
+  真正成熟的 AI Coding，不是把需求丢给模型等待它自由发挥，而是把目标、边界、上下文、验证、检查点与迭代秩序写成一套稳定的工程协作系统。人负责定义目标与验收标准，AI 负责在约束内搜索实现路径，Harness 负责调度、校验、重试与收敛。只有把“先澄清、再最小实现、然后验证、最后在通过后继续”沉淀成方法论，AI Coding 才会从偶尔奏效的技巧，变成可以长期维护、可复制扩展的工程能力。
+categories: software-engineering
+tags:
+  - ai-coding
+  - llm
+  - software-engineering
+  - harness-engineering
+  - context-engineering
+author:
+  - vortezwohl
+  - 吴子豪
+  - Codex
+---
+
+<article id="ai-coding-methodology-essay" lang="zh-CN">
+  <style>
+    #ai-coding-methodology-essay {
+      --essay-text: #1c1b18;
+      --essay-text-strong: #141310;
+      --essay-text-muted: #3f3a34;
+      --essay-kicker: #7b705f;
+      --essay-border: #ddd7cc;
+      --essay-border-soft: #e2ddd4;
+      --essay-panel-bg: #fbf9f5;
+      --essay-panel-strong-bg: #f2ede5;
+      --essay-hero-bg-start: #f8f5ef;
+      --essay-hero-bg-end: #f4efe6;
+      --essay-hero-grid: rgba(80, 72, 60, 0.03);
+      --essay-summary-bg: rgba(255, 253, 249, 0.9);
+      --essay-button-bg: #f8f4ed;
+      --essay-button-text: #231f19;
+      --essay-button-active-bg: #1f1d19;
+      --essay-button-active-text: #fbf8f2;
+      --essay-code-bg: #f3eee5;
+      --essay-code-inline-bg: #f0eadf;
+      --essay-code-text: #1f1d19;
+      --essay-output-bg: #1d1b18;
+      --essay-output-text: #f5efe5;
+      --essay-link: #675743;
+      --essay-link-border: rgba(103, 87, 67, 0.35);
+      --essay-link-border-hover: rgba(103, 87, 67, 0.8);
+      --essay-accent: #8f7d66;
+      color: var(--essay-text);
+      font-family: "Georgia", "Times New Roman", "Noto Serif SC", serif;
+      line-height: 1.85;
+    }
+
+    #ai-coding-methodology-essay[data-tone="dark"] {
+      --essay-text: #e6dfd4;
+      --essay-text-strong: #fbf7ef;
+      --essay-text-muted: #d1c7b8;
+      --essay-kicker: #b9ab97;
+      --essay-border: rgba(239, 229, 213, 0.18);
+      --essay-border-soft: rgba(239, 229, 213, 0.14);
+      --essay-panel-bg: rgba(33, 30, 26, 0.92);
+      --essay-panel-strong-bg: rgba(47, 42, 36, 0.96);
+      --essay-hero-bg-start: rgba(33, 29, 24, 0.98);
+      --essay-hero-bg-end: rgba(24, 22, 19, 0.98);
+      --essay-hero-grid: rgba(241, 232, 216, 0.05);
+      --essay-summary-bg: rgba(53, 47, 40, 0.88);
+      --essay-button-bg: rgba(48, 42, 36, 0.96);
+      --essay-button-text: #f0e7db;
+      --essay-button-active-bg: #f2e6d6;
+      --essay-button-active-text: #1f1c18;
+      --essay-code-bg: rgba(28, 26, 23, 0.98);
+      --essay-code-inline-bg: rgba(71, 61, 51, 0.82);
+      --essay-code-text: #f2ece2;
+      --essay-output-bg: #efe4d2;
+      --essay-output-text: #1f1b17;
+      --essay-link: #8fd6e5;
+      --essay-link-border: rgba(143, 214, 229, 0.45);
+      --essay-link-border-hover: rgba(143, 214, 229, 0.95);
+      --essay-accent: #d1b48a;
+    }
+
+    #ai-coding-methodology-essay .essay-shell {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 1.5rem 0 3rem;
+    }
+
+    #ai-coding-methodology-essay .essay-hero {
+      position: relative;
+      padding: 2.4rem 2rem 1.8rem;
+      border: 1px solid var(--essay-border);
+      background: linear-gradient(180deg, var(--essay-hero-bg-start) 0%, var(--essay-hero-bg-end) 100%);
+    }
+
+    #ai-coding-methodology-essay .essay-hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image: linear-gradient(var(--essay-hero-grid) 1px, transparent 1px);
+      background-size: 100% 1.8rem;
+      pointer-events: none;
+    }
+
+    #ai-coding-methodology-essay .hero-kicker {
+      margin: 0 0 0.9rem;
+      font-size: 0.82rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--essay-kicker);
+    }
+
+    #ai-coding-methodology-essay .hero-title {
+      margin: 0;
+      font-size: 2.4rem;
+      line-height: 1.18;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    #ai-coding-methodology-essay .hero-lead {
+      max-width: 52rem;
+      margin: 1.25rem 0 0;
+      font-size: 1.05rem;
+      color: var(--essay-text-muted);
+    }
+
+    #ai-coding-methodology-essay .hero-summary {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.9rem;
+      margin-top: 1.5rem;
+    }
+
+    #ai-coding-methodology-essay .hero-summary-item {
+      padding: 0.9rem 1rem;
+      border: 1px solid var(--essay-border);
+      background: var(--essay-summary-bg);
+    }
+
+    #ai-coding-methodology-essay .hero-summary-item strong {
+      display: block;
+      margin-bottom: 0.35rem;
+      font-size: 0.94rem;
+    }
+
+    #ai-coding-methodology-essay .essay-body {
+      margin-top: 1.6rem;
+    }
+
+    #ai-coding-methodology-essay .section-block {
+      margin-top: 2.2rem;
+      padding-top: 1.4rem;
+      border-top: 1px solid var(--essay-border-soft);
+    }
+
+    #ai-coding-methodology-essay .section-block:first-child {
+      margin-top: 0;
+      padding-top: 0;
+      border-top: 0;
+    }
+
+    #ai-coding-methodology-essay h2,
+    #ai-coding-methodology-essay h3,
+    #ai-coding-methodology-essay h4 {
+      font-family: "Georgia", "Times New Roman", "Noto Serif SC", serif;
+      line-height: 1.32;
+      color: var(--essay-text-strong);
+    }
+
+    #ai-coding-methodology-essay h2 {
+      margin: 0 0 1rem;
+      font-size: 1.7rem;
+    }
+
+    #ai-coding-methodology-essay h3 {
+      margin: 1.4rem 0 0.7rem;
+      font-size: 1.22rem;
+    }
+
+    #ai-coding-methodology-essay p {
+      margin: 0.9rem 0;
+    }
+
+    #ai-coding-methodology-essay ul,
+    #ai-coding-methodology-essay ol {
+      margin: 0.8rem 0 0.8rem 1.3rem;
+      padding: 0;
+    }
+
+    #ai-coding-methodology-essay li {
+      margin: 0.35rem 0;
+    }
+
+    #ai-coding-methodology-essay .argument-box,
+    #ai-coding-methodology-essay .note-box,
+    #ai-coding-methodology-essay .pillar-card,
+    #ai-coding-methodology-essay .ref-box {
+      border: 1px solid var(--essay-border);
+      background: var(--essay-panel-bg);
+    }
+
+    #ai-coding-methodology-essay .argument-box,
+    #ai-coding-methodology-essay .note-box,
+    #ai-coding-methodology-essay .ref-box {
+      padding: 1rem 1.1rem;
+      margin: 1rem 0;
+    }
+
+    #ai-coding-methodology-essay .argument-box strong,
+    #ai-coding-methodology-essay .note-box strong,
+    #ai-coding-methodology-essay .ref-box strong {
+      color: var(--essay-text-strong);
+    }
+
+    #ai-coding-methodology-essay .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+      font-size: 0.98rem;
+    }
+
+    #ai-coding-methodology-essay .comparison-table th,
+    #ai-coding-methodology-essay .comparison-table td {
+      padding: 0.8rem 0.9rem;
+      border: 1px solid var(--essay-border);
+      vertical-align: top;
+      text-align: left;
+    }
+
+    #ai-coding-methodology-essay .comparison-table th {
+      background: var(--essay-panel-strong-bg);
+      font-weight: 700;
+    }
+
+    #ai-coding-methodology-essay .pillar-index {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
+      margin: 1.1rem 0 1.3rem;
+    }
+
+    #ai-coding-methodology-essay .pillar-card {
+      padding: 1rem;
+    }
+
+    #ai-coding-methodology-essay .pillar-card h3 {
+      margin-top: 0;
+    }
+
+    #ai-coding-methodology-essay .pillar-nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin: 1.3rem 0 1rem;
+      padding: 0;
+      list-style: none;
+    }
+
+    #ai-coding-methodology-essay .pillar-nav button {
+      border: 1px solid var(--essay-border);
+      background: var(--essay-button-bg);
+      color: var(--essay-button-text);
+      padding: 0.42rem 0.75rem;
+      font: inherit;
+      cursor: pointer;
+    }
+
+    #ai-coding-methodology-essay .pillar-nav button.is-active {
+      background: var(--essay-button-active-bg);
+      color: var(--essay-button-active-text);
+      border-color: var(--essay-button-active-bg);
+    }
+
+    #ai-coding-methodology-essay .pillar-panel {
+      display: none;
+      margin-top: 1rem;
+    }
+
+    #ai-coding-methodology-essay .pillar-panel.is-active {
+      display: block;
+    }
+
+    #ai-coding-methodology-essay .pillar-head {
+      border-left: 3px solid var(--essay-accent);
+      padding-left: 0.9rem;
+      margin-bottom: 1rem;
+    }
+
+    #ai-coding-methodology-essay code {
+      font-family: "Consolas", "Courier New", monospace;
+      font-size: 0.92em;
+    }
+
+    #ai-coding-methodology-essay code {
+      padding: 0.08rem 0.32rem;
+      background: var(--essay-code-inline-bg);
+    }
+
+    #ai-coding-methodology-essay .essay-divider {
+      margin: 2rem 0 1.5rem;
+      border: 0;
+      border-top: 1px solid var(--essay-border);
+    }
+
+    #ai-coding-methodology-essay .ref-box p {
+      margin: 0.55rem 0;
+      font-size: 0.98rem;
+    }
+
+    #ai-coding-methodology-essay .ref-list-html {
+      margin: 0;
+      padding: 0;
+    }
+
+    #ai-coding-methodology-essay .ref-item {
+      margin: 0.7rem 0;
+      font-size: 0.98rem;
+    }
+
+    #ai-coding-methodology-essay .ref-index {
+      display: inline-block;
+      min-width: 2.2rem;
+    }
+
+    #ai-coding-methodology-essay .cite-ref {
+      display: inline-block;
+      margin-left: 0.18rem;
+      font-size: 0.82em;
+      vertical-align: super;
+      line-height: 1;
+    }
+
+    #ai-coding-methodology-essay .cite-ref a {
+      border-bottom: 0;
+    }
+
+    #ai-coding-methodology-essay a {
+      color: var(--essay-link);
+      text-decoration: none;
+      border-bottom: 1px solid var(--essay-link-border);
+    }
+
+    #ai-coding-methodology-essay a:hover {
+      border-bottom-color: var(--essay-link-border-hover);
+    }
+
+    @media (max-width: 860px) {
+      #ai-coding-methodology-essay .hero-summary,
+      #ai-coding-methodology-essay .pillar-index {
+        grid-template-columns: 1fr;
+      }
+
+      #ai-coding-methodology-essay .essay-shell {
+        padding-top: 0.5rem;
+      }
+
+      #ai-coding-methodology-essay .essay-hero {
+        padding: 1.6rem 1.2rem;
+      }
+
+      #ai-coding-methodology-essay .hero-title {
+        font-size: 2rem;
+      }
+    }
+  </style>
+
+  <div class="essay-shell">
+    <header class="essay-hero">
+      <p class="hero-kicker">AI Coding / Harness Engineering / Context Engineering</p>
+      <h1 class="hero-title">AI Coding 完整方法论: 从让模型写代码, 到建立受约束的工程协作系统</h1>
+      <p class="hero-lead">
+        真正成熟的 AI Coding，不是把需求丢给模型，期待它一次性吐出正确答案，而是先把目标、边界、上下文、验证、检查点与迭代秩序写成一套稳定系统。人负责目标与裁决，AI 负责受约束地搜索实现路径，Harness 负责调度、校验、重试与收敛。只有这样，AI Coding 才会从偶尔有效的技巧，升级为可复制、可维护、可扩展的工程能力。
+      </p>
+      <section class="hero-summary">
+        <div class="hero-summary-item">
+          <strong>本文主张</strong>
+          AI Coding 的核心不是“生成”，而是“受约束的目标驱动式工程协作”。
+        </div>
+        <div class="hero-summary-item">
+          <strong>角色分工</strong>
+          人定义目标、边界、验收与裁决，AI 执行局部推理和实现搜索，Harness 管秩序。
+        </div>
+        <div class="hero-summary-item">
+          <strong>最小闭环</strong>
+          先澄清，再最小实现，然后验证，最后只在通过后继续。
+        </div>
+      </section>
+    </header>
+
+    <div class="essay-body">
+      <section class="section-block">
+        <h2>一、真正的问题不是“怎么让 AI 写代码”，而是“怎么让 AI 在工程边界内稳定产出”</h2>
+        <p>
+          很多人理解 AI Coding 的方式，仍然停留在“把需求说清楚，模型就会帮我把代码写出来”。这种理解只适合非常短、非常局部、几乎没有后续维护成本的小任务。一旦任务变成真实工程问题，情况立刻复杂起来：需求会含糊，代码库有历史包袱，输出要兼容现有结构，错误不能只被看见，还必须被验证、定位和修正。
+        </p>
+        <p>
+          因此，AI Coding 的真正问题从来不是“模型能不能写”，而是“模型写出来的东西能不能被稳定地放进一个真实系统里”。这也是为什么成熟的 AI 编程方法论，最终一定会从提示词技巧转向系统设计：需要明确的目标接口，需要可验证的验收标准，需要上下文治理，需要检查器，需要中间态，需要重试机制，需要断点恢复，需要对副作用的控制。<span class="cite-ref"><a href="#ref-3">[3]</a><a href="#ref-4">[4]</a><a href="#ref-5">[5]</a></span>
+        </p>
+
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th>把 AI Coding 理解成什么</th>
+              <th>典型做法</th>
+              <th>短期效果</th>
+              <th>长期结果</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>一次性生成工具</td>
+              <td>丢一个模糊需求，让模型直接输出代码</td>
+              <td>看起来很快</td>
+              <td>返工频繁，副作用多，难以复用</td>
+            </tr>
+            <tr>
+              <td>受约束的工程协作系统</td>
+              <td>先定义目标、边界、验证，再让模型在闭环里迭代</td>
+              <td>起步更严格</td>
+              <td>更稳定、更可控、更容易扩展</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="argument-box">
+          <strong>本文的基本判断：</strong>
+          AI Coding 的本质不是“自然语言替代键盘”，而是“人类把工程秩序前置，AI 在秩序内高效执行”。谁定义秩序，谁就决定结果质量。
+        </div>
+      </section>
+
+      <section class="section-block">
+        <h2>二、这套方法论的世界观：人负责目标与裁决，AI 负责搜索实现，Harness 负责收敛</h2>
+        <p>
+          只要把 LLM 视为一个“非常强但并不可靠的推理与生成模块”，很多方法论问题都会变得清晰。它擅长把上下文、规则和目标转译成局部实现；它不擅长替你承担系统级责任。系统级责任包括：任务拆解、状态管理、验证协议、副作用控制、何时停止、何时回滚、何时重试、何时升级为人工裁决。<span class="cite-ref"><a href="#ref-3">[3]</a><a href="#ref-4">[4]</a><a href="#ref-6">[6]</a></span>
+        </p>
+        <p>
+          所以一套成熟的 AI Coding 系统，至少包含三个角色层次。第一层是人类，负责定义目标、非目标、优先级、风险边界和最终验收。第二层是 AI，负责在边界内完成分析、生成、修补、总结等局部工作。第三层是 Harness，也就是围绕模型建立的工程壳层，它负责把调用顺序、验证逻辑、错误恢复、上下文管理和中间态治理写成程序秩序。没有这第三层，AI Coding 往往会很快退化成“对话式碰运气”。
+        </p>
+
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th>角色</th>
+              <th>核心职责</th>
+              <th>不该承担什么</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>人类开发者</td>
+              <td>定义目标、边界、成功标准、风险裁决</td>
+              <td>不必手工完成所有实现细节</td>
+            </tr>
+            <tr>
+              <td>LLM / Coding Agent</td>
+              <td>在给定上下文与约束内完成局部推理、实现和修正</td>
+              <td>不应主导端到端系统秩序</td>
+            </tr>
+            <tr>
+              <td>Harness / Orchestrator</td>
+              <td>调度、校验、重试、记录、断点恢复、上下文治理</td>
+              <td>不替代人类做价值判断</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="note-box">
+          <strong>一句话理解：</strong>
+          人负责“要什么”，Harness 负责“怎么稳”，AI 负责“怎么做”。
+        </div>
+      </section>
+
+      <section class="section-block">
+        <h2>三、5 条基础原则：所有成熟 AI Coding 系统都绕不开这几件事</h2>
+        <div class="pillar-index">
+          <section class="pillar-card">
+            <h3>原则 1</h3>
+            <p>先想再做。假设、歧义、备选解释必须先暴露，不允许模型默默替你做决定。</p>
+          </section>
+          <section class="pillar-card">
+            <h3>原则 2</h3>
+            <p>简洁至上。默认只做当前目标的最小闭环，不提前抽象，不顺手扩功能。</p>
+          </section>
+          <section class="pillar-card">
+            <h3>原则 3</h3>
+            <p>精准修改。只动必须动的部分，每一行改动都要能追溯到需求或验证失败项。</p>
+          </section>
+          <section class="pillar-card">
+            <h3>原则 4</h3>
+            <p>目标驱动。任务必须被翻译成可验证目标，而不是模糊愿望。</p>
+          </section>
+          <section class="pillar-card">
+            <h3>原则 5</h3>
+            <p>验证闭环。任何 AI 产出默认不可信，必须进入评估、修正、再验证的循环。</p>
+          </section>
+          <section class="pillar-card">
+            <h3>原则总括</h3>
+            <p>越想发挥 AI 的速度，就越要把约束、验证和边界做硬，否则速度只会放大错误。</p>
+          </section>
+        </div>
+
+        <ul class="pillar-nav" id="pillar-nav">
+          <li><button type="button" data-pillar-target="clarify">先澄清</button></li>
+          <li><button type="button" data-pillar-target="simple">最小方案</button></li>
+          <li><button type="button" data-pillar-target="surgical">精准修改</button></li>
+          <li><button type="button" data-pillar-target="verify">验证闭环</button></li>
+          <li><button type="button" data-pillar-target="context">上下文治理</button></li>
+          <li><button type="button" data-pillar-target="harness">Harness</button></li>
+        </ul>
+
+        <section class="pillar-panel" data-pillar-panel="clarify">
+          <header class="pillar-head">
+            <h3>先澄清：不让模型替你补全前提</h3>
+            <p>关键词：显式假设、暴露歧义、停下来问、拒绝默选解释。</p>
+          </header>
+          <p>
+            真实工程里，AI 最危险的失误往往不是语法错误，而是“理解错了你的意图，却自信地一路做下去”。因此开始实现前，必须先把假设写出来，把多种理解并列出来，把不确定点暴露出来。如果任务存在几种解释，不能让模型偷偷挑一种最顺手的。
+          </p>
+          <p>
+            这条原则看起来拖慢节奏，实际上是在提前消灭返工。很多“模型怎么越改越乱”的根因，并不是生成能力不够，而是起点错了。
+          </p>
+        </section>
+
+        <section class="pillar-panel" data-pillar-panel="simple">
+          <header class="pillar-head">
+            <h3>最小方案：避免把“看起来专业”误当成“真的合适”</h3>
+            <p>关键词：最小闭环、拒绝预留、禁止一次性框架化。</p>
+          </header>
+          <p>
+            LLM 非常容易产生一种工程错觉：用更多层、更强抽象、更完整接口把代码包装得很“高级”。但真实需求常常只需要一个最小、直接、低副作用的实现。所谓简洁，不是写得幼稚，而是只承担当前问题所需要的复杂度。
+          </p>
+          <p>
+            所以 AI Coding 要把“不要添加未被要求的灵活性、不要为一次性问题做永久抽象、不要为想象中的未来场景铺路”写成硬规则。很多坏代码不是功能错，而是结构过量。
+          </p>
+        </section>
+
+        <section class="pillar-panel" data-pillar-panel="surgical">
+          <header class="pillar-head">
+            <h3>精准修改：主任务做对了，不代表副作用可以被原谅</h3>
+            <p>关键词：最小 diff、范围约束、遵循现有风格、只清理自己引入的脏点。</p>
+          </header>
+          <p>
+            在已有仓库里，AI 最常见的高成本错误之一是“顺手改”。它修了一个问题，同时改了相邻注释、格式、命名、结构，甚至开始清理看不顺眼的旧逻辑。最后主需求也许完成了，但 review 和回归成本大幅上升。
+          </p>
+          <p>
+            精准修改的标准非常简单：每一行变化都应该能直接追溯到需求、缺陷或验证失败项。凡是追溯不到的改动，默认都值得怀疑。
+          </p>
+        </section>
+
+        <section class="pillar-panel" data-pillar-panel="verify">
+          <header class="pillar-head">
+            <h3>验证闭环：没有验证的生成，不叫完成</h3>
+            <p>关键词：eval、refine、verify、通过后再继续。</p>
+          </header>
+          <p>
+            把任务翻译成“可验证目标”，是 AI Coding 从聊天技巧进入工程状态的分水岭。修 bug，就先写复现；加功能，就先定义输入输出；重构，就先锁定行为不变。这样模型的输出不再只是“看起来合理”，而是被外部检查器判断“是否达标”。
+          </p>
+          <p>
+            一旦进入验证闭环，AI 的角色就从“写最终答案的人”，变成“不断逼近成功标准的执行者”。这是更符合工程现实的角色定位。
+          </p>
+        </section>
+
+        <section class="pillar-panel" data-pillar-panel="context">
+          <header class="pillar-head">
+            <h3>上下文治理：不是喂得越多越好，而是组织得越准越好</h3>
+            <p>关键词：只给必要上下文、结构化摘要、长任务切片、中间态复用。</p>
+          </header>
+          <p>
+            很多 AI Coding 失败，不是因为模型不会写，而是因为上下文被组织得太差。无关文件、冗长讨论、历史噪音混进来后，模型会在真正关键的信息上失焦。上下文工程的目标，不是把仓库一股脑塞进去，而是只暴露当前决策所需的材料。<span class="cite-ref"><a href="#ref-5">[5]</a></span>
+          </p>
+          <p>
+            高质量上下文应优先是结构化的：接口摘要、约束摘要、变更摘要、风险摘要，而不是一堆原始文本。长任务则应分批推进，每一批只携带必要摘要进入下一批。
+          </p>
+        </section>
+
+        <section class="pillar-panel" data-pillar-panel="harness">
+          <header class="pillar-head">
+            <h3>Harness：把 AI Coding 从“对话”升级成“系统”</h3>
+            <p>关键词：状态机、检查器、重试、检查点、外部秩序。</p>
+          </header>
+          <p>
+            只靠 Prompt 很难支撑真实工程任务。真正稳定的 AI Coding，一定要有外部程序壳层去承担秩序：什么时候读取上下文，什么时候让模型生成，什么时候运行测试，什么时候回滚，什么时候保留检查点，什么时候终止。<span class="cite-ref"><a href="#ref-3">[3]</a><a href="#ref-4">[4]</a></span>
+          </p>
+          <p>
+            换句话说，Prompt 定义的是局部推理接口，Harness 管的是整个任务生命周期。前者决定模型这一轮说什么，后者决定系统下一步做什么。
+          </p>
+        </section>
+      </section>
+
+      <section class="section-block">
+        <h2>四、标准工作流：把 AI Coding 写成 7 步操作系统</h2>
+        <p>
+          如果要把这套方法论压缩成最稳定的通用流程，我更推荐把它写成 7 个固定阶段，而不是依赖临场发挥。流程越稳定，团队协作越容易统一，工具层越容易自动化，失败后越容易定位是哪个环节出了问题。
+        </p>
+
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th>阶段</th>
+              <th>要解决的问题</th>
+              <th>关键产物</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>1. 任务定约</td>
+              <td>这次到底要什么，不要什么，能碰哪里</td>
+              <td><code>Objective / Non-goals / Scope / Verify</code></td>
+            </tr>
+            <tr>
+              <td>2. 上下文提取</td>
+              <td>当前决策真正需要哪些信息</td>
+              <td>接口摘要、约束摘要、相邻实现、未知点</td>
+            </tr>
+            <tr>
+              <td>3. 先计划再实现</td>
+              <td>多步任务怎样拆成可验证的小步</td>
+              <td>步骤列表和每步验证方式</td>
+            </tr>
+            <tr>
+              <td>4. 最小切片实现</td>
+              <td>一次只推进一个最小可验证单元</td>
+              <td>最小 diff 或最小产物</td>
+            </tr>
+            <tr>
+              <td>5. 局部验证</td>
+              <td>当前切片是否满足功能和格式要求</td>
+              <td>测试、lint、build、快照、断言</td>
+            </tr>
+            <tr>
+              <td>6. 全局一致性复查</td>
+              <td>与现有系统是否冲突，跨阶段是否一致</td>
+              <td>接口兼容性、状态一致性、风格一致性结论</td>
+            </tr>
+            <tr>
+              <td>7. 总结与落盘</td>
+              <td>如何保留可续跑、可审计、可复盘的中间态</td>
+              <td>变更摘要、风险摘要、检查点</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="note-box">
+          <strong>一个非常重要的原则：</strong>
+          不要把“大任务一次做完”当成能力强的表现。对 AI 来说，更合理的目标是“把复杂任务拆成一串局部可验证的小成功”。
+        </div>
+      </section>
+
+      <section class="section-block">
+        <h2>五、任务定约是第一生产力：先把目标、非目标、范围和验收写死</h2>
+        <p>
+          很多 AI Coding 失败，一开始就埋下了种子。因为任务定义太模糊，所以模型只能靠猜；因为非目标没写明，所以它会顺手扩展；因为范围不清，所以它会误改无关区域；因为验收标准没定义，所以所有人只能凭感觉判断“差不多行不行”。
+        </p>
+        <p>
+          所谓任务定约，就是在开始之前把这四个维度写成显式协议。它们并不复杂，但极其高价值。协议越明确，模型的搜索空间越小，错误类型越少，验证工作越便宜。
+        </p>
+
+        <div class="argument-box">
+          <strong>这一步最容易被低估：</strong>
+          好的任务定约不是文书工作，而是在实现前就把大量错误路径剪掉。它直接决定后面是高效迭代，还是低效返工。
+        </div>
+      </section>
+
+      <section class="section-block">
+        <h2>六、把任务翻译成可验证目标：从“看起来对”切换到“证明它对”</h2>
+        <p>
+          AI Coding 进入工程状态的关键，不在“会不会写代码”，而在“会不会把需求翻译成验证协议”。只要任务仍然停留在“修一下”“优化一下”“让它能用”这种表达层次，模型和人都会被困在模糊地带里。只有当需求被改写成可执行检查时，系统才真正开始收敛。
+        </p>
+        <p>
+          这也是为什么很多成熟做法会强调测试先行、快照对比、结构化断言和门禁链路。验证协议不是附属品，而是主流程的一部分。
+        </p>
+
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th>原始需求</th>
+              <th>更好的工程化改写</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>修复这个 bug</td>
+              <td>先写复现用例，再让复现用例通过</td>
+            </tr>
+            <tr>
+              <td>给接口加校验</td>
+              <td>为非法输入写失败用例，并明确报错结构</td>
+            </tr>
+            <tr>
+              <td>重构这段代码</td>
+              <td>保持行为不变，并证明重构前后测试一致</td>
+            </tr>
+            <tr>
+              <td>让页面更好用</td>
+              <td>先定义可观察变化，再通过截图、交互检查或指标验证</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="note-box">
+          <strong>最小门禁模型：</strong>
+          先评估失败项，再精准修正失败项，最后重新验证。没有这个闭环，AI 的错误会被带着继续向后传播。
+        </div>
+      </section>
+
+      <section class="section-block">
+        <h2>七、上下文工程不是“喂更多”，而是“组织得更准”</h2>
+        <p>
+          编码 agent 的上限，很大程度取决于上下文工程。上下文不是原始资料仓库，而是决策输入层。只要这个输入层被无关信息淹没，模型就会在最关键的约束、接口和风险点上失焦。<span class="cite-ref"><a href="#ref-5">[5]</a></span>
+        </p>
+        <p>
+          真正有效的上下文治理，至少包括四件事。第一，只给当前任务真正需要的代码和说明。第二，优先提供结构化摘要，而不是大段原文。第三，把长任务拆成多个局部阶段，每一阶段只带必要中间态。第四，保留检查点和摘要，让系统可以续跑，而不必每次从零开始重新推理。
+        </p>
+
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th>低质量上下文</th>
+              <th>高质量上下文</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>整个仓库、整个聊天记录、整个日志直接喂进去</td>
+              <td>只提取相关入口、接口、约束、相邻实现和未知点</td>
+            </tr>
+            <tr>
+              <td>堆原始文本</td>
+              <td>堆结构化摘要与已验证中间态</td>
+            </tr>
+            <tr>
+              <td>每轮都从头解释背景</td>
+              <td>用检查点和摘要做增量续跑</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="argument-box">
+          <strong>上下文工程最重要的目标：</strong>
+          不是让模型知道更多，而是让模型在当前这一步只看到最该看到的东西。
+        </div>
+      </section>
+
+      <section class="section-block">
+        <h2>八、Harness 才是真正的“系统大脑”：Prompt 管局部推理，Harness 管任务秩序</h2>
+        <p>
+          很多人把 AI Coding 的主要精力放在“怎么写更强的 Prompt”上，但如果系统缺少 Harness，Prompt 再长也很难可靠。原因很简单：Prompt 只能定义这一轮推理的语义接口，它不能天然负责状态转换、异常恢复、门禁失败后的回退、检查点落盘、上下文裁剪、重试策略和并发边界。<span class="cite-ref"><a href="#ref-3">[3]</a><a href="#ref-4">[4]</a></span>
+        </p>
+        <p>
+          所以更成熟的做法，是把 Prompt 视为局部推理模块，把 Harness 视为总控。前者回答“这一轮模型应该做什么”，后者回答“系统下一步应该怎么走”。这个分工一旦清晰，整个 AI Coding 系统就不再像长对话，而更像一个可审计、可续跑、可自动化的任务流水线。
+        </p>
+
+        <div class="note-box">
+          <strong>一句话压缩：</strong>
+          Prompt 告诉模型“这一轮怎么想”，Harness 决定系统“下一步怎么走”。
+        </div>
+      </section>
+
+      <section class="section-block">
+        <h2>九、不同任务类型的最佳姿势并不一样：不要用一种工作流解决所有问题</h2>
+        <p>
+          一套方法论要真正可用，不能只讲原则，还要指导不同任务怎样落地。AI Coding 最大的误区之一，就是把所有任务都当成同一类生成问题。实际上，成熟仓库修 bug、新功能原型、大型重构、代码审查、安全敏感改动，它们的边界条件完全不同。
+        </p>
+
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th>任务类型</th>
+              <th>推荐策略</th>
+              <th>核心风险</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>成熟仓库修 bug</td>
+              <td>先复现，再最小修复，再跑回归</td>
+              <td>顺手改太多、误伤相邻逻辑</td>
+            </tr>
+            <tr>
+              <td>增量式功能开发</td>
+              <td>先定义最小闭环，再逐步扩展</td>
+              <td>过早抽象、顺手加配置</td>
+            </tr>
+            <tr>
+              <td>大重构</td>
+              <td>拆成一串行为不变的小步，每步独立验证</td>
+              <td>一次改太多，失败后无法定位</td>
+            </tr>
+            <tr>
+              <td>代码审查</td>
+              <td>聚焦 bug、回归风险、测试缺口和边界错误</td>
+              <td>沉迷风格意见，忽视真正风险</td>
+            </tr>
+            <tr>
+              <td>安全敏感代码</td>
+              <td>叠加专门安全检查，不接受“看起来没问题”</td>
+              <td>模型过度自信、引入隐性漏洞</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p>
+          这也是为什么很多外部研究对 AI 编码能力的结论会显得不一致。原型类任务里，AI 往往能带来显著速度优势；而在复杂成熟代码库里，审查和修复 AI 输出的成本可能抵消甚至反超这些收益。METR 的随机对照研究就显示，针对资深开源开发者与复杂仓库任务，早 2025 年的 AI 工具让完成时间平均变慢了 19%。<span class="cite-ref"><a href="#ref-8">[8]</a></span>
+        </p>
+      </section>
+
+      <section class="section-block">
+        <h2>十、为什么这套方法论必须强调验证、审慎和零信任</h2>
+        <p>
+          如果 AI 只是偶尔答错一个事实，问题还不算大；但在代码场景里，错误往往是结构性的。模型会过度自信，会做错误假设，会在局部正确时掩盖全局冲突，会把“像工程”误当成“是工程”。微软关于代码模型过度自信的研究，以及开发者与 agent 协作研究，都说明了这一点：模型很强，但仍然远远谈不上“可被无条件信任”。<span class="cite-ref"><a href="#ref-9">[9]</a><a href="#ref-10">[10]</a></span>
+        </p>
+        <p>
+          安全面上更是如此。Veracode 的 2025 报告显示，在其测试的任务中，仍有接近一半的 AI 生成代码会包含已知安全问题。<span class="cite-ref"><a href="#ref-11">[11]</a></span> 这意味着“只要模型更强就会自动安全”并不是成立前提。也正因此，零信任原则在 AI Coding 里不是保守姿态，而是必要工程纪律。
+        </p>
+
+        <div class="argument-box">
+          <strong>零信任原则的正确含义：</strong>
+          不是拒绝使用 AI，而是拒绝把“模型说了”当成验证结束的理由。AI 可以生成、解释、修补、总结，但不能免除检查、测试和审查。
+        </div>
+      </section>
+
+      <section class="section-block">
+        <h2>十一、最常见的反模式：AI Coding 为什么会从高效协作退化成高成本噪音</h2>
+        <p>
+          几乎所有糟糕的 AI Coding 体验，最终都能归到几类稳定反模式。它们之所以危险，不是因为偶尔会出错，而是因为一旦形成习惯，就会系统性放大模型的弱点。
+        </p>
+
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th>反模式</th>
+              <th>问题本质</th>
+              <th>后果</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>需求含糊就直接开写</td>
+              <td>把澄清成本后置</td>
+              <td>越改越偏，返工更大</td>
+            </tr>
+            <tr>
+              <td>一次让 AI 改太多地方</td>
+              <td>失去问题定位能力</td>
+              <td>失败后难以判断错在何处</td>
+            </tr>
+            <tr>
+              <td>把“灵活性”当成高级工程</td>
+              <td>复杂度超前增长</td>
+              <td>结构噪音积累，维护变难</td>
+            </tr>
+            <tr>
+              <td>只有生成，没有门禁</td>
+              <td>把模型输出误当成完成</td>
+              <td>错误向后传播</td>
+            </tr>
+            <tr>
+              <td>上下文全量堆给模型</td>
+              <td>无差别输入污染关键约束</td>
+              <td>注意力失焦，判断漂移</td>
+            </tr>
+            <tr>
+              <td>让 Prompt 承担系统秩序</td>
+              <td>缺少外部 harness</td>
+              <td>状态、重试、异常处理失控</td>
+            </tr>
+            <tr>
+              <td>顺手清理无关代码</td>
+              <td>范围约束失效</td>
+              <td>review 成本和回归风险飙升</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="note-box">
+          <strong>这些反模式的共同根源：</strong>
+          把 AI Coding 理解成“更会说话的自动编程”，而不是“受约束的工程协作系统”。
+        </div>
+      </section>
+
+      <section class="section-block">
+        <h2>十二、最后的收束：AI Coding 最值钱的不是第一版代码，而是第五次迭代后系统仍然站得住</h2>
+        <p>
+          AI 让“写出第一版”变得越来越便宜，这一点几乎已经没有悬念。真正稀缺的能力，正在从“能不能写出来”转向“能不能把生成速度转化成稳定系统演化速度”。换句话说，AI Coding 时代最值钱的能力，不是 prompt 花样，不是一次性生成长度，而是把模型纳入工程秩序、让它在约束中持续产出、并让这些产出在多轮迭代后依旧可维护。
+        </p>
+        <p>
+          如果一定要用一句最简洁的话概括这套方法论，可以这样说：先用契约定义任务，再用上下文组织信息，再用最小切片推进实现，再用门禁闭环逼近成功标准，最后用 Harness 维持整个系统的秩序。AI 在这里不是替代工程，而是被工程化。
+        </p>
+
+        <div class="argument-box">
+          <strong>一句话收束全文：</strong>
+          AI Coding 的终局，不是让模型自由写代码，而是让模型在明确目标、严格边界和持续验证之下，成为一个可被工程系统稳定驱动的实现加速器。
+        </div>
+      </section>
+
+      <hr class="essay-divider">
+
+      <section class="section-block">
+        <h2>参考文献</h2>
+        <div class="ref-box">
+          <div class="ref-list-html">
+            <p class="ref-item" id="ref-1"><a class="ref-index" href="https://github.com/multica-ai/andrej-karpathy-skills" target="_blank" rel="noopener noreferrer">[1]</a> Multica AI. <em>andrej-karpathy-skills</em>.</p>
+            <p class="ref-item" id="ref-2"><a class="ref-index" href="https://karpathy.medium.com/software-2-0-a64152b37c35" target="_blank" rel="noopener noreferrer">[2]</a> Andrej Karpathy. <em>Software 2.0</em>.</p>
+            <p class="ref-item" id="ref-3"><a class="ref-index" href="https://openai.com/index/harness-engineering/" target="_blank" rel="noopener noreferrer">[3]</a> OpenAI Research Team. <em>Harness engineering: leveraging Codex in an agent-first world</em>.</p>
+            <p class="ref-item" id="ref-4"><a class="ref-index" href="https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents" target="_blank" rel="noopener noreferrer">[4]</a> Anthropic Research Team. <em>Effective harnesses for long-running agents</em>.</p>
+            <p class="ref-item" id="ref-5"><a class="ref-index" href="https://martinfowler.com/articles/exploring-gen-ai/context-engineering-coding-agents.html" target="_blank" rel="noopener noreferrer">[5]</a> Birgitta Böckeler. <em>Context Engineering for Coding Agents</em>.</p>
+            <p class="ref-item" id="ref-6"><a class="ref-index" href="https://github.com/humanlayer/12-factor-agents" target="_blank" rel="noopener noreferrer">[6]</a> Dex Horthy. <em>12 Factor Agents</em>.</p>
+            <p class="ref-item" id="ref-7"><a class="ref-index" href="https://arxiv.org/abs/2506.23253" target="_blank" rel="noopener noreferrer">[7]</a> Researchers. <em>Vibe coding: programming through conversation with artificial intelligence</em>.</p>
+            <p class="ref-item" id="ref-8"><a class="ref-index" href="https://metr.org/blog/2025-07-10-early-2025-ai-experienced-os-dev-study/" target="_blank" rel="noopener noreferrer">[8]</a> METR. <em>Measuring the Impact of Early-2025 AI on Experienced Open-Source Developer Productivity</em>.</p>
+            <p class="ref-item" id="ref-9"><a class="ref-index" href="https://www.microsoft.com/en-us/research/publication/do-code-models-suffer-from-the-dunning-kruger-effect/" target="_blank" rel="noopener noreferrer">[9]</a> Microsoft Research. <em>Do Code Models Suffer from the Dunning-Kruger Effect?</em>.</p>
+            <p class="ref-item" id="ref-10"><a class="ref-index" href="https://www.microsoft.com/en-us/research/publication/sharp-tools-how-developers-wield-agentic-ai-in-real-software-engineering-tasks/" target="_blank" rel="noopener noreferrer">[10]</a> Microsoft Research. <em>Why AI Agents Still Need You</em>.</p>
+            <p class="ref-item" id="ref-11"><a class="ref-index" href="https://www.veracode.com/wp-content/uploads/2025_GenAI_Code_Security_Report_Final.pdf" target="_blank" rel="noopener noreferrer">[11]</a> Veracode. <em>2025 GenAI Code Security Report</em>.</p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const article = document.getElementById("ai-coding-methodology-essay");
+      const navButtons = Array.from(document.querySelectorAll("#pillar-nav button"));
+      const panels = Array.from(document.querySelectorAll("[data-pillar-panel]"));
+
+      function parseRgb(colorValue) {
+        const match = colorValue && colorValue.match(/\d+(\.\d+)?/g);
+        if (!match || match.length < 3) {
+          return null;
+        }
+        return match.slice(0, 3).map(Number);
+      }
+
+      function luminance(rgb) {
+        return (0.299 * rgb[0]) + (0.587 * rgb[1]) + (0.114 * rgb[2]);
+      }
+
+      function mixRgb(source, target, weight) {
+        return source.map(function (channel, index) {
+          return Math.round((channel * (1 - weight)) + (target[index] * weight));
+        });
+      }
+
+      function toRgbString(rgb) {
+        return "rgb(" + rgb.join(", ") + ")";
+      }
+
+      function toRgbaString(rgb, alpha) {
+        return "rgba(" + rgb.join(", ") + ", " + alpha + ")";
+      }
+
+      function applyEssayPalette(backgroundRgb) {
+        const isDark = luminance(backgroundRgb) < 156;
+        const warmLight = [250, 243, 231];
+        const warmDark = [28, 26, 23];
+        const textBase = isDark ? mixRgb(backgroundRgb, [255, 248, 239], 0.84) : mixRgb(backgroundRgb, [24, 22, 19], 0.94);
+        const textStrong = isDark ? mixRgb(backgroundRgb, [255, 252, 245], 0.92) : mixRgb(backgroundRgb, [15, 14, 12], 0.97);
+        const textMuted = isDark ? mixRgb(textBase, backgroundRgb, 0.22) : mixRgb(textBase, backgroundRgb, 0.3);
+        const kicker = isDark ? mixRgb(textBase, [214, 191, 158], 0.38) : mixRgb(textMuted, [116, 98, 76], 0.48);
+        const border = isDark ? toRgbaString(mixRgb(backgroundRgb, [255, 239, 214], 0.28), 0.34) : toRgbaString(mixRgb(backgroundRgb, [118, 101, 81], 0.82), 0.22);
+        const borderSoft = isDark ? toRgbaString(mixRgb(backgroundRgb, [255, 239, 214], 0.18), 0.24) : toRgbaString(mixRgb(backgroundRgb, [118, 101, 81], 0.58), 0.14);
+        const panelBg = isDark ? toRgbString(mixRgb(backgroundRgb, warmLight, 0.11)) : toRgbString(mixRgb(backgroundRgb, warmLight, 0.58));
+        const panelStrongBg = isDark ? toRgbString(mixRgb(backgroundRgb, warmLight, 0.18)) : toRgbString(mixRgb(backgroundRgb, [236, 226, 212], 0.7));
+        const heroStart = isDark ? toRgbString(mixRgb(backgroundRgb, warmLight, 0.09)) : toRgbString(mixRgb(backgroundRgb, [251, 247, 239], 0.74));
+        const heroEnd = isDark ? toRgbString(mixRgb(backgroundRgb, warmDark, 0.2)) : toRgbString(mixRgb(backgroundRgb, [244, 238, 227], 0.68));
+        const heroGrid = isDark ? toRgbaString(mixRgb(backgroundRgb, warmLight, 0.4), 0.08) : toRgbaString(mixRgb(backgroundRgb, [98, 84, 68], 0.6), 0.045);
+        const summaryBg = isDark ? toRgbaString(mixRgb(backgroundRgb, warmLight, 0.16), 0.88) : toRgbaString(mixRgb(backgroundRgb, [255, 252, 247], 0.72), 0.94);
+        const buttonBg = isDark ? toRgbString(mixRgb(backgroundRgb, warmLight, 0.14)) : toRgbString(mixRgb(backgroundRgb, [248, 242, 234], 0.62));
+        const buttonText = toRgbString(textStrong);
+        const buttonActiveBg = isDark ? toRgbString(mixRgb(backgroundRgb, warmLight, 0.84)) : toRgbString(mixRgb(backgroundRgb, warmDark, 0.92));
+        const buttonActiveText = isDark ? toRgbString(mixRgb(backgroundRgb, warmDark, 0.94)) : toRgbString(mixRgb(backgroundRgb, [255, 249, 241], 0.96));
+        const codeBg = isDark ? toRgbString(mixRgb(backgroundRgb, [17, 16, 14], 0.42)) : toRgbString(mixRgb(backgroundRgb, [243, 237, 228], 0.74));
+        const codeInlineBg = isDark ? toRgbString(mixRgb(backgroundRgb, [76, 67, 56], 0.48)) : toRgbString(mixRgb(backgroundRgb, [240, 233, 222], 0.78));
+        const codeText = isDark ? toRgbString(mixRgb(backgroundRgb, [248, 239, 227], 0.92)) : toRgbString(mixRgb(backgroundRgb, [30, 28, 24], 0.94));
+        const outputBg = isDark ? toRgbString(mixRgb(backgroundRgb, [244, 228, 205], 0.86)) : toRgbString(mixRgb(backgroundRgb, [29, 27, 24], 0.92));
+        const outputText = isDark ? toRgbString(mixRgb(backgroundRgb, [26, 24, 20], 0.94)) : toRgbString(mixRgb(backgroundRgb, [247, 239, 228], 0.94));
+        const link = isDark ? toRgbString(mixRgb(backgroundRgb, [151, 223, 237], 0.88)) : toRgbString(mixRgb(backgroundRgb, [101, 83, 63], 0.92));
+        const linkBorder = isDark ? toRgbaString(mixRgb(backgroundRgb, [151, 223, 237], 0.84), 0.52) : toRgbaString(mixRgb(backgroundRgb, [101, 83, 63], 0.9), 0.34);
+        const linkBorderHover = isDark ? toRgbaString(mixRgb(backgroundRgb, [151, 223, 237], 0.96), 0.96) : toRgbaString(mixRgb(backgroundRgb, [101, 83, 63], 0.96), 0.84);
+        const accent = isDark ? toRgbString(mixRgb(backgroundRgb, [221, 188, 145], 0.82)) : toRgbString(mixRgb(backgroundRgb, [143, 125, 102], 0.9));
+
+        article.style.setProperty("--essay-text", toRgbString(textBase));
+        article.style.setProperty("--essay-text-strong", toRgbString(textStrong));
+        article.style.setProperty("--essay-text-muted", toRgbString(textMuted));
+        article.style.setProperty("--essay-kicker", toRgbString(kicker));
+        article.style.setProperty("--essay-border", border);
+        article.style.setProperty("--essay-border-soft", borderSoft);
+        article.style.setProperty("--essay-panel-bg", panelBg);
+        article.style.setProperty("--essay-panel-strong-bg", panelStrongBg);
+        article.style.setProperty("--essay-hero-bg-start", heroStart);
+        article.style.setProperty("--essay-hero-bg-end", heroEnd);
+        article.style.setProperty("--essay-hero-grid", heroGrid);
+        article.style.setProperty("--essay-summary-bg", summaryBg);
+        article.style.setProperty("--essay-button-bg", buttonBg);
+        article.style.setProperty("--essay-button-text", buttonText);
+        article.style.setProperty("--essay-button-active-bg", buttonActiveBg);
+        article.style.setProperty("--essay-button-active-text", buttonActiveText);
+        article.style.setProperty("--essay-code-bg", codeBg);
+        article.style.setProperty("--essay-code-inline-bg", codeInlineBg);
+        article.style.setProperty("--essay-code-text", codeText);
+        article.style.setProperty("--essay-output-bg", outputBg);
+        article.style.setProperty("--essay-output-text", outputText);
+        article.style.setProperty("--essay-link", link);
+        article.style.setProperty("--essay-link-border", linkBorder);
+        article.style.setProperty("--essay-link-border-hover", linkBorderHover);
+        article.style.setProperty("--essay-accent", accent);
+        article.dataset.tone = isDark ? "dark" : "light";
+      }
+
+      function resolveBackgroundColor(node) {
+        let current = node;
+        while (current) {
+          const style = window.getComputedStyle(current);
+          const rgb = parseRgb(style.backgroundColor);
+          if (rgb && style.backgroundColor !== "rgba(0, 0, 0, 0)" && style.backgroundColor !== "transparent") {
+            return rgb;
+          }
+          current = current.parentElement;
+        }
+        return [255, 255, 255];
+      }
+
+      function applyEssayTone() {
+        if (!article) {
+          return;
+        }
+        const rgb = resolveBackgroundColor(article.parentElement || document.body);
+        applyEssayPalette(rgb);
+      }
+
+      applyEssayTone();
+      window.addEventListener("load", applyEssayTone);
+      window.addEventListener("resize", applyEssayTone);
+
+      function activatePanel(name) {
+        navButtons.forEach((button) => {
+          button.classList.toggle("is-active", button.dataset.pillarTarget === name);
+        });
+        panels.forEach((panel) => {
+          panel.classList.toggle("is-active", panel.dataset.pillarPanel === name);
+        });
+      }
+
+      if (navButtons.length > 0) {
+        activatePanel("clarify");
+        navButtons.forEach((button) => {
+          button.addEventListener("click", function () {
+            activatePanel(button.dataset.pillarTarget);
+          });
+        });
+      }
+
+    })();
+  </script>
+</article>
