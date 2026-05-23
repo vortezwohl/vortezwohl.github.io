@@ -4,7 +4,7 @@ title: "基于 Prompt4Py 的结构化提示词设计方法论: 从写一句 Prom
 toc: false
 math: false
 excerpt: >-
-  提示词工程真正需要的不是一段越来越长的字符串，而是一套可复用、可检查、可演化的结构。以 Prompt4Py 为中心，可以先用 Role、Objective、Instruction、Constraint、Context、Input、Output 七层定义 Prompt 的主骨架，再结合 capability、output_dtype、output_format、output_example、output_language 等扩展字段，把提示词真正建模成一个面向推理任务的接口。这样一来，LLM 在真实系统中承担的就不再是模糊的“端到端智能”，而是一个受 harness、检查器、文本沙箱和系统代码共同约束的推理模块；真正主导任务流程、状态迁移、异常处理与结果验收的，始终应该是外部系统本身。
+  提示词工程真正需要的不是一段越来越长的字符串，而是一套可复用、可检查、可演化的结构。以 Prompt4Py 为中心，可以先用 Role、Objective、Instruction、Constraint、Context、Input、Output 七层定义 Prompt 的主骨架，再结合 capability、output_dtype、output_format、output_example、output_language 等扩展字段，把提示词真正建模成一个面向推理任务的接口。这样一来，LLM 在真实系统中承担的就不再是模糊的“端到端智能”，而是一个受 harness、检查器、文本沙箱和系统代码共同约束的推理模块；真正主导任务流程、状态迁移、异常处理与结果验收的，始终应该是 harness 系统本身。
 categories: prompt-engineering
 tags:
   - prompt-engineering
