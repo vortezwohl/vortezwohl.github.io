@@ -4,7 +4,7 @@ title: "基于 Prompt4Py 的结构化提示词设计方法论: 从写一句 Prom
 toc: false
 math: false
 excerpt: >-
-  提示词工程真正需要的不是一段越来越长的字符串，而是一套可复用的结构。以 Prompt4Py 为中心，可以把 Prompt 拆成 Role、Objective、Instruction、Constraint、Context、Input、Output 七层，并进一步接入 harness、检查器与文本沙箱，让 LLM 在真实系统中只承担受约束的推理职责，而不是直接主导端到端任务。
+  提示词工程真正需要的不是一段越来越长的字符串，而是一套可复用、可检查、可演化的结构。以 Prompt4Py 为中心，可以先用 Role、Objective、Instruction、Constraint、Context、Input、Output 七层定义 Prompt 的主骨架，再结合 capability、output_dtype、output_format、output_example、output_language、timestamp 等扩展字段，把提示词真正建模成一个面向推理任务的接口。这样一来，LLM 在真实系统中承担的就不再是模糊的“端到端智能”，而是一个受 harness、检查器、文本沙箱和系统代码共同约束的推理模块；真正主导任务流程、状态迁移、异常处理与结果验收的，始终应该是外部系统本身。
 categories: prompt-engineering
 tags:
   - prompt-engineering
@@ -417,7 +417,7 @@ author:
         </div>
         <div class="hero-summary-item">
           <strong>核心框架</strong>
-          7 层提示词设计框架：Role、Objective、Instruction、Constraint、Context、Input、Output。
+          7 层主骨架定义 Prompt 的核心职责，再由 Prompt4Py 扩展字段补齐输出与能力语义。
         </div>
         <div class="hero-summary-item">
           <strong>系统边界</strong>
@@ -496,8 +496,10 @@ template.constraint = [
     "(mandatory) Do not invent unsupported claims.",
     "(mandatory) Follow the declared output format exactly."
 ]
+template.capability = "Structured analytical extraction"
 template.context = "{{context_text}}"
 template.input = "{{topic}}"
+template.output_language = "en-us"
 template.output_dtype = "json"
 template.output_format = """
 {
@@ -515,9 +517,9 @@ template.output_format = """
       </section>
 
       <section class="section-block">
-        <h2>三、7 层提示词设计框架</h2>
+        <h2>三、7 层提示词设计主骨架</h2>
         <p>
-          这套方法论的核心，不是抽象的“多写约束”，而是一套明确的七层结构。它们对应 Prompt4Py 里最稳定、最实用的设计面。
+          这套方法论的核心，不是抽象的“多写约束”，而是一套明确的七层主骨架。之所以称它为主骨架，而不是完整字段全集，是因为它定义的是 Prompt 最核心的职责边界，而不是 Prompt4Py 的全部属性表。
         </p>
 
         <table class="comparison-table">
@@ -574,7 +576,62 @@ template.output_format = """
       </section>
 
       <section class="section-block">
-        <h2>四、核心的落地规则</h2>
+        <h2>四、Prompt4Py 的完整字段视图: 主骨架之外还有哪些扩展字段</h2>
+        <p>
+          7 层框架很重要，但它不是 Prompt4Py 的全部。Prompt4Py 真正有价值的地方，在于它允许你在主骨架之外继续挂接一些扩展字段，让 Prompt 不只描述“要做什么”，还描述“具备什么能力”“输出用什么协议”“这份提示运行在什么语言或时间语境中”。
+        </p>
+
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th>字段</th>
+              <th>它解决什么问题</th>
+              <th>什么时候值得显式写出</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>capability</code></td>
+              <td>声明模型当前被期待具备的能力边界</td>
+              <td>当任务需要强调“你是来做什么类型工作”的时候</td>
+            </tr>
+            <tr>
+              <td><code>output_dtype</code></td>
+              <td>声明输出的数据类型</td>
+              <td>任何需要程序消费输出的场景</td>
+            </tr>
+            <tr>
+              <td><code>output_format</code></td>
+              <td>声明输出骨架、标记或协议</td>
+              <td>输出必须严格可解析时</td>
+            </tr>
+            <tr>
+              <td><code>output_example</code></td>
+              <td>给出最短合法样本</td>
+              <td>输出协议容易歧义时</td>
+            </tr>
+            <tr>
+              <td><code>output_language</code></td>
+              <td>显式声明结果使用什么语言</td>
+              <td>多语言系统或语言切换任务中</td>
+            </tr>
+            <tr>
+              <td><code>_timestamp</code></td>
+              <td>标记提示生成时的时间上下文</td>
+              <td>时间敏感任务、记忆任务或调试追踪中</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="note-box">
+          <strong>更准确的说法应该是：</strong>
+          `Role / Objective / Instruction / Constraint / Context / Input / Output` 是 Prompt 的七层主骨架；
+          `capability / output_dtype / output_format / output_example / output_language / timestamp` 等字段，则是 Prompt4Py 在工程落地时非常关键的扩展面。
+        </div>
+      </section>
+
+      <section class="section-block">
+        <h2>五、核心的落地规则</h2>
         <div class="method-index">
           <section class="method-card">
             <h3>规则 1</h3>
@@ -686,7 +743,7 @@ template.output_format = """
       </section>
 
       <section class="section-block">
-        <h2>五、LLM 在真实系统中的正确位置: 一个受约束的推理模块</h2>
+        <h2>六、LLM 在真实系统中的正确位置: 一个受约束的推理模块</h2>
         <p>
           这套方法论最核心的一点，是重新摆正 LLM 的角色。LLM 很强，但它不应该直接主导端到端任务。更合理的做法是把它视作一个推理模块：给它一段受控输入，让它执行一个局部认知任务，再由系统决定是否接受、修复、分支或继续调用下一步。
         </p>
@@ -725,7 +782,7 @@ template.output_format = """
       </section>
 
       <section class="section-block">
-        <h2>六、围绕 Prompt4Py 的最小实现骨架</h2>
+        <h2>七、围绕 Prompt4Py 的最小实现骨架</h2>
         <p>
           如果要把这套思想压成一个最小工程骨架，结构应该是：Prompt4Py 定义推理模板，文本沙箱承载中间态，检查器判断输出是否合法，harness 决定是否重试或进入下一阶段。
         </p>
@@ -777,8 +834,10 @@ def build_reasoning_prompt(task_input: str, context_text: str) -&gt; str:
         "(mandatory) Do not edit source_text directly.",
         "(mandatory) Use exactly the declared output keys."
     ]
+    template.capability = "Evidence-grounded reasoning"
     template.context = "{{context_text}}"
     template.input = "{{task_input}}"
+    template.output_language = "en-us"
     template.output_dtype = "json"
     template.output_format = """
 {
@@ -818,7 +877,7 @@ def harness_step(task_input: str, sandbox: TextSandbox) -&gt; str:
       </section>
 
       <section class="section-block">
-        <h2>七、最常见的反模式</h2>
+        <h2>八、最常见的反模式</h2>
         <p>
           一旦离开上面的结构，Prompt 设计很快会退化。下面这些反模式尤其常见。
         </p>
@@ -872,7 +931,7 @@ def harness_step(task_input: str, sandbox: TextSandbox) -&gt; str:
       </section>
 
       <section class="section-block">
-        <h2>八、最后的收束: Prompt4Py 管结构, Harness 管秩序, LLM 管推理</h2>
+        <h2>九、最后的收束: Prompt4Py 管结构, Harness 管秩序, LLM 管推理</h2>
         <p>
           如果要用一句最简洁的话概括这套方法论，可以这样说：Prompt4Py 负责把 Prompt 写成结构，Harness 负责把系统运行在秩序里，LLM 负责在这个秩序里完成局部推理。
         </p>
