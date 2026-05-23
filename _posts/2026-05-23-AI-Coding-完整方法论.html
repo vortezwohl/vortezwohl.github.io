@@ -371,6 +371,9 @@ author:
       <p class="hero-lead">
         真正成熟的 AI Coding，不是把需求丢给模型，期待它一次性吐出正确答案，而是先把目标、边界、上下文、验证、检查点与迭代秩序写成一套稳定系统。人负责目标与裁决，AI 负责受约束地搜索实现路径，Harness 负责调度、校验、重试与收敛。只有这样，AI Coding 才会从偶尔有效的技巧，升级为可复制、可维护、可扩展的工程能力。
       </p>
+      <p class="hero-lead">
+        这篇文章既面向人类开发者，也面向 code agent 本身。对人类读者，它是一套组织 AI 协作与审查 AI 产出的工程方法论；对 code agent，它也可以被直接当作执行任务时应遵循的行为约束与工作秩序。
+      </p>
       <section class="hero-summary">
         <div class="hero-summary-item">
           <strong>本文主张</strong>
@@ -452,7 +455,7 @@ author:
               <td>不必手工完成所有实现细节</td>
             </tr>
             <tr>
-              <td>LLM / Coding Agent</td>
+              <td>LLM / code agent</td>
               <td>在给定上下文与约束内完成局部推理、实现和修正</td>
               <td>不应主导端到端系统秩序</td>
             </tr>
@@ -654,6 +657,9 @@ author:
         <p>
           所谓任务定约，就是在开始之前把这四个维度写成显式协议。它们并不复杂，但极其高价值。协议越明确，模型的搜索空间越小，错误类型越少，验证工作越便宜。
         </p>
+        <p>
+          需要再往前走一步的是：如果 AI Coding 已经进入“需要 AI 帮你继续编写提示词、agent instruction 或推理接口”的阶段，那么这里的任务定约还不够，必须继续把这些约束细化成结构化提示词与可渲染的推理接口。这个层面可以继续参考《<a href="https://vortezwohl.github.io/prompt-engineering/2026/05/23/%E7%BB%93%E6%9E%84%E5%8C%96%E6%8F%90%E7%A4%BA%E8%AF%8D%E8%AE%BE%E8%AE%A1%E6%96%B9%E6%B3%95%E8%AE%BA.html" target="_blank" rel="noopener noreferrer">结构化提示词设计方法论</a>》<span class="cite-ref"><a href="#ref-12">[12]</a></span>。
+        </p>
 
         <div class="argument-box">
           <strong>这一步最容易被低估：</strong>
@@ -748,6 +754,9 @@ author:
         </p>
         <p>
           所以更成熟的做法，是把 Prompt 视为局部推理模块，把 Harness 视为总控。前者回答“这一轮模型应该做什么”，后者回答“系统下一步应该怎么走”。这个分工一旦清晰，整个 AI Coding 系统就不再像长对话，而更像一个可审计、可续跑、可自动化的任务流水线。
+        </p>
+        <p>
+          也正因为如此，AI Coding 不只是上下文管理问题，还是推理接口设计问题。尤其当 AI 已经不止在写代码，而开始帮你写 prompt、写 agent instruction、写中间推理协议时，Prompt 本身也必须被工程化，而不能继续停留在自由文本层面；这一层可以和《<a href="https://vortezwohl.github.io/prompt-engineering/2026/05/23/%E7%BB%93%E6%9E%84%E5%8C%96%E6%8F%90%E7%A4%BA%E8%AF%8D%E8%AE%BE%E8%AE%A1%E6%96%B9%E6%B3%95%E8%AE%BA.html" target="_blank" rel="noopener noreferrer">结构化提示词设计方法论</a>》一起看<span class="cite-ref"><a href="#ref-12">[12]</a></span>。
         </p>
 
         <div class="note-box">
@@ -886,6 +895,9 @@ author:
         <p>
           如果一定要用一句最简洁的话概括这套方法论，可以这样说：先用契约定义任务，再用上下文组织信息，再用最小切片推进实现，再用门禁闭环逼近成功标准，最后用 Harness 维持整个系统的秩序。AI 在这里不是替代工程，而是被工程化。
         </p>
+        <p>
+          但当 AI 开始主动抽象、拆层、预留扩展点时，真正重要的就已经不只是“能不能生成代码”，而是“能不能谨慎识别变化点、控制依赖扩散、压住架构复杂度”。这一层更接近结构判断与架构克制的问题，可以继续参考《<a href="https://vortezwohl.github.io/software-engineering/2026/05/22/AI-Coding-%E6%97%B6%E4%BB%A3-%E7%90%86%E8%A7%A3%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E5%8F%98%E5%BE%97%E6%9B%B4%E5%8A%A0%E9%87%8D%E8%A6%81.html" target="_blank" rel="noopener noreferrer">AI Coding 时代，理解设计模式变得更加重要</a>》<span class="cite-ref"><a href="#ref-13">[13]</a></span>。
+        </p>
 
         <div class="argument-box">
           <strong>一句话收束全文：</strong>
@@ -903,13 +915,15 @@ author:
             <p class="ref-item" id="ref-2"><a class="ref-index" href="https://karpathy.medium.com/software-2-0-a64152b37c35" target="_blank" rel="noopener noreferrer">[2]</a> Andrej Karpathy. <em>Software 2.0</em>.</p>
             <p class="ref-item" id="ref-3"><a class="ref-index" href="https://openai.com/index/harness-engineering/" target="_blank" rel="noopener noreferrer">[3]</a> OpenAI Research Team. <em>Harness engineering: leveraging Codex in an agent-first world</em>.</p>
             <p class="ref-item" id="ref-4"><a class="ref-index" href="https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents" target="_blank" rel="noopener noreferrer">[4]</a> Anthropic Research Team. <em>Effective harnesses for long-running agents</em>.</p>
-            <p class="ref-item" id="ref-5"><a class="ref-index" href="https://martinfowler.com/articles/exploring-gen-ai/context-engineering-coding-agents.html" target="_blank" rel="noopener noreferrer">[5]</a> Birgitta Böckeler. <em>Context Engineering for Coding Agents</em>.</p>
+            <p class="ref-item" id="ref-5"><a class="ref-index" href="https://martinfowler.com/articles/exploring-gen-ai/context-engineering-coding-agents.html" target="_blank" rel="noopener noreferrer">[5]</a> Birgitta Böckeler. <em>Context Engineering for code agents</em>.</p>
             <p class="ref-item" id="ref-6"><a class="ref-index" href="https://github.com/humanlayer/12-factor-agents" target="_blank" rel="noopener noreferrer">[6]</a> Dex Horthy. <em>12 Factor Agents</em>.</p>
             <p class="ref-item" id="ref-7"><a class="ref-index" href="https://arxiv.org/abs/2506.23253" target="_blank" rel="noopener noreferrer">[7]</a> Researchers. <em>Vibe coding: programming through conversation with artificial intelligence</em>.</p>
             <p class="ref-item" id="ref-8"><a class="ref-index" href="https://metr.org/blog/2025-07-10-early-2025-ai-experienced-os-dev-study/" target="_blank" rel="noopener noreferrer">[8]</a> METR. <em>Measuring the Impact of Early-2025 AI on Experienced Open-Source Developer Productivity</em>.</p>
             <p class="ref-item" id="ref-9"><a class="ref-index" href="https://www.microsoft.com/en-us/research/publication/do-code-models-suffer-from-the-dunning-kruger-effect/" target="_blank" rel="noopener noreferrer">[9]</a> Microsoft Research. <em>Do Code Models Suffer from the Dunning-Kruger Effect?</em>.</p>
             <p class="ref-item" id="ref-10"><a class="ref-index" href="https://www.microsoft.com/en-us/research/publication/sharp-tools-how-developers-wield-agentic-ai-in-real-software-engineering-tasks/" target="_blank" rel="noopener noreferrer">[10]</a> Microsoft Research. <em>Why AI Agents Still Need You</em>.</p>
             <p class="ref-item" id="ref-11"><a class="ref-index" href="https://www.veracode.com/wp-content/uploads/2025_GenAI_Code_Security_Report_Final.pdf" target="_blank" rel="noopener noreferrer">[11]</a> Veracode. <em>2025 GenAI Code Security Report</em>.</p>
+            <p class="ref-item" id="ref-12"><a class="ref-index" href="https://vortezwohl.github.io/prompt-engineering/2026/05/23/%E7%BB%93%E6%9E%84%E5%8C%96%E6%8F%90%E7%A4%BA%E8%AF%8D%E8%AE%BE%E8%AE%A1%E6%96%B9%E6%B3%95%E8%AE%BA.html" target="_blank" rel="noopener noreferrer">[12]</a> Vortezwohl. <em>结构化提示词设计方法论</em>. 面向 AI 编写提示词、agent instruction 与推理接口的结构化方法。</p>
+            <p class="ref-item" id="ref-13"><a class="ref-index" href="https://vortezwohl.github.io/software-engineering/2026/05/22/AI-Coding-%E6%97%B6%E4%BB%A3-%E7%90%86%E8%A7%A3%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E5%8F%98%E5%BE%97%E6%9B%B4%E5%8A%A0%E9%87%8D%E8%A6%81.html" target="_blank" rel="noopener noreferrer">[13]</a> Vortezwohl. <em>AI Coding 时代，理解设计模式变得更加重要</em>. 面向 AI 架构设计、变化点控制与谨慎抽象的结构方法。</p>
           </div>
         </div>
       </section>
