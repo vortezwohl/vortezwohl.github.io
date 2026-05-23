@@ -714,7 +714,7 @@ template.output_format = """
             Context 是模型做判断时可以依赖的背景，Input 是这次运行的即时任务对象。二者混写会让系统无法精确做缓存、裁剪、替换和局部重试。
           </p>
           <p>
-            few-shot 示例通常也应被当作 Context 的一部分来管理，而不是临时塞在任意位置。并且示例位置本身会影响效果，不能忽略其布局偏置。<span class="cite-ref"><a href="#ref-2">[2]</a></span>
+            few-shot 示例通常也应被当作 Context 的一部分来管理，而不是临时塞在任意位置。并且示例位置本身会影响效果，不能忽略其布局偏置。<span class="cite-ref"><a href="#ref-2">[2]</a></span> <span><a href="https://vortezwohl.github.io/nlp/2025/08/13/WhereToShowDemosInYourPrompt.html">查看 few-shot 示例的放置规范</a></span>
           </p>
           <p>
             如果业务上确实必须出现内部术语、缩写或流程代号，也不要硬塞给模型直接使用。更好的做法是把这些术语先翻译成自然语言解释，并放进 Context 中，让模型先理解“这个词在当前任务里具体是什么意思”，再基于它推理。
