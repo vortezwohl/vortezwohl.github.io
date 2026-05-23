@@ -600,6 +600,10 @@ template.output_format = """
             <h3>规则 6</h3>
             <p>Prompt 只定义推理接口，不负责端到端业务编排。</p>
           </section>
+          <section class="method-card">
+            <h3>规则 7</h3>
+            <p>不要硬用内部术语；必须用时，要在 Context 里补自然语言解释。</p>
+          </section>
         </div>
 
         <ul class="method-nav" id="method-nav">
@@ -618,6 +622,9 @@ template.output_format = """
           </header>
           <p>
             Role 的目的不是暴露系统内部架构，而是给模型一个稳定的认知视角。写成“你是章节冲突检测器 V3 子模块”这种内部命名，通常只会制造噪声。更合理的写法是“你是一名关注叙事冲突的结构编辑”。
+          </p>
+          <p>
+            这条规则也适用于整份 Prompt：不要默认模型理解你的内部概念、缩写和工程黑话。Prompt 面向的是模型的自然语言理解能力，不是你所在团队的隐式语境。
           </p>
         </section>
 
@@ -651,6 +658,9 @@ template.output_format = """
           </p>
           <p>
             few-shot 示例通常也应被当作 Context 的一部分来管理，而不是临时塞在任意位置。并且示例位置本身会影响效果，不能忽略其布局偏置。<span class="cite-ref"><a href="#ref-2">[2]</a></span>
+          </p>
+          <p>
+            如果业务上确实必须出现内部术语、缩写或流程代号，也不要硬塞给模型直接使用。更好的做法是把这些术语先翻译成自然语言解释，并放进 Context 中，让模型先理解“这个词在当前任务里具体是什么意思”，再基于它推理。
           </p>
         </section>
 
@@ -841,6 +851,11 @@ def harness_step(task_input: str, sandbox: TextSandbox) -&gt; str:
               <td>Context / Input 不分</td>
               <td>背景材料和本轮参数混在一起</td>
               <td>缓存、裁剪、替换和复用都变难</td>
+            </tr>
+            <tr>
+              <td>直接使用内部术语或黑话</td>
+              <td>把团队隐式语境误当成模型共享语境</td>
+              <td>模型可能表面接话，实际理解却已经偏了</td>
             </tr>
             <tr>
               <td>让 LLM 直接主导端到端任务</td>
