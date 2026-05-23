@@ -1,0 +1,1075 @@
+---
+layout: post
+title: "结构化提示词设计方法论: 从写一句 Prompt 到构建可控文本系统"
+toc: false
+math: false
+excerpt: >-
+  当模型能力持续上升后，提示词设计的瓶颈不再是“会不会写一句更像样的话”，而是能否把任务目标、上下文边界、输出协议和失败恢复机制组织成一套可复用、可测试、可演化的结构。真正有效的提示词工程，本质上正在从一次性文案技巧，升级为面向任务分解、上下文治理、契约设计和反馈闭环的轻量软件工程。
+categories: prompt-engineering
+tags:
+  - prompt-engineering
+  - ai-coding
+  - llm
+  - software-architecture
+  - python
+author:
+  - vortezwohl
+  - 吴子豪
+  - Codex
+---
+
+<article id="prompt-methodology-essay" lang="zh-CN">
+  <style>
+    #prompt-methodology-essay {
+      --essay-text: #1c1b18;
+      --essay-text-strong: #141310;
+      --essay-text-muted: #3f3a34;
+      --essay-kicker: #7b705f;
+      --essay-border: #ddd7cc;
+      --essay-border-soft: #e2ddd4;
+      --essay-panel-bg: #fbf9f5;
+      --essay-panel-strong-bg: #f2ede5;
+      --essay-hero-bg-start: #f8f5ef;
+      --essay-hero-bg-end: #f4efe6;
+      --essay-hero-grid: rgba(80, 72, 60, 0.03);
+      --essay-summary-bg: rgba(255, 253, 249, 0.9);
+      --essay-button-bg: #f8f4ed;
+      --essay-button-text: #231f19;
+      --essay-button-active-bg: #1f1d19;
+      --essay-button-active-text: #fbf8f2;
+      --essay-code-bg: #f3eee5;
+      --essay-code-inline-bg: #f0eadf;
+      --essay-code-text: #1f1d19;
+      --essay-output-bg: #1d1b18;
+      --essay-output-text: #f5efe5;
+      --essay-link: #675743;
+      --essay-link-border: rgba(103, 87, 67, 0.35);
+      --essay-link-border-hover: rgba(103, 87, 67, 0.8);
+      --essay-accent: #8f7d66;
+      color: var(--essay-text);
+      font-family: "Georgia", "Times New Roman", "Noto Serif SC", serif;
+      line-height: 1.85;
+    }
+
+    #prompt-methodology-essay[data-tone="dark"] {
+      --essay-text: #e6dfd4;
+      --essay-text-strong: #fbf7ef;
+      --essay-text-muted: #d1c7b8;
+      --essay-kicker: #b9ab97;
+      --essay-border: rgba(239, 229, 213, 0.18);
+      --essay-border-soft: rgba(239, 229, 213, 0.14);
+      --essay-panel-bg: rgba(33, 30, 26, 0.92);
+      --essay-panel-strong-bg: rgba(47, 42, 36, 0.96);
+      --essay-hero-bg-start: rgba(33, 29, 24, 0.98);
+      --essay-hero-bg-end: rgba(24, 22, 19, 0.98);
+      --essay-hero-grid: rgba(241, 232, 216, 0.05);
+      --essay-summary-bg: rgba(53, 47, 40, 0.88);
+      --essay-button-bg: rgba(48, 42, 36, 0.96);
+      --essay-button-text: #f0e7db;
+      --essay-button-active-bg: #f2e6d6;
+      --essay-button-active-text: #1f1c18;
+      --essay-code-bg: rgba(28, 26, 23, 0.98);
+      --essay-code-inline-bg: rgba(71, 61, 51, 0.82);
+      --essay-code-text: #f2ece2;
+      --essay-output-bg: #efe4d2;
+      --essay-output-text: #1f1b17;
+      --essay-link: #8fd6e5;
+      --essay-link-border: rgba(143, 214, 229, 0.45);
+      --essay-link-border-hover: rgba(143, 214, 229, 0.95);
+      --essay-accent: #d1b48a;
+    }
+
+    #prompt-methodology-essay .essay-shell {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 1.5rem 0 3rem;
+    }
+
+    #prompt-methodology-essay .essay-hero {
+      position: relative;
+      padding: 2.4rem 2rem 1.8rem;
+      border: 1px solid var(--essay-border);
+      background: linear-gradient(180deg, var(--essay-hero-bg-start) 0%, var(--essay-hero-bg-end) 100%);
+    }
+
+    #prompt-methodology-essay .essay-hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image: linear-gradient(var(--essay-hero-grid) 1px, transparent 1px);
+      background-size: 100% 1.8rem;
+      pointer-events: none;
+    }
+
+    #prompt-methodology-essay .hero-kicker {
+      margin: 0 0 0.9rem;
+      font-size: 0.82rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--essay-kicker);
+    }
+
+    #prompt-methodology-essay .hero-title {
+      margin: 0;
+      font-size: 2.4rem;
+      line-height: 1.18;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    #prompt-methodology-essay .hero-lead {
+      max-width: 52rem;
+      margin: 1.25rem 0 0;
+      font-size: 1.05rem;
+      color: var(--essay-text-muted);
+    }
+
+    #prompt-methodology-essay .hero-summary {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.9rem;
+      margin-top: 1.5rem;
+    }
+
+    #prompt-methodology-essay .hero-summary-item {
+      padding: 0.9rem 1rem;
+      border: 1px solid var(--essay-border);
+      background: var(--essay-summary-bg);
+    }
+
+    #prompt-methodology-essay .hero-summary-item strong {
+      display: block;
+      margin-bottom: 0.35rem;
+      font-size: 0.94rem;
+    }
+
+    #prompt-methodology-essay .essay-body {
+      margin-top: 1.6rem;
+    }
+
+    #prompt-methodology-essay .section-block {
+      margin-top: 2.2rem;
+      padding-top: 1.4rem;
+      border-top: 1px solid var(--essay-border-soft);
+    }
+
+    #prompt-methodology-essay .section-block:first-child {
+      margin-top: 0;
+      padding-top: 0;
+      border-top: 0;
+    }
+
+    #prompt-methodology-essay h2,
+    #prompt-methodology-essay h3,
+    #prompt-methodology-essay h4 {
+      font-family: "Georgia", "Times New Roman", "Noto Serif SC", serif;
+      line-height: 1.32;
+      color: var(--essay-text-strong);
+    }
+
+    #prompt-methodology-essay h2 {
+      margin: 0 0 1rem;
+      font-size: 1.7rem;
+    }
+
+    #prompt-methodology-essay h3 {
+      margin: 1.4rem 0 0.7rem;
+      font-size: 1.22rem;
+    }
+
+    #prompt-methodology-essay p {
+      margin: 0.9rem 0;
+    }
+
+    #prompt-methodology-essay ul,
+    #prompt-methodology-essay ol {
+      margin: 0.8rem 0 0.8rem 1.3rem;
+      padding: 0;
+    }
+
+    #prompt-methodology-essay li {
+      margin: 0.35rem 0;
+    }
+
+    #prompt-methodology-essay .argument-box,
+    #prompt-methodology-essay .note-box,
+    #prompt-methodology-essay .demo-box,
+    #prompt-methodology-essay .method-card,
+    #prompt-methodology-essay .ref-box {
+      border: 1px solid var(--essay-border);
+      background: var(--essay-panel-bg);
+    }
+
+    #prompt-methodology-essay .argument-box,
+    #prompt-methodology-essay .note-box,
+    #prompt-methodology-essay .demo-box,
+    #prompt-methodology-essay .ref-box {
+      padding: 1rem 1.1rem;
+      margin: 1rem 0;
+    }
+
+    #prompt-methodology-essay .argument-box strong,
+    #prompt-methodology-essay .note-box strong,
+    #prompt-methodology-essay .ref-box strong {
+      color: var(--essay-text-strong);
+    }
+
+    #prompt-methodology-essay .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+      font-size: 0.98rem;
+    }
+
+    #prompt-methodology-essay .comparison-table th,
+    #prompt-methodology-essay .comparison-table td {
+      padding: 0.8rem 0.9rem;
+      border: 1px solid var(--essay-border);
+      vertical-align: top;
+      text-align: left;
+    }
+
+    #prompt-methodology-essay .comparison-table th {
+      background: var(--essay-panel-strong-bg);
+      font-weight: 700;
+    }
+
+    #prompt-methodology-essay .method-index {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
+      margin: 1.1rem 0 1.3rem;
+    }
+
+    #prompt-methodology-essay .method-card {
+      padding: 1rem;
+    }
+
+    #prompt-methodology-essay .method-card h3 {
+      margin-top: 0;
+    }
+
+    #prompt-methodology-essay .method-nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin: 1.3rem 0 1rem;
+      padding: 0;
+      list-style: none;
+    }
+
+    #prompt-methodology-essay .method-nav button {
+      border: 1px solid var(--essay-border);
+      background: var(--essay-button-bg);
+      color: var(--essay-button-text);
+      padding: 0.42rem 0.75rem;
+      font: inherit;
+      cursor: pointer;
+    }
+
+    #prompt-methodology-essay .method-nav button.is-active {
+      background: var(--essay-button-active-bg);
+      color: var(--essay-button-active-text);
+      border-color: var(--essay-button-active-bg);
+    }
+
+    #prompt-methodology-essay .method-panel {
+      display: none;
+      margin-top: 1rem;
+    }
+
+    #prompt-methodology-essay .method-panel.is-active {
+      display: block;
+    }
+
+    #prompt-methodology-essay .method-head {
+      border-left: 3px solid var(--essay-accent);
+      padding-left: 0.9rem;
+      margin-bottom: 1rem;
+    }
+
+    #prompt-methodology-essay .demo-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+      align-items: center;
+      margin-bottom: 0.8rem;
+    }
+
+    #prompt-methodology-essay .demo-toolbar button {
+      border: 1px solid var(--essay-border);
+      background: var(--essay-button-bg);
+      color: var(--essay-button-text);
+      padding: 0.42rem 0.8rem;
+      font: inherit;
+      cursor: pointer;
+    }
+
+    #prompt-methodology-essay pre {
+      margin: 0;
+      padding: 1rem;
+      overflow-x: auto;
+      background: var(--essay-code-bg);
+      border: 1px solid var(--essay-border);
+      color: var(--essay-code-text);
+      line-height: 1.6;
+    }
+
+    #prompt-methodology-essay code {
+      font-family: "Consolas", "Courier New", monospace;
+      font-size: 0.92em;
+    }
+
+    #prompt-methodology-essay :not(pre) > code {
+      padding: 0.08rem 0.32rem;
+      background: var(--essay-code-inline-bg);
+    }
+
+    #prompt-methodology-essay .demo-output {
+      margin-top: 0.8rem;
+      padding: 0.95rem 1rem;
+      background: var(--essay-output-bg);
+      color: var(--essay-output-text);
+      min-height: 3.4rem;
+      white-space: pre-wrap;
+      font-family: "Consolas", "Courier New", monospace;
+    }
+
+    #prompt-methodology-essay .essay-divider {
+      margin: 2rem 0 1.5rem;
+      border: 0;
+      border-top: 1px solid var(--essay-border);
+    }
+
+    #prompt-methodology-essay .ref-box p {
+      margin: 0.55rem 0;
+      font-size: 0.98rem;
+    }
+
+    #prompt-methodology-essay .ref-list-html {
+      margin: 0;
+      padding: 0;
+    }
+
+    #prompt-methodology-essay .ref-item {
+      margin: 0.7rem 0;
+      font-size: 0.98rem;
+    }
+
+    #prompt-methodology-essay .ref-index {
+      display: inline-block;
+      min-width: 2.2rem;
+    }
+
+    #prompt-methodology-essay .cite-ref {
+      display: inline-block;
+      margin-left: 0.18rem;
+      font-size: 0.82em;
+      vertical-align: super;
+      line-height: 1;
+    }
+
+    #prompt-methodology-essay .cite-ref a {
+      border-bottom: 0;
+    }
+
+    #prompt-methodology-essay a {
+      color: var(--essay-link);
+      text-decoration: none;
+      border-bottom: 1px solid var(--essay-link-border);
+    }
+
+    #prompt-methodology-essay a:hover {
+      border-bottom-color: var(--essay-link-border-hover);
+    }
+
+    @media (max-width: 860px) {
+      #prompt-methodology-essay .hero-summary,
+      #prompt-methodology-essay .method-index {
+        grid-template-columns: 1fr;
+      }
+
+      #prompt-methodology-essay .essay-shell {
+        padding-top: 0.5rem;
+      }
+
+      #prompt-methodology-essay .essay-hero {
+        padding: 1.6rem 1.2rem;
+      }
+
+      #prompt-methodology-essay .hero-title {
+        font-size: 2rem;
+      }
+    }
+  </style>
+
+  <div class="essay-shell">
+    <header class="essay-hero">
+      <p class="hero-kicker">Prompt Engineering / AI Systems / Methodology</p>
+      <h1 class="hero-title">结构化提示词设计方法论: 从写一句 Prompt 到构建可控文本系统</h1>
+      <p class="hero-lead">
+        提示词工程最容易被误解成“写一句更聪明的话”。真正决定效果上限的，却往往不是措辞本身，而是任务边界是否清楚、上下文是否受控、输出是否可校验、失败后是否能形成反馈闭环。
+        当这些因素被系统化之后，Prompt 才从一次性文案变成可迭代的工程对象。
+      </p>
+      <section class="hero-summary">
+        <div class="hero-summary-item">
+          <strong>这篇文章讲什么</strong>
+          把零散的提示词技巧收束为一套面向工程实施的方法论。
+        </div>
+        <div class="hero-summary-item">
+          <strong>核心主张</strong>
+          Prompt 不应只是字符串，而应是一个有结构、有契约、有验证的文本系统。
+        </div>
+        <div class="hero-summary-item">
+          <strong>落地方式</strong>
+          用模板对象、上下文治理、输出协议、文本沙箱和检视闭环来控制生成。
+        </div>
+      </section>
+    </header>
+
+    <div class="essay-body">
+      <section class="section-block">
+        <h2>一、为什么提示词工程正在从“写文案”变成“做软件”</h2>
+        <p>
+          在模型还不够强的时候，提示词的重点往往是“把任务说清楚”。当模型能力提高之后，新的瓶颈开始出现：提示变长了，输入材料变杂了，输出需要被程序消费了，失败也不再只是“答错一句话”，而是会把错误放大到一整条自动化链路中。
+        </p>
+        <p>
+          这时，提示词设计面临的问题已经与软件设计越来越相似：职责怎么划分，输入输出怎么定义，异常怎么处理，状态如何逐步演化，哪个环节负责验证，哪个环节允许生成，哪个环节只允许检查。换句话说，Prompt 的核心矛盾不再只是语言表达，而是结构控制。
+        </p>
+
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th>常见误区</th>
+              <th>表面现象</th>
+              <th>真实问题</th>
+              <th>更合理的工程视角</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>把 Prompt 当一次性字符串</td>
+              <td>越改越长，后续只能复制粘贴</td>
+              <td>没有结构化规范</td>
+              <td>把 Prompt 视为可复用模板对象</td>
+            </tr>
+            <tr>
+              <td>把所有信息一次性塞进去</td>
+              <td>上下文臃肿，模型注意力失焦</td>
+              <td>没有上下文预算意识</td>
+              <td>按阶段披露，按任务裁剪</td>
+            </tr>
+            <tr>
+              <td>只关心生成，不关心检查</td>
+              <td>输出看似自然，系统却难以消费</td>
+              <td>没有输出契约和验证闭环</td>
+              <td>先定义协议，再生成，再检视</td>
+            </tr>
+            <tr>
+              <td>靠“更强模型”掩盖设计缺陷</td>
+              <td>小任务能跑，大任务开始漂移</td>
+              <td>控制层缺失</td>
+              <td>把模型放进受控 harness 中使用</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="argument-box">
+          <strong>一个更直接的判断：</strong>
+          当 Prompt 开始需要复用、组合、验证和回退时，它就已经不是一句话，而是一个轻量的软件系统。
+        </div>
+      </section>
+
+      <section class="section-block">
+        <h2>二、一个可复用的四层框架</h2>
+        <p>
+          如果把提示词工程抽象成一套通用方法，最稳定的框架可以分成四层：意图层、上下文层、契约层和反馈层。它们分别回答“要做什么”“基于什么做”“结果长什么样”“做坏了怎么办”这四个问题。
+        </p>
+
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th>层级</th>
+              <th>核心对象</th>
+              <th>关键问题</th>
+              <th>如果缺失会怎样</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>意图层</td>
+              <td><code>role</code> / <code>objective</code> / <code>instruction</code> / <code>constraint</code></td>
+              <td>模型当前到底应该完成什么任务</td>
+              <td>生成方向飘忽，约束互相打架</td>
+            </tr>
+            <tr>
+              <td>上下文层</td>
+              <td><code>context</code> / <code>input</code> / demos / memory</td>
+              <td>模型基于哪些材料做判断</td>
+              <td>信息不够或信息过载，幻觉与遗漏并存</td>
+            </tr>
+            <tr>
+              <td>契约层</td>
+              <td><code>output_dtype</code> / <code>output_format</code> / <code>output_example</code></td>
+              <td>输出必须满足什么结构</td>
+              <td>看上去自然，但下游解析失败</td>
+            </tr>
+            <tr>
+              <td>反馈层</td>
+              <td>inspect / score / repair / reprompt</td>
+              <td>输出错了之后如何发现并收敛</td>
+              <td>系统只能一锤子买卖，无法稳定迭代</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="note-box">
+          <strong>一个很重要的边界：</strong>
+          “模型怎么想”很难直接控制，但“输入给它什么、要求它输出什么、如何检查它的结果”完全可以被工程化。这正是方法论真正有价值的部分。
+        </div>
+      </section>
+
+      <section class="section-block">
+        <h2>三、先把 Prompt 变成结构, 再谈技巧</h2>
+        <p>
+          一条长期稳定的经验是：不要从一段超长字符串开始设计 Prompt，而要先从结构开始。角色、目标、指令、约束、上下文、输入和输出协议，本质上是不同职责的字段。把它们混成一个大段落，会让后续的维护、测试和重用都迅速变差。
+        </p>
+        <p>
+          这也是程序化模板库存在的意义。以 <code>Prompt4Py</code> 这样的模板接口为例，它的价值不在于“帮你少写几行字符串”，而在于强迫你把本来含混的 Prompt 明确拆成可讨论、可替换、可审查的结构部件。<span class="cite-ref"><a href="#ref-1">[1]</a></span>
+        </p>
+
+        <div class="demo-box">
+          <div class="demo-toolbar">
+            <button type="button" data-run-demo="template">运行 demo</button>
+            <button type="button" data-copy-code="code-template">复制代码</button>
+          </div>
+          <pre id="code-template"><code>from prompt4py import GeneralTemplate
+
+
+def build_prompt(topic: str, notes: str) -&gt; str:
+    template = GeneralTemplate()
+    template.role = "Senior writing assistant"
+    template.objective = "Produce a concise outline for {{topic}}."
+    template.instruction = [
+        "(thinking_intensity=7/10) Identify the main claims first.",
+        "Separate facts, inferences, and open questions.",
+        "Return only the declared JSON object."
+    ]
+    template.constraint = [
+        "(mandatory) Do not invent facts not present in CONTEXT.",
+        "(mandatory) Return exactly one JSON object.",
+        "(important) Keep every field short and parseable."
+    ]
+    template.context = "{{notes}}"
+    template.input = "{{topic}}"
+    template.output_dtype = "json"
+    template.output_format = """
+{
+  "title": "string",
+  "sections": ["string"],
+  "risks": ["string"]
+}
+"""
+    template.output_example = """
+{"title":"Prompt Methodology","sections":["Problem","Method"],"risks":["Missing evidence"]}
+"""
+    return template.render(topic=topic, notes=notes)</code></pre>
+          <div class="demo-output" data-demo-output="template">等待运行...</div>
+        </div>
+
+        <div class="argument-box">
+          <strong>真正的收益：</strong>
+          当 Prompt 结构被显式建模之后，增量修改、记忆增强、检索增强、重试修复和协议复用才会变得自然，否则每一次调整都只是重新拼接字符串。
+        </div>
+      </section>
+
+      <section class="section-block">
+        <h2>四、六条最有价值的设计原则</h2>
+        <div class="method-index">
+          <section class="method-card">
+            <h3>规格先行</h3>
+            <p>先定义任务意图与边界，再谈语言优化。Prompt 首先是规范，其次才是文案。</p>
+          </section>
+          <section class="method-card">
+            <h3>上下文治理</h3>
+            <p>给模型的不是“越多越好”的资料，而是当前步骤刚好需要的材料。</p>
+          </section>
+          <section class="method-card">
+            <h3>输出契约</h3>
+            <p>机器可消费的输出不能靠猜，必须用格式、示例和字段约束明确声明。</p>
+          </section>
+          <section class="method-card">
+            <h3>反馈闭环</h3>
+            <p>生成不是终点。检查、评分、修复和再提示，才是系统稳定性的来源。</p>
+          </section>
+        </div>
+
+        <ul class="method-nav" id="method-nav">
+          <li><button type="button" data-method-target="spec">规格先行</button></li>
+          <li><button type="button" data-method-target="context">上下文预算</button></li>
+          <li><button type="button" data-method-target="demos">示例位置</button></li>
+          <li><button type="button" data-method-target="contract">输出契约</button></li>
+          <li><button type="button" data-method-target="sandbox">文本沙箱</button></li>
+          <li><button type="button" data-method-target="inspect">检视闭环</button></li>
+        </ul>
+
+        <section class="method-panel" data-method-panel="spec">
+          <header class="method-head">
+            <h3>规格先行: 先定义任务接口, 再优化措辞</h3>
+            <p>关键词：任务边界、职责分离、结构字段。</p>
+          </header>
+          <p>
+            很多 Prompt 之所以越来越乱，不是因为语言写得不够好，而是因为任务接口从一开始就没有被定义清楚。角色写成背景故事，目标和约束混写，输入和上下文不区分，最终导致每次修补都在扩大歧义。
+          </p>
+          <ul>
+            <li>把 <code>objective</code> 写成单句任务定义，而不是愿景宣言。</li>
+            <li>把 <code>instruction</code> 拆成原子化条目，一条只表达一个动作。</li>
+            <li>把 <code>constraint</code> 留给硬边界，不要混入一般性建议。</li>
+          </ul>
+        </section>
+
+        <section class="method-panel" data-method-panel="context">
+          <header class="method-head">
+            <h3>上下文预算: 给模型“够用的信息”, 不给“所有信息”</h3>
+            <p>关键词：裁剪、分层披露、局部相关性。</p>
+          </header>
+          <p>
+            有效上下文不等于最大上下文。材料越多，模型越可能在无关信息上消耗注意力。好的上下文工程不是堆料，而是做选择：哪些事实必须在当前轮可见，哪些材料只应在下一阶段引入。
+          </p>
+          <ul>
+            <li>将背景资料、任务输入、检索结果和历史状态分开管理。</li>
+            <li>优先提供“当前子任务必须知道”的最小上下文。</li>
+            <li>当任务分阶段时，使用渐进式披露而不是一次性注入。</li>
+          </ul>
+        </section>
+
+        <section class="method-panel" data-method-panel="demos">
+          <header class="method-head">
+            <h3>示例位置: Demo 不是装饰, 它的位置会改变行为</h3>
+            <p>关键词：位置偏置、系统提示、前置示例。</p>
+          </header>
+          <p>
+            Few-shot 示例的内容很重要，但位置也同样重要。示例出现在系统提示还是用户输入、出现在开头还是结尾，都会影响模型对任务模式的归纳方式。近期关于 DPP 偏差的研究已经明确指出，示例位置本身就可能带来显著性能波动。<span class="cite-ref"><a href="#ref-2">[2]</a></span>
+          </p>
+          <ul>
+            <li>当示例承担“教模型遵守协议”的作用时，尽量前置。</li>
+            <li>避免把关键示例塞在用户输入末尾当作附注。</li>
+            <li>不要只调示例内容，也要把位置纳入实验变量。</li>
+          </ul>
+        </section>
+
+        <section class="method-panel" data-method-panel="contract">
+          <header class="method-head">
+            <h3>输出契约: 模型输出必须像接口返回值一样可检验</h3>
+            <p>关键词：格式协议、字段语义、程序消费。</p>
+          </header>
+          <p>
+            如果输出要被程序读取，就不能只告诉模型“请尽量 JSON”。更好的做法是同时声明数据类型、字段语义、格式骨架和正例示例，让模型明白什么是合法响应，解析器也明白什么是失败响应。
+          </p>
+          <ul>
+            <li><code>output_format</code> 负责定义协议骨架。</li>
+            <li><code>output_example</code> 负责给出最短合法样本。</li>
+            <li>解析失败要被视作显式错误，而不是“模型大致回答了就算了”。</li>
+          </ul>
+        </section>
+
+        <section class="method-panel" data-method-panel="sandbox">
+          <header class="method-head">
+            <h3>文本沙箱: 把生成与操作限制在受控中间态里</h3>
+            <p>关键词：草稿区、局部编辑、隔离副作用。</p>
+          </header>
+          <p>
+            一个非常有价值的抽象是“文本沙箱”。它的意思不是把模型关起来，而是把模型对文本的操作限制在明确的工作区里：原始材料是只读的，工作草稿可编辑，最终结果单独导出，检查器只读取候选输出而不直接修改事实源。
+          </p>
+          <p>
+            这种设计能显著降低大型文本任务中的混乱，因为模型不会一边读原文一边随手重写原文，也不会把中间推断和最终结论混在同一个容器里。
+          </p>
+
+          <div class="demo-box">
+            <div class="demo-toolbar">
+              <button type="button" data-run-demo="sandbox">运行 demo</button>
+              <button type="button" data-copy-code="code-sandbox">复制代码</button>
+            </div>
+            <pre id="code-sandbox"><code>class TextSandbox:
+    def __init__(self, source_text: str) -&gt; None:
+        self.source_text = source_text
+        self.working_notes = []
+        self.candidate_output = None
+
+    def add_note(self, note: str) -&gt; None:
+        self.working_notes.append(note)
+
+    def set_candidate(self, text: str) -&gt; None:
+        self.candidate_output = text
+
+    def snapshot(self) -&gt; dict:
+        return {
+            "source_text": self.source_text,
+            "working_notes": list(self.working_notes),
+            "candidate_output": self.candidate_output,
+        }</code></pre>
+            <div class="demo-output" data-demo-output="sandbox">等待运行...</div>
+          </div>
+        </section>
+
+        <section class="method-panel" data-method-panel="inspect">
+          <header class="method-head">
+            <h3>检视闭环: 让“生成”和“判断是否合格”成为两个步骤</h3>
+            <p>关键词：评分器、验证器、再提示、收敛。</p>
+          </header>
+          <p>
+            许多生成任务失败，不是因为第一次输出一定很差，而是因为系统没有把“检视”和“修复”做成一等公民。把模型输出直接交付，和把输出先交给检查器再决定是否重试，是两种完全不同的系统。
+          </p>
+          <ul>
+            <li>先生成候选结果，再独立检查字段完整性、事实一致性和格式合法性。</li>
+            <li>检查器最好尽量规则化，少依赖模糊主观判断。</li>
+            <li>再提示时只反馈失败点，不要把整个任务重新说一遍。</li>
+          </ul>
+
+          <div class="demo-box">
+            <div class="demo-toolbar">
+              <button type="button" data-run-demo="inspect">运行 demo</button>
+              <button type="button" data-copy-code="code-inspect">复制代码</button>
+            </div>
+            <pre id="code-inspect"><code>def inspect_outline(result: dict) -&gt; list[str]:
+    errors = []
+    if not result.get("title"):
+        errors.append("missing title")
+    if not isinstance(result.get("sections"), list) or not result["sections"]:
+        errors.append("sections must be a non-empty list")
+    if "risks" not in result:
+        errors.append("missing risks")
+    return errors
+
+
+def should_retry(errors: list[str]) -&gt; bool:
+    return bool(errors)</code></pre>
+            <div class="demo-output" data-demo-output="inspect">等待运行...</div>
+          </div>
+        </section>
+      </section>
+
+      <section class="section-block">
+        <h2>五、最常见的五种反模式</h2>
+        <p>
+          很多失败并不是模型太弱，而是结构太差。下面这些反模式反复出现，并且几乎都会在规模扩大后暴露出明显成本。
+        </p>
+
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th>反模式</th>
+              <th>典型症状</th>
+              <th>为什么危险</th>
+              <th>更好的替代</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>巨型 One-shot Prompt</td>
+              <td>把背景、规则、示例、历史、任务一次性塞满</td>
+              <td>上下文污染，注意力扩散，调试成本极高</td>
+              <td>分阶段执行，逐步披露上下文</td>
+            </tr>
+            <tr>
+              <td>隐藏输出协议</td>
+              <td>只说“请返回 JSON”</td>
+              <td>字段歧义大，下游很难稳定解析</td>
+              <td>显式写出格式骨架和合法示例</td>
+            </tr>
+            <tr>
+              <td>把建议和硬约束混写</td>
+              <td>模型无法区分必须遵守与尽量遵守</td>
+              <td>重试时难以定位真正违反了什么</td>
+              <td>将 <code>instruction</code> 与 <code>constraint</code> 分离</td>
+            </tr>
+            <tr>
+              <td>让模型直接改写事实源</td>
+              <td>原文、草稿、结论混成一团</td>
+              <td>中间推断污染原始资料</td>
+              <td>引入文本沙箱，隔离中间态</td>
+            </tr>
+            <tr>
+              <td>没有检查器</td>
+              <td>输出不合格也被直接接收</td>
+              <td>错误只能在线上被动暴露</td>
+              <td>生成后必经 inspect / validate 阶段</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="note-box">
+          <strong>一个经验规律：</strong>
+          绝大多数所谓“提示词玄学”，最后都能被重新解释成结构问题、上下文问题或验证问题。
+        </div>
+      </section>
+
+      <section class="section-block">
+        <h2>六、一个最小可用的工程骨架</h2>
+        <p>
+          如果要把上面的思想压缩成一个真正可复用的最小骨架，它应该至少包含三件事：结构化模板、显式检查器和有限次修复循环。下面这段 Python 代码只是演示，但已经比“拼一段长字符串然后直接调用模型”更接近工程化使用方式。
+        </p>
+
+        <div class="demo-box">
+          <div class="demo-toolbar">
+            <button type="button" data-run-demo="pipeline">运行 demo</button>
+            <button type="button" data-copy-code="code-pipeline">复制代码</button>
+          </div>
+          <pre id="code-pipeline"><code>from prompt4py import GeneralTemplate
+
+
+def build_outline_prompt(topic: str, notes: str) -&gt; str:
+    template = GeneralTemplate()
+    template.role = "Research writing assistant"
+    template.objective = "Create a reliable outline for {{topic}}."
+    template.instruction = [
+        "Identify the strongest claims from CONTEXT.",
+        "Keep sections concise and non-overlapping.",
+        "Return only one JSON object."
+    ]
+    template.constraint = [
+        "(mandatory) Do not invent unsupported claims.",
+        "(mandatory) Use exactly the declared keys.",
+        "(important) Keep each section title under 12 words."
+    ]
+    template.context = "{{notes}}"
+    template.input = "{{topic}}"
+    template.output_dtype = "json"
+    template.output_format = """
+{
+  "title": "string",
+  "sections": ["string"],
+  "risks": ["string"]
+}
+"""
+    template.output_example = """
+{"title":"Prompt Systems","sections":["Problem","Method","Checklist"],"risks":["Weak evidence"]}
+"""
+    return template.render(topic=topic, notes=notes)
+
+
+def inspect_outline(result: dict) -&gt; list[str]:
+    errors = []
+    if not result.get("title"):
+        errors.append("missing title")
+    if not isinstance(result.get("sections"), list) or not result["sections"]:
+        errors.append("sections must be a non-empty list")
+    if "risks" not in result:
+        errors.append("missing risks")
+    return errors
+
+
+def repair_hint(errors: list[str]) -&gt; str:
+    return "Fix only these issues: " + ", ".join(errors)</code></pre>
+          <div class="demo-output" data-demo-output="pipeline">等待运行...</div>
+        </div>
+
+        <p>
+          这套骨架的价值不在于“更优雅”，而在于它把生成系统中最容易失控的三件事都拉回了显式控制：任务规范、输出契约和失败修复。
+        </p>
+      </section>
+
+      <section class="section-block">
+        <h2>七、最后的收束: Prompt 的终局不是更花哨, 而是更可控</h2>
+        <p>
+          真正成熟的提示词工程，不会长期停留在“哪一句更厉害”的层面。它最终一定会走向结构化模板、上下文治理、输出协议、文本中间态管理和检视闭环，因为只有这样，模型能力才能被稳定利用，而不是在每次任务变复杂时重新掉回经验主义。
+        </p>
+        <p>
+          因此，判断一个 Prompt 设计是否优秀，最重要的问题不是“它第一次效果有多惊艳”，而是“当任务加一层复杂度、当材料多一倍、当输出要被程序读取、当第一次失败需要修复时，它还能不能继续站住”。
+        </p>
+
+        <div class="argument-box">
+          <strong>一句话概括全文：</strong>
+          提示词工程最值得追求的，不是更像灵感写作，而是更像接口设计、上下文治理和反馈驱动的软件工程。
+        </div>
+      </section>
+
+      <hr class="essay-divider">
+
+      <section class="section-block">
+        <h2>参考文献</h2>
+        <div class="ref-box">
+          <div class="ref-list-html">
+            <p class="ref-item" id="ref-1"><a class="ref-index" href="https://github.com/vortezwohl/Prompt4Py" target="_blank" rel="noopener noreferrer">[1]</a> Vortezwohl. <em>Prompt4Py</em>.</p>
+            <p class="ref-item" id="ref-2"><a class="ref-index" href="https://doi.org/10.48550/arXiv.2507.22887" target="_blank" rel="noopener noreferrer">[2]</a> University of Maryland researchers. <em>Where to show Demos in Your Prompt: A Positional Bias of In-Context Learning</em>.</p>
+            <p class="ref-item" id="ref-3"><a class="ref-index" href="https://openai.com/index/harness-engineering/" target="_blank" rel="noopener noreferrer">[3]</a> OpenAI Research Team. <em>Harness engineering: leveraging Codex in an agent-first world</em>.</p>
+            <p class="ref-item" id="ref-4"><a class="ref-index" href="https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents" target="_blank" rel="noopener noreferrer">[4]</a> Anthropic Research Team. <em>Effective harnesses for long-running agents</em>.</p>
+            <p class="ref-item" id="ref-5"><a class="ref-index" href="https://martinfowler.com/articles/exploring-gen-ai/context-engineering-coding-agents.html" target="_blank" rel="noopener noreferrer">[5]</a> Birgitta Böckeler. <em>Context Engineering for Coding Agents</em>.</p>
+            <p class="ref-item" id="ref-6"><a class="ref-index" href="https://github.com/humanlayer/12-factor-agents" target="_blank" rel="noopener noreferrer">[6]</a> Dex Horthy. <em>12 Factor Agents</em>.</p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const article = document.getElementById("prompt-methodology-essay");
+      const navButtons = Array.from(document.querySelectorAll("#method-nav button"));
+      const panels = Array.from(document.querySelectorAll("[data-method-panel]"));
+
+      function parseRgb(colorValue) {
+        const match = colorValue && colorValue.match(/\d+(\.\d+)?/g);
+        if (!match || match.length < 3) {
+          return null;
+        }
+        return match.slice(0, 3).map(Number);
+      }
+
+      function luminance(rgb) {
+        return (0.299 * rgb[0]) + (0.587 * rgb[1]) + (0.114 * rgb[2]);
+      }
+
+      function mixRgb(source, target, weight) {
+        return source.map(function (channel, index) {
+          return Math.round((channel * (1 - weight)) + (target[index] * weight));
+        });
+      }
+
+      function toRgbString(rgb) {
+        return "rgb(" + rgb.join(", ") + ")";
+      }
+
+      function toRgbaString(rgb, alpha) {
+        return "rgba(" + rgb.join(", ") + ", " + alpha + ")";
+      }
+
+      function applyEssayPalette(backgroundRgb) {
+        const isDark = luminance(backgroundRgb) < 156;
+        const warmLight = [250, 243, 231];
+        const warmDark = [28, 26, 23];
+        const textBase = isDark ? mixRgb(backgroundRgb, [255, 248, 239], 0.84) : mixRgb(backgroundRgb, [24, 22, 19], 0.94);
+        const textStrong = isDark ? mixRgb(backgroundRgb, [255, 252, 245], 0.92) : mixRgb(backgroundRgb, [15, 14, 12], 0.97);
+        const textMuted = isDark ? mixRgb(textBase, backgroundRgb, 0.22) : mixRgb(textBase, backgroundRgb, 0.3);
+        const kicker = isDark ? mixRgb(textBase, [214, 191, 158], 0.38) : mixRgb(textMuted, [116, 98, 76], 0.48);
+        const border = isDark ? toRgbaString(mixRgb(backgroundRgb, [255, 239, 214], 0.28), 0.34) : toRgbaString(mixRgb(backgroundRgb, [118, 101, 81], 0.82), 0.22);
+        const borderSoft = isDark ? toRgbaString(mixRgb(backgroundRgb, [255, 239, 214], 0.18), 0.24) : toRgbaString(mixRgb(backgroundRgb, [118, 101, 81], 0.58), 0.14);
+        const panelBg = isDark ? toRgbString(mixRgb(backgroundRgb, warmLight, 0.11)) : toRgbString(mixRgb(backgroundRgb, warmLight, 0.58));
+        const panelStrongBg = isDark ? toRgbString(mixRgb(backgroundRgb, warmLight, 0.18)) : toRgbString(mixRgb(backgroundRgb, [236, 226, 212], 0.7));
+        const heroStart = isDark ? toRgbString(mixRgb(backgroundRgb, warmLight, 0.09)) : toRgbString(mixRgb(backgroundRgb, [251, 247, 239], 0.74));
+        const heroEnd = isDark ? toRgbString(mixRgb(backgroundRgb, warmDark, 0.2)) : toRgbString(mixRgb(backgroundRgb, [244, 238, 227], 0.68));
+        const heroGrid = isDark ? toRgbaString(mixRgb(backgroundRgb, warmLight, 0.4), 0.08) : toRgbaString(mixRgb(backgroundRgb, [98, 84, 68], 0.6), 0.045);
+        const summaryBg = isDark ? toRgbaString(mixRgb(backgroundRgb, warmLight, 0.16), 0.88) : toRgbaString(mixRgb(backgroundRgb, [255, 252, 247], 0.72), 0.94);
+        const buttonBg = isDark ? toRgbString(mixRgb(backgroundRgb, warmLight, 0.14)) : toRgbString(mixRgb(backgroundRgb, [248, 242, 234], 0.62));
+        const buttonText = toRgbString(textStrong);
+        const buttonActiveBg = isDark ? toRgbString(mixRgb(backgroundRgb, warmLight, 0.84)) : toRgbString(mixRgb(backgroundRgb, warmDark, 0.92));
+        const buttonActiveText = isDark ? toRgbString(mixRgb(backgroundRgb, warmDark, 0.94)) : toRgbString(mixRgb(backgroundRgb, [255, 249, 241], 0.96));
+        const codeBg = isDark ? toRgbString(mixRgb(backgroundRgb, [17, 16, 14], 0.42)) : toRgbString(mixRgb(backgroundRgb, [243, 237, 228], 0.74));
+        const codeInlineBg = isDark ? toRgbString(mixRgb(backgroundRgb, [76, 67, 56], 0.48)) : toRgbString(mixRgb(backgroundRgb, [240, 233, 222], 0.78));
+        const codeText = isDark ? toRgbString(mixRgb(backgroundRgb, [248, 239, 227], 0.92)) : toRgbString(mixRgb(backgroundRgb, [30, 28, 24], 0.94));
+        const outputBg = isDark ? toRgbString(mixRgb(backgroundRgb, [244, 228, 205], 0.86)) : toRgbString(mixRgb(backgroundRgb, [29, 27, 24], 0.92));
+        const outputText = isDark ? toRgbString(mixRgb(backgroundRgb, [26, 24, 20], 0.94)) : toRgbString(mixRgb(backgroundRgb, [247, 239, 228], 0.94));
+        const link = isDark ? toRgbString(mixRgb(backgroundRgb, [151, 223, 237], 0.88)) : toRgbString(mixRgb(backgroundRgb, [101, 83, 63], 0.92));
+        const linkBorder = isDark ? toRgbaString(mixRgb(backgroundRgb, [151, 223, 237], 0.84), 0.52) : toRgbaString(mixRgb(backgroundRgb, [101, 83, 63], 0.9), 0.34);
+        const linkBorderHover = isDark ? toRgbaString(mixRgb(backgroundRgb, [151, 223, 237], 0.96), 0.96) : toRgbaString(mixRgb(backgroundRgb, [101, 83, 63], 0.96), 0.84);
+        const accent = isDark ? toRgbString(mixRgb(backgroundRgb, [221, 188, 145], 0.82)) : toRgbString(mixRgb(backgroundRgb, [143, 125, 102], 0.9));
+
+        article.style.setProperty("--essay-text", toRgbString(textBase));
+        article.style.setProperty("--essay-text-strong", toRgbString(textStrong));
+        article.style.setProperty("--essay-text-muted", toRgbString(textMuted));
+        article.style.setProperty("--essay-kicker", toRgbString(kicker));
+        article.style.setProperty("--essay-border", border);
+        article.style.setProperty("--essay-border-soft", borderSoft);
+        article.style.setProperty("--essay-panel-bg", panelBg);
+        article.style.setProperty("--essay-panel-strong-bg", panelStrongBg);
+        article.style.setProperty("--essay-hero-bg-start", heroStart);
+        article.style.setProperty("--essay-hero-bg-end", heroEnd);
+        article.style.setProperty("--essay-hero-grid", heroGrid);
+        article.style.setProperty("--essay-summary-bg", summaryBg);
+        article.style.setProperty("--essay-button-bg", buttonBg);
+        article.style.setProperty("--essay-button-text", buttonText);
+        article.style.setProperty("--essay-button-active-bg", buttonActiveBg);
+        article.style.setProperty("--essay-button-active-text", buttonActiveText);
+        article.style.setProperty("--essay-code-bg", codeBg);
+        article.style.setProperty("--essay-code-inline-bg", codeInlineBg);
+        article.style.setProperty("--essay-code-text", codeText);
+        article.style.setProperty("--essay-output-bg", outputBg);
+        article.style.setProperty("--essay-output-text", outputText);
+        article.style.setProperty("--essay-link", link);
+        article.style.setProperty("--essay-link-border", linkBorder);
+        article.style.setProperty("--essay-link-border-hover", linkBorderHover);
+        article.style.setProperty("--essay-accent", accent);
+        article.dataset.tone = isDark ? "dark" : "light";
+      }
+
+      function resolveBackgroundColor(node) {
+        let current = node;
+        while (current) {
+          const style = window.getComputedStyle(current);
+          const rgb = parseRgb(style.backgroundColor);
+          if (rgb && style.backgroundColor !== "rgba(0, 0, 0, 0)" && style.backgroundColor !== "transparent") {
+            return rgb;
+          }
+          current = current.parentElement;
+        }
+        return [255, 255, 255];
+      }
+
+      function applyEssayTone() {
+        if (!article) {
+          return;
+        }
+        const rgb = resolveBackgroundColor(article.parentElement || document.body);
+        applyEssayPalette(rgb);
+      }
+
+      applyEssayTone();
+      window.addEventListener("load", applyEssayTone);
+      window.addEventListener("resize", applyEssayTone);
+
+      function activatePanel(name) {
+        navButtons.forEach((button) => {
+          button.classList.toggle("is-active", button.dataset.methodTarget === name);
+        });
+        panels.forEach((panel) => {
+          panel.classList.toggle("is-active", panel.dataset.methodPanel === name);
+        });
+      }
+
+      if (navButtons.length > 0) {
+        activatePanel("spec");
+        navButtons.forEach((button) => {
+          button.addEventListener("click", function () {
+            activatePanel(button.dataset.methodTarget);
+          });
+        });
+      }
+
+      const demoOutputs = {
+        template: "## ROLE\nSenior writing assistant\n## OBJECTIVE\nProduce a concise outline for Prompt Methodology.\n## OUTPUT_FORMAT\n{\"title\":\"string\",\"sections\":[\"string\"],\"risks\":[\"string\"]}",
+        sandbox: "source_text -> immutable\nworking_notes -> ['claim A', 'risk B']\ncandidate_output -> draft_v1\ninspect() reads candidate only",
+        inspect: "inspect_outline(result)\n-> ['sections must be a non-empty list']\nshould_retry(...) -> True\nrepair prompt -> Fix only these issues: sections must be a non-empty list",
+        pipeline: "build prompt -> call model -> parse JSON\ninspect -> no title found\nrepair hint -> Fix only these issues: missing title\nsecond pass -> accepted"
+      };
+
+      document.querySelectorAll("[data-run-demo]").forEach((button) => {
+        button.addEventListener("click", function () {
+          const key = button.dataset.runDemo;
+          const output = document.querySelector('[data-demo-output="' + key + '"]');
+          if (output) {
+            output.textContent = demoOutputs[key] || "暂无输出";
+          }
+        });
+      });
+
+      document.querySelectorAll("[data-copy-code]").forEach((button) => {
+        button.addEventListener("click", async function () {
+          const source = document.getElementById(button.dataset.copyCode);
+          if (!source) {
+            return;
+          }
+          try {
+            await navigator.clipboard.writeText(source.textContent || "");
+            const oldText = button.textContent;
+            button.textContent = "已复制";
+            setTimeout(function () {
+              button.textContent = oldText;
+            }, 1200);
+          } catch (error) {
+            button.textContent = "复制失败";
+          }
+        });
+      });
+    })();
+  </script>
+</article>
