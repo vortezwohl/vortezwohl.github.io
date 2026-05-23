@@ -1,10 +1,10 @@
 ---
 layout: post
-title: "结构化提示词设计方法论: 从写一句 Prompt 到构建可控文本系统"
+title: "基于 Prompt4Py 的结构化提示词设计方法论: 从写一句 Prompt 到构建可控文本系统"
 toc: false
 math: false
 excerpt: >-
-  当模型能力持续上升后，提示词设计的瓶颈不再是“会不会写一句更像样的话”，而是能否把任务目标、上下文边界、输出协议和失败恢复机制组织成一套可复用、可测试、可演化的结构。真正有效的提示词工程，本质上正在从一次性文案技巧，升级为面向任务分解、上下文治理、契约设计和反馈闭环的轻量软件工程。
+  提示词工程真正需要的不是一段越来越长的字符串，而是一套可复用的结构。以 Prompt4Py 为中心，可以把 Prompt 拆成 Role、Objective、Instruction、Constraint、Context、Input、Output 七层，并进一步接入 harness、检查器与文本沙箱，让 LLM 在真实系统中只承担受约束的推理职责，而不是直接主导端到端任务。
 categories: prompt-engineering
 tags:
   - prompt-engineering
@@ -405,137 +405,75 @@ author:
 
   <div class="essay-shell">
     <header class="essay-hero">
-      <p class="hero-kicker">Prompt Engineering / AI Systems / Methodology</p>
-      <h1 class="hero-title">结构化提示词设计方法论: 从写一句 Prompt 到构建可控文本系统</h1>
+      <p class="hero-kicker">Prompt4Py / Prompt Engineering / Harness Design</p>
+      <h1 class="hero-title">基于 Prompt4Py 的结构化提示词设计方法论</h1>
       <p class="hero-lead">
-        提示词工程最容易被误解成“写一句更聪明的话”。真正决定效果上限的，却往往不是措辞本身，而是任务边界是否清楚、上下文是否受控、输出是否可校验、失败后是否能形成反馈闭环。
-        当这些因素被系统化之后，Prompt 才从一次性文案变成可迭代的工程对象。
+        真正可落地的 Prompt 设计，不应从“写一句更强的话”开始，而应从结构开始。以 Prompt4Py 为中心，可以把 Prompt 拆成七层规范，再把 LLM 放进 harness 与系统代码构成的受控流程里，让模型只承担局部推理，而不是直接主导整个任务。
       </p>
       <section class="hero-summary">
         <div class="hero-summary-item">
-          <strong>这篇文章讲什么</strong>
-          把零散的提示词技巧收束为一套面向工程实施的方法论。
+          <strong>本文主轴</strong>
+          用 Prompt4Py 把 Prompt 从字符串提升为结构化模板对象。
         </div>
         <div class="hero-summary-item">
-          <strong>核心主张</strong>
-          Prompt 不应只是字符串，而应是一个有结构、有契约、有验证的文本系统。
+          <strong>核心框架</strong>
+          7 层提示词设计框架：Role、Objective、Instruction、Constraint、Context、Input、Output。
         </div>
         <div class="hero-summary-item">
-          <strong>落地方式</strong>
-          用模板对象、上下文治理、输出协议、文本沙箱和检视闭环来控制生成。
+          <strong>系统边界</strong>
+          LLM 是推理模块，系统代码和 harness 才负责调度、校验、状态和闭环。
         </div>
       </section>
     </header>
 
     <div class="essay-body">
       <section class="section-block">
-        <h2>一、为什么提示词工程正在从“写文案”变成“做软件”</h2>
+        <h2>一、真正的问题不是“怎么写一句 Prompt”, 而是“怎么定义一个推理接口”</h2>
         <p>
-          在模型还不够强的时候，提示词的重点往往是“把任务说清楚”。当模型能力提高之后，新的瓶颈开始出现：提示变长了，输入材料变杂了，输出需要被程序消费了，失败也不再只是“答错一句话”，而是会把错误放大到一整条自动化链路中。
+          提示词工程最容易走偏的地方，是把 Prompt 理解成一段文本技巧。这样做在一次性问答中也许足够，但在真实任务里很快会失控：任务目标会变化，上下文会变长，输出要被程序消费，错误还需要被自动发现和修复。
         </p>
         <p>
-          这时，提示词设计面临的问题已经与软件设计越来越相似：职责怎么划分，输入输出怎么定义，异常怎么处理，状态如何逐步演化，哪个环节负责验证，哪个环节允许生成，哪个环节只允许检查。换句话说，Prompt 的核心矛盾不再只是语言表达，而是结构控制。
+          因此，Prompt 在工程上更接近一个推理接口，而不是一句自然语言。这个接口需要说明模型现在是谁、这轮到底要做什么、允许依据哪些材料推理、输出必须满足什么协议，以及失败后系统如何继续处理。
         </p>
 
         <table class="comparison-table">
           <thead>
             <tr>
-              <th>常见误区</th>
-              <th>表面现象</th>
-              <th>真实问题</th>
-              <th>更合理的工程视角</th>
+              <th>把 Prompt 当成什么</th>
+              <th>典型做法</th>
+              <th>短期看起来怎样</th>
+              <th>长期结果</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td>把 Prompt 当一次性字符串</td>
-              <td>越改越长，后续只能复制粘贴</td>
-              <td>没有结构化规范</td>
-              <td>把 Prompt 视为可复用模板对象</td>
+              <td>一段字符串</td>
+              <td>不断补句子、补规则、补例子</td>
+              <td>改起来快</td>
+              <td>维护困难，边界模糊，难以复用</td>
             </tr>
             <tr>
-              <td>把所有信息一次性塞进去</td>
-              <td>上下文臃肿，模型注意力失焦</td>
-              <td>没有上下文预算意识</td>
-              <td>按阶段披露，按任务裁剪</td>
-            </tr>
-            <tr>
-              <td>只关心生成，不关心检查</td>
-              <td>输出看似自然，系统却难以消费</td>
-              <td>没有输出契约和验证闭环</td>
-              <td>先定义协议，再生成，再检视</td>
-            </tr>
-            <tr>
-              <td>靠“更强模型”掩盖设计缺陷</td>
-              <td>小任务能跑，大任务开始漂移</td>
-              <td>控制层缺失</td>
-              <td>把模型放进受控 harness 中使用</td>
+              <td>一个推理接口</td>
+              <td>先定义结构字段，再渲染文本</td>
+              <td>初期稍慢</td>
+              <td>可测试、可组合、可检查、可演化</td>
             </tr>
           </tbody>
         </table>
 
         <div class="argument-box">
-          <strong>一个更直接的判断：</strong>
-          当 Prompt 开始需要复用、组合、验证和回退时，它就已经不是一句话，而是一个轻量的软件系统。
+          <strong>本文的基本立场：</strong>
+          Prompt 不应该主导系统，Prompt 只是系统暴露给 LLM 的推理接口；真正的系统主导者是代码、状态机、检查器和 harness。
         </div>
       </section>
 
       <section class="section-block">
-        <h2>二、一个可复用的四层框架</h2>
+        <h2>二、Prompt4Py 为什么应该成为方法论中心</h2>
         <p>
-          如果把提示词工程抽象成一套通用方法，最稳定的框架可以分成四层：意图层、上下文层、契约层和反馈层。它们分别回答“要做什么”“基于什么做”“结果长什么样”“做坏了怎么办”这四个问题。
-        </p>
-
-        <table class="comparison-table">
-          <thead>
-            <tr>
-              <th>层级</th>
-              <th>核心对象</th>
-              <th>关键问题</th>
-              <th>如果缺失会怎样</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>意图层</td>
-              <td><code>role</code> / <code>objective</code> / <code>instruction</code> / <code>constraint</code></td>
-              <td>模型当前到底应该完成什么任务</td>
-              <td>生成方向飘忽，约束互相打架</td>
-            </tr>
-            <tr>
-              <td>上下文层</td>
-              <td><code>context</code> / <code>input</code> / demos / memory</td>
-              <td>模型基于哪些材料做判断</td>
-              <td>信息不够或信息过载，幻觉与遗漏并存</td>
-            </tr>
-            <tr>
-              <td>契约层</td>
-              <td><code>output_dtype</code> / <code>output_format</code> / <code>output_example</code></td>
-              <td>输出必须满足什么结构</td>
-              <td>看上去自然，但下游解析失败</td>
-            </tr>
-            <tr>
-              <td>反馈层</td>
-              <td>inspect / score / repair / reprompt</td>
-              <td>输出错了之后如何发现并收敛</td>
-              <td>系统只能一锤子买卖，无法稳定迭代</td>
-            </tr>
-          </tbody>
-        </table>
-
-        <div class="note-box">
-          <strong>一个很重要的边界：</strong>
-          “模型怎么想”很难直接控制，但“输入给它什么、要求它输出什么、如何检查它的结果”完全可以被工程化。这正是方法论真正有价值的部分。
-        </div>
-      </section>
-
-      <section class="section-block">
-        <h2>三、先把 Prompt 变成结构, 再谈技巧</h2>
-        <p>
-          一条长期稳定的经验是：不要从一段超长字符串开始设计 Prompt，而要先从结构开始。角色、目标、指令、约束、上下文、输入和输出协议，本质上是不同职责的字段。把它们混成一个大段落，会让后续的维护、测试和重用都迅速变差。
+          如果方法论最终不能沉淀到一个稳定接口上，它就很容易退化回经验主义。Prompt4Py 的意义正是在这里：它把 Prompt 设计从“拼接字符串”改成“声明结构字段并渲染”。<span class="cite-ref"><a href="#ref-1">[1]</a></span>
         </p>
         <p>
-          这也是程序化模板库存在的意义。以 <code>Prompt4Py</code> 这样的模板接口为例，它的价值不在于“帮你少写几行字符串”，而在于强迫你把本来含混的 Prompt 明确拆成可讨论、可替换、可审查的结构部件。<span class="cite-ref"><a href="#ref-1">[1]</a></span>
+          这意味着 Prompt4Py 不是一个方便类库，而是一个约束框架。它迫使设计者提前回答几个工程问题：角色是什么，目标是什么，指令与约束是否分离，上下文和输入是否分离，输出契约是否显式。方法论之所以应该围绕它展开，是因为它天然提供了一个足够稳定的结构骨架。
         </p>
 
         <div class="demo-box">
@@ -546,151 +484,248 @@ author:
           <pre id="code-template"><code>from prompt4py import GeneralTemplate
 
 
-def build_prompt(topic: str, notes: str) -&gt; str:
-    template = GeneralTemplate()
-    template.role = "Senior writing assistant"
-    template.objective = "Produce a concise outline for {{topic}}."
-    template.instruction = [
-        "(thinking_intensity=7/10) Identify the main claims first.",
-        "Separate facts, inferences, and open questions.",
-        "Return only the declared JSON object."
-    ]
-    template.constraint = [
-        "(mandatory) Do not invent facts not present in CONTEXT.",
-        "(mandatory) Return exactly one JSON object.",
-        "(important) Keep every field short and parseable."
-    ]
-    template.context = "{{notes}}"
-    template.input = "{{topic}}"
-    template.output_dtype = "json"
-    template.output_format = """
+template = GeneralTemplate()
+template.role = "Senior analysis assistant"
+template.objective = "Extract the key claims from {{topic}}."
+template.instruction = [
+    "Read CONTEXT before answering.",
+    "Separate facts from inferences.",
+    "Return only the declared output object."
+]
+template.constraint = [
+    "(mandatory) Do not invent unsupported claims.",
+    "(mandatory) Follow the declared output format exactly."
+]
+template.context = "{{context_text}}"
+template.input = "{{topic}}"
+template.output_dtype = "json"
+template.output_format = """
 {
-  "title": "string",
-  "sections": ["string"],
-  "risks": ["string"]
+  "claims": ["string"],
+  "open_questions": ["string"]
 }
-"""
-    template.output_example = """
-{"title":"Prompt Methodology","sections":["Problem","Method"],"risks":["Missing evidence"]}
-"""
-    return template.render(topic=topic, notes=notes)</code></pre>
+"""</code></pre>
           <div class="demo-output" data-demo-output="template">等待运行...</div>
         </div>
 
-        <div class="argument-box">
-          <strong>真正的收益：</strong>
-          当 Prompt 结构被显式建模之后，增量修改、记忆增强、检索增强、重试修复和协议复用才会变得自然，否则每一次调整都只是重新拼接字符串。
+        <div class="note-box">
+          <strong>关键点：</strong>
+          只有先把 Prompt 写成结构，后面的 demo 位置、上下文治理、检查闭环和重试修复才真正有落点。
         </div>
       </section>
 
       <section class="section-block">
-        <h2>四、六条最有价值的设计原则</h2>
+        <h2>三、7 层提示词设计框架</h2>
+        <p>
+          这套方法论的核心，不是抽象的“多写约束”，而是一套明确的七层结构。它们对应 Prompt4Py 里最稳定、最实用的设计面。
+        </p>
+
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th>层</th>
+              <th>它回答什么问题</th>
+              <th>设计要求</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Role</td>
+              <td>模型现在是谁</td>
+              <td>只写自然身份，不写内部模块名，不写系统实现细节</td>
+            </tr>
+            <tr>
+              <td>Objective</td>
+              <td>这轮任务到底要完成什么</td>
+              <td>写成单一目标，不混入流程说明和附加背景</td>
+            </tr>
+            <tr>
+              <td>Instruction</td>
+              <td>模型该如何完成任务</td>
+              <td>拆成原子指令，一条只表达一个动作</td>
+            </tr>
+            <tr>
+              <td>Constraint</td>
+              <td>哪些边界绝不能越过</td>
+              <td>只放硬规则、协议和格式约束</td>
+            </tr>
+            <tr>
+              <td>Context</td>
+              <td>模型依赖哪些背景材料</td>
+              <td>放只读知识、检索内容、记忆摘要，不放当前任务指令</td>
+            </tr>
+            <tr>
+              <td>Input</td>
+              <td>这次运行的即时输入是什么</td>
+              <td>放本轮问题、本轮文本、本轮参数，不和背景资料混写</td>
+            </tr>
+            <tr>
+              <td>Output</td>
+              <td>结果必须长什么样</td>
+              <td>同时定义类型、格式骨架和合法示例</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="argument-box">
+          <strong>这里最容易被忽略的一点：</strong>
+          `Role` 不是“你是模块 A 的第三级子代理”，而是自然身份，例如 “Senior legal summarizer” 或 “Narrative structure analyst”。因为模型需要的是可执行角色，不是内部工程命名。
+        </div>
+      </section>
+
+      <section class="section-block">
+        <h2>四、核心的落地规则</h2>
         <div class="method-index">
           <section class="method-card">
-            <h3>规格先行</h3>
-            <p>先定义任务意图与边界，再谈语言优化。Prompt 首先是规范，其次才是文案。</p>
+            <h3>规则 1</h3>
+            <p>Role 只写自然身份，不写系统内部拓扑。</p>
           </section>
           <section class="method-card">
-            <h3>上下文治理</h3>
-            <p>给模型的不是“越多越好”的资料，而是当前步骤刚好需要的材料。</p>
+            <h3>规则 2</h3>
+            <p>Objective 只能有一个主目标，不能把多个阶段揉成一句。</p>
           </section>
           <section class="method-card">
-            <h3>输出契约</h3>
-            <p>机器可消费的输出不能靠猜，必须用格式、示例和字段约束明确声明。</p>
+            <h3>规则 3</h3>
+            <p>Instruction 写动作，Constraint 写边界，二者必须分离。</p>
           </section>
           <section class="method-card">
-            <h3>反馈闭环</h3>
-            <p>生成不是终点。检查、评分、修复和再提示，才是系统稳定性的来源。</p>
+            <h3>规则 4</h3>
+            <p>Context 和 Input 必须拆开，背景与本轮输入不能混在一个块里。</p>
+          </section>
+          <section class="method-card">
+            <h3>规则 5</h3>
+            <p>Output 协议至少声明 dtype、format、example 三件事。</p>
+          </section>
+          <section class="method-card">
+            <h3>规则 6</h3>
+            <p>Prompt 只定义推理接口，不负责端到端业务编排。</p>
           </section>
         </div>
 
         <ul class="method-nav" id="method-nav">
-          <li><button type="button" data-method-target="spec">规格先行</button></li>
-          <li><button type="button" data-method-target="context">上下文预算</button></li>
-          <li><button type="button" data-method-target="demos">示例位置</button></li>
-          <li><button type="button" data-method-target="contract">输出契约</button></li>
-          <li><button type="button" data-method-target="sandbox">文本沙箱</button></li>
-          <li><button type="button" data-method-target="inspect">检视闭环</button></li>
+          <li><button type="button" data-method-target="role">Role</button></li>
+          <li><button type="button" data-method-target="objective">Objective</button></li>
+          <li><button type="button" data-method-target="instruction">Instruction</button></li>
+          <li><button type="button" data-method-target="context">Context/Input</button></li>
+          <li><button type="button" data-method-target="output">Output</button></li>
+          <li><button type="button" data-method-target="harness">Harness</button></li>
         </ul>
 
-        <section class="method-panel" data-method-panel="spec">
+        <section class="method-panel" data-method-panel="role">
           <header class="method-head">
-            <h3>规格先行: 先定义任务接口, 再优化措辞</h3>
-            <p>关键词：任务边界、职责分离、结构字段。</p>
+            <h3>Role: 模型现在是谁, 只写自然身份</h3>
+            <p>关键词：角色可执行性、自然语义、认知定位。</p>
           </header>
           <p>
-            很多 Prompt 之所以越来越乱，不是因为语言写得不够好，而是因为任务接口从一开始就没有被定义清楚。角色写成背景故事，目标和约束混写，输入和上下文不区分，最终导致每次修补都在扩大歧义。
+            Role 的目的不是暴露系统内部架构，而是给模型一个稳定的认知视角。写成“你是章节冲突检测器 V3 子模块”这种内部命名，通常只会制造噪声。更合理的写法是“你是一名关注叙事冲突的结构编辑”。
           </p>
-          <ul>
-            <li>把 <code>objective</code> 写成单句任务定义，而不是愿景宣言。</li>
-            <li>把 <code>instruction</code> 拆成原子化条目，一条只表达一个动作。</li>
-            <li>把 <code>constraint</code> 留给硬边界，不要混入一般性建议。</li>
-          </ul>
+        </section>
+
+        <section class="method-panel" data-method-panel="objective">
+          <header class="method-head">
+            <h3>Objective: 一次只定义一个主目标</h3>
+            <p>关键词：单任务、边界清晰、阶段拆分。</p>
+          </header>
+          <p>
+            很多失败来自把“阅读材料、总结问题、提出方案、输出 JSON、顺便做风险审计”揉成一个目标。更好的做法是把一次调用限定为单一推理任务，其他阶段由外部流程调度。
+          </p>
+        </section>
+
+        <section class="method-panel" data-method-panel="instruction">
+          <header class="method-head">
+            <h3>Instruction 与 Constraint 必须严格分离</h3>
+            <p>关键词：动作序列、硬边界、可修复性。</p>
+          </header>
+          <p>
+            Instruction 说的是“怎么做”，Constraint 说的是“不能怎么做”。这两个字段一旦混写，后续重试时系统就很难判断模型到底是没完成动作，还是越过了边界。
+          </p>
         </section>
 
         <section class="method-panel" data-method-panel="context">
           <header class="method-head">
-            <h3>上下文预算: 给模型“够用的信息”, 不给“所有信息”</h3>
-            <p>关键词：裁剪、分层披露、局部相关性。</p>
+            <h3>Context 与 Input: 背景材料和本轮输入必须拆开</h3>
+            <p>关键词：只读背景、本轮参数、上下文预算。</p>
           </header>
           <p>
-            有效上下文不等于最大上下文。材料越多，模型越可能在无关信息上消耗注意力。好的上下文工程不是堆料，而是做选择：哪些事实必须在当前轮可见，哪些材料只应在下一阶段引入。
+            Context 是模型做判断时可以依赖的背景，Input 是这次运行的即时任务对象。二者混写会让系统无法精确做缓存、裁剪、替换和局部重试。
           </p>
-          <ul>
-            <li>将背景资料、任务输入、检索结果和历史状态分开管理。</li>
-            <li>优先提供“当前子任务必须知道”的最小上下文。</li>
-            <li>当任务分阶段时，使用渐进式披露而不是一次性注入。</li>
-          </ul>
+          <p>
+            few-shot 示例通常也应被当作 Context 的一部分来管理，而不是临时塞在任意位置。并且示例位置本身会影响效果，不能忽略其布局偏置。<span class="cite-ref"><a href="#ref-2">[2]</a></span>
+          </p>
         </section>
 
-        <section class="method-panel" data-method-panel="demos">
+        <section class="method-panel" data-method-panel="output">
           <header class="method-head">
-            <h3>示例位置: Demo 不是装饰, 它的位置会改变行为</h3>
-            <p>关键词：位置偏置、系统提示、前置示例。</p>
+            <h3>Output: 协议必须显式到足以被程序消费</h3>
+            <p>关键词：dtype、format、example、解析安全。</p>
           </header>
           <p>
-            Few-shot 示例的内容很重要，但位置也同样重要。示例出现在系统提示还是用户输入、出现在开头还是结尾，都会影响模型对任务模式的归纳方式。近期关于 DPP 偏差的研究已经明确指出，示例位置本身就可能带来显著性能波动。<span class="cite-ref"><a href="#ref-2">[2]</a></span>
+            真实系统里，“差不多像 JSON”是没有意义的。你需要明确声明输出类型、字段骨架、必要标记和合法示例。只有这样，检查器和解析器才知道什么叫合格，什么叫失败。
           </p>
-          <ul>
-            <li>当示例承担“教模型遵守协议”的作用时，尽量前置。</li>
-            <li>避免把关键示例塞在用户输入末尾当作附注。</li>
-            <li>不要只调示例内容，也要把位置纳入实验变量。</li>
-          </ul>
         </section>
 
-        <section class="method-panel" data-method-panel="contract">
+        <section class="method-panel" data-method-panel="harness">
           <header class="method-head">
-            <h3>输出契约: 模型输出必须像接口返回值一样可检验</h3>
-            <p>关键词：格式协议、字段语义、程序消费。</p>
+            <h3>Harness: Prompt 不负责业务闭环, 系统才负责</h3>
+            <p>关键词：调度、校验、状态、重试。</p>
           </header>
           <p>
-            如果输出要被程序读取，就不能只告诉模型“请尽量 JSON”。更好的做法是同时声明数据类型、字段语义、格式骨架和正例示例，让模型明白什么是合法响应，解析器也明白什么是失败响应。
+            Prompt 不应该承担检索、调度、状态持久化、异常处理和重试策略。它只负责定义一次推理调用的接口。任务拆分、运行顺序、文本沙箱、检查器与修复机制，都应由系统代码或 harness 实现。<span class="cite-ref"><a href="#ref-3">[3]</a><a href="#ref-4">[4]</a><a href="#ref-5">[5]</a></span>
           </p>
-          <ul>
-            <li><code>output_format</code> 负责定义协议骨架。</li>
-            <li><code>output_example</code> 负责给出最短合法样本。</li>
-            <li>解析失败要被视作显式错误，而不是“模型大致回答了就算了”。</li>
-          </ul>
         </section>
+      </section>
 
-        <section class="method-panel" data-method-panel="sandbox">
-          <header class="method-head">
-            <h3>文本沙箱: 把生成与操作限制在受控中间态里</h3>
-            <p>关键词：草稿区、局部编辑、隔离副作用。</p>
-          </header>
-          <p>
-            一个非常有价值的抽象是“文本沙箱”。它的意思不是把模型关起来，而是把模型对文本的操作限制在明确的工作区里：原始材料是只读的，工作草稿可编辑，最终结果单独导出，检查器只读取候选输出而不直接修改事实源。
-          </p>
-          <p>
-            这种设计能显著降低大型文本任务中的混乱，因为模型不会一边读原文一边随手重写原文，也不会把中间推断和最终结论混在同一个容器里。
-          </p>
+      <section class="section-block">
+        <h2>五、LLM 在真实系统中的正确位置: 一个受约束的推理模块</h2>
+        <p>
+          这套方法论最核心的一点，是重新摆正 LLM 的角色。LLM 很强，但它不应该直接主导端到端任务。更合理的做法是把它视作一个推理模块：给它一段受控输入，让它执行一个局部认知任务，再由系统决定是否接受、修复、分支或继续调用下一步。
+        </p>
 
-          <div class="demo-box">
-            <div class="demo-toolbar">
-              <button type="button" data-run-demo="sandbox">运行 demo</button>
-              <button type="button" data-copy-code="code-sandbox">复制代码</button>
-            </div>
-            <pre id="code-sandbox"><code>class TextSandbox:
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th>错误做法</th>
+              <th>为什么会失控</th>
+              <th>更合理的做法</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>“把整个任务都交给模型”</td>
+              <td>状态、验证、回退、异常都混在一次生成里</td>
+              <td>把任务拆成多个受约束推理步骤</td>
+            </tr>
+            <tr>
+              <td>“让模型自己决定下一步”</td>
+              <td>流程不可预测，难以审计和复现</td>
+              <td>由 harness 决定调度顺序和分支</td>
+            </tr>
+            <tr>
+              <td>“模型直接改最终结果”</td>
+              <td>中间态污染事实源</td>
+              <td>先写入文本沙箱，再检查再提交</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="note-box">
+          <strong>简化成一句话：</strong>
+          LLM 负责推理，程序负责秩序。
+        </div>
+      </section>
+
+      <section class="section-block">
+        <h2>六、围绕 Prompt4Py 的最小实现骨架</h2>
+        <p>
+          如果要把这套思想压成一个最小工程骨架，结构应该是：Prompt4Py 定义推理模板，文本沙箱承载中间态，检查器判断输出是否合法，harness 决定是否重试或进入下一阶段。
+        </p>
+
+        <div class="demo-box">
+          <div class="demo-toolbar">
+            <button type="button" data-run-demo="sandbox">运行 demo</button>
+            <button type="button" data-copy-code="code-sandbox">复制代码</button>
+          </div>
+          <pre id="code-sandbox"><code>class TextSandbox:
     def __init__(self, source_text: str) -&gt; None:
         self.source_text = source_text
         self.working_notes = []
@@ -708,107 +743,8 @@ def build_prompt(topic: str, notes: str) -&gt; str:
             "working_notes": list(self.working_notes),
             "candidate_output": self.candidate_output,
         }</code></pre>
-            <div class="demo-output" data-demo-output="sandbox">等待运行...</div>
-          </div>
-        </section>
-
-        <section class="method-panel" data-method-panel="inspect">
-          <header class="method-head">
-            <h3>检视闭环: 让“生成”和“判断是否合格”成为两个步骤</h3>
-            <p>关键词：评分器、验证器、再提示、收敛。</p>
-          </header>
-          <p>
-            许多生成任务失败，不是因为第一次输出一定很差，而是因为系统没有把“检视”和“修复”做成一等公民。把模型输出直接交付，和把输出先交给检查器再决定是否重试，是两种完全不同的系统。
-          </p>
-          <ul>
-            <li>先生成候选结果，再独立检查字段完整性、事实一致性和格式合法性。</li>
-            <li>检查器最好尽量规则化，少依赖模糊主观判断。</li>
-            <li>再提示时只反馈失败点，不要把整个任务重新说一遍。</li>
-          </ul>
-
-          <div class="demo-box">
-            <div class="demo-toolbar">
-              <button type="button" data-run-demo="inspect">运行 demo</button>
-              <button type="button" data-copy-code="code-inspect">复制代码</button>
-            </div>
-            <pre id="code-inspect"><code>def inspect_outline(result: dict) -&gt; list[str]:
-    errors = []
-    if not result.get("title"):
-        errors.append("missing title")
-    if not isinstance(result.get("sections"), list) or not result["sections"]:
-        errors.append("sections must be a non-empty list")
-    if "risks" not in result:
-        errors.append("missing risks")
-    return errors
-
-
-def should_retry(errors: list[str]) -&gt; bool:
-    return bool(errors)</code></pre>
-            <div class="demo-output" data-demo-output="inspect">等待运行...</div>
-          </div>
-        </section>
-      </section>
-
-      <section class="section-block">
-        <h2>五、最常见的五种反模式</h2>
-        <p>
-          很多失败并不是模型太弱，而是结构太差。下面这些反模式反复出现，并且几乎都会在规模扩大后暴露出明显成本。
-        </p>
-
-        <table class="comparison-table">
-          <thead>
-            <tr>
-              <th>反模式</th>
-              <th>典型症状</th>
-              <th>为什么危险</th>
-              <th>更好的替代</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>巨型 One-shot Prompt</td>
-              <td>把背景、规则、示例、历史、任务一次性塞满</td>
-              <td>上下文污染，注意力扩散，调试成本极高</td>
-              <td>分阶段执行，逐步披露上下文</td>
-            </tr>
-            <tr>
-              <td>隐藏输出协议</td>
-              <td>只说“请返回 JSON”</td>
-              <td>字段歧义大，下游很难稳定解析</td>
-              <td>显式写出格式骨架和合法示例</td>
-            </tr>
-            <tr>
-              <td>把建议和硬约束混写</td>
-              <td>模型无法区分必须遵守与尽量遵守</td>
-              <td>重试时难以定位真正违反了什么</td>
-              <td>将 <code>instruction</code> 与 <code>constraint</code> 分离</td>
-            </tr>
-            <tr>
-              <td>让模型直接改写事实源</td>
-              <td>原文、草稿、结论混成一团</td>
-              <td>中间推断污染原始资料</td>
-              <td>引入文本沙箱，隔离中间态</td>
-            </tr>
-            <tr>
-              <td>没有检查器</td>
-              <td>输出不合格也被直接接收</td>
-              <td>错误只能在线上被动暴露</td>
-              <td>生成后必经 inspect / validate 阶段</td>
-            </tr>
-          </tbody>
-        </table>
-
-        <div class="note-box">
-          <strong>一个经验规律：</strong>
-          绝大多数所谓“提示词玄学”，最后都能被重新解释成结构问题、上下文问题或验证问题。
+          <div class="demo-output" data-demo-output="sandbox">等待运行...</div>
         </div>
-      </section>
-
-      <section class="section-block">
-        <h2>六、一个最小可用的工程骨架</h2>
-        <p>
-          如果要把上面的思想压缩成一个真正可复用的最小骨架，它应该至少包含三件事：结构化模板、显式检查器和有限次修复循环。下面这段 Python 代码只是演示，但已经比“拼一段长字符串然后直接调用模型”更接近工程化使用方式。
-        </p>
 
         <div class="demo-box">
           <div class="demo-toolbar">
@@ -818,69 +754,120 @@ def should_retry(errors: list[str]) -&gt; bool:
           <pre id="code-pipeline"><code>from prompt4py import GeneralTemplate
 
 
-def build_outline_prompt(topic: str, notes: str) -&gt; str:
+def build_reasoning_prompt(task_input: str, context_text: str) -&gt; str:
     template = GeneralTemplate()
-    template.role = "Research writing assistant"
-    template.objective = "Create a reliable outline for {{topic}}."
+    template.role = "Senior analytical assistant"
+    template.objective = "Resolve the current reasoning task from INPUT."
     template.instruction = [
-        "Identify the strongest claims from CONTEXT.",
-        "Keep sections concise and non-overlapping.",
-        "Return only one JSON object."
+        "Read CONTEXT before solving the task.",
+        "Write only the declared JSON object.",
+        "Keep unsupported claims out of the result."
     ]
     template.constraint = [
-        "(mandatory) Do not invent unsupported claims.",
-        "(mandatory) Use exactly the declared keys.",
-        "(important) Keep each section title under 12 words."
+        "(mandatory) Do not edit source_text directly.",
+        "(mandatory) Use exactly the declared output keys."
     ]
-    template.context = "{{notes}}"
-    template.input = "{{topic}}"
+    template.context = "{{context_text}}"
+    template.input = "{{task_input}}"
     template.output_dtype = "json"
     template.output_format = """
 {
-  "title": "string",
-  "sections": ["string"],
-  "risks": ["string"]
+  "answer": "string",
+  "evidence": ["string"],
+  "risk_flags": ["string"]
 }
 """
     template.output_example = """
-{"title":"Prompt Systems","sections":["Problem","Method","Checklist"],"risks":["Weak evidence"]}
+{"answer":"...","evidence":["fact A"],"risk_flags":["missing source"]}
 """
-    return template.render(topic=topic, notes=notes)
+    return template.render(task_input=task_input, context_text=context_text)
 
 
-def inspect_outline(result: dict) -&gt; list[str]:
+def inspect_result(result: dict) -&gt; list[str]:
     errors = []
-    if not result.get("title"):
-        errors.append("missing title")
-    if not isinstance(result.get("sections"), list) or not result["sections"]:
-        errors.append("sections must be a non-empty list")
-    if "risks" not in result:
-        errors.append("missing risks")
+    if not result.get("answer"):
+        errors.append("missing answer")
+    if not isinstance(result.get("evidence"), list):
+        errors.append("evidence must be a list")
+    if "risk_flags" not in result:
+        errors.append("missing risk_flags")
     return errors
 
 
-def repair_hint(errors: list[str]) -&gt; str:
-    return "Fix only these issues: " + ", ".join(errors)</code></pre>
+def harness_step(task_input: str, sandbox: TextSandbox) -&gt; str:
+    prompt = build_reasoning_prompt(task_input, sandbox.source_text)
+    model_output = "{...}"  # provider call lives outside Prompt4Py
+    sandbox.set_candidate(model_output)
+    return prompt</code></pre>
           <div class="demo-output" data-demo-output="pipeline">等待运行...</div>
         </div>
 
         <p>
-          这套骨架的价值不在于“更优雅”，而在于它把生成系统中最容易失控的三件事都拉回了显式控制：任务规范、输出契约和失败修复。
+          这里最关键的一行其实不是模板定义，而是注释：<code>provider call lives outside Prompt4Py</code>。Prompt4Py 只负责推理接口构建；模型调用、沙箱管理、检查重试和状态转移，全都应留在外部 harness 中。
         </p>
       </section>
 
       <section class="section-block">
-        <h2>七、最后的收束: Prompt 的终局不是更花哨, 而是更可控</h2>
+        <h2>七、最常见的反模式</h2>
         <p>
-          真正成熟的提示词工程，不会长期停留在“哪一句更厉害”的层面。它最终一定会走向结构化模板、上下文治理、输出协议、文本中间态管理和检视闭环，因为只有这样，模型能力才能被稳定利用，而不是在每次任务变复杂时重新掉回经验主义。
+          一旦离开上面的结构，Prompt 设计很快会退化。下面这些反模式尤其常见。
+        </p>
+
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th>反模式</th>
+              <th>问题本质</th>
+              <th>为什么危险</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Role 写成内部模块名</td>
+              <td>角色语义不可执行</td>
+              <td>模型获得的是噪声，不是认知视角</td>
+            </tr>
+            <tr>
+              <td>一个 Objective 塞多个阶段</td>
+              <td>任务边界失真</td>
+              <td>失败后无法局部重试</td>
+            </tr>
+            <tr>
+              <td>Instruction / Constraint 混写</td>
+              <td>动作和边界纠缠</td>
+              <td>系统无法判断到底违反了什么</td>
+            </tr>
+            <tr>
+              <td>Context / Input 不分</td>
+              <td>背景材料和本轮参数混在一起</td>
+              <td>缓存、裁剪、替换和复用都变难</td>
+            </tr>
+            <tr>
+              <td>让 LLM 直接主导端到端任务</td>
+              <td>没有外部秩序层</td>
+              <td>状态、校验和异常处理全部失控</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="argument-box">
+          <strong>本质上，所有这些问题都指向同一个根源：</strong>
+          没有把 Prompt 看成结构化推理接口，而只是看成一句越来越长的话。
+        </div>
+      </section>
+
+      <section class="section-block">
+        <h2>八、最后的收束: Prompt4Py 管结构, Harness 管秩序, LLM 管推理</h2>
+        <p>
+          如果要用一句最简洁的话概括这套方法论，可以这样说：Prompt4Py 负责把 Prompt 写成结构，Harness 负责把系统运行在秩序里，LLM 负责在这个秩序里完成局部推理。
         </p>
         <p>
-          因此，判断一个 Prompt 设计是否优秀，最重要的问题不是“它第一次效果有多惊艳”，而是“当任务加一层复杂度、当材料多一倍、当输出要被程序读取、当第一次失败需要修复时，它还能不能继续站住”。
+          这比“写一段很长的 Prompt 然后交给模型自由发挥”要严格得多，但也稳定得多。它真正解决的问题不是如何偶尔生成一段漂亮结果，而是如何让一个真实系统在规模扩大、任务变复杂、需要校验和重试时仍然保持可控。
         </p>
 
         <div class="argument-box">
-          <strong>一句话概括全文：</strong>
-          提示词工程最值得追求的，不是更像灵感写作，而是更像接口设计、上下文治理和反馈驱动的软件工程。
+          <strong>一句话收束全文：</strong>
+          提示词设计的终局不是更会写话，而是更会用 Prompt4Py 定义推理接口，再用 harness 接管任务秩序。
         </div>
       </section>
 
@@ -1027,7 +1014,7 @@ def repair_hint(errors: list[str]) -&gt; str:
       }
 
       if (navButtons.length > 0) {
-        activatePanel("spec");
+        activatePanel("role");
         navButtons.forEach((button) => {
           button.addEventListener("click", function () {
             activatePanel(button.dataset.methodTarget);
@@ -1036,10 +1023,9 @@ def repair_hint(errors: list[str]) -&gt; str:
       }
 
       const demoOutputs = {
-        template: "## ROLE\nSenior writing assistant\n## OBJECTIVE\nProduce a concise outline for Prompt Methodology.\n## OUTPUT_FORMAT\n{\"title\":\"string\",\"sections\":[\"string\"],\"risks\":[\"string\"]}",
-        sandbox: "source_text -> immutable\nworking_notes -> ['claim A', 'risk B']\ncandidate_output -> draft_v1\ninspect() reads candidate only",
-        inspect: "inspect_outline(result)\n-> ['sections must be a non-empty list']\nshould_retry(...) -> True\nrepair prompt -> Fix only these issues: sections must be a non-empty list",
-        pipeline: "build prompt -> call model -> parse JSON\ninspect -> no title found\nrepair hint -> Fix only these issues: missing title\nsecond pass -> accepted"
+        template: "ROLE -> Senior analysis assistant\nOBJECTIVE -> Extract the key claims from topic\nCONTEXT and INPUT remain separated\nOUTPUT -> explicit JSON contract",
+        sandbox: "source_text -> read only\nworking_notes -> isolated scratch space\ncandidate_output -> staged result\nfinal commit happens after external inspection",
+        pipeline: "Prompt4Py builds the reasoning interface\nprovider call executes outside Prompt4Py\ninspect_result validates the JSON\nharness decides retry / accept / next step"
       };
 
       document.querySelectorAll("[data-run-demo]").forEach((button) => {
