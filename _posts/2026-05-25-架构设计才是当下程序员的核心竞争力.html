@@ -1,0 +1,670 @@
+---
+layout: post
+title: "架构设计才是当下程序员的核心竞争力"
+toc: false
+math: false
+excerpt: >-
+  当写代码变便宜以后，真正贵的是结构。AI 可以越来越快地写出第一版代码，但它不会自动替你判断边界、变化点、依赖关系和长期维护成本。今天真正拉开程序员差距的，不是“谁敲得更快”，而是谁能把混乱需求组织成稳定结构，把一次性实现变成可验证、可演化、可协作的系统。
+categories: software-engineering
+tags:
+  - design-patterns
+  - software-architecture
+  - ai-coding
+  - prompt-engineering
+  - harness-engineering
+author:
+  - vortezwohl
+  - 吴子豪
+  - Codex
+---
+
+<article id="architecture-core-competence-essay" lang="zh-CN">
+  <style>
+    #architecture-core-competence-essay {
+      --essay-text: #1c1b18;
+      --essay-text-strong: #141310;
+      --essay-text-muted: #4a433b;
+      --essay-kicker: #7b705f;
+      --essay-border: #ddd7cc;
+      --essay-border-soft: #e8e1d6;
+      --essay-panel-bg: #fbf9f5;
+      --essay-panel-strong-bg: #f2ede5;
+      --essay-hero-bg-start: #f8f5ef;
+      --essay-hero-bg-end: #f4efe6;
+      --essay-hero-grid: rgba(80, 72, 60, 0.04);
+      --essay-summary-bg: rgba(255, 253, 249, 0.92);
+      --essay-button-bg: #f8f4ed;
+      --essay-button-text: #231f19;
+      --essay-button-active-bg: #1f1d19;
+      --essay-button-active-text: #fbf8f2;
+      --essay-code-bg: #f3eee5;
+      --essay-code-text: #1f1d19;
+      --essay-link: #675743;
+      --essay-link-border: rgba(103, 87, 67, 0.35);
+      --essay-accent: #8f7d66;
+      color: var(--essay-text);
+      font-family: "Georgia", "Times New Roman", "Noto Serif SC", "Songti SC", serif;
+      line-height: 1.85;
+    }
+
+    #architecture-core-competence-essay * {
+      box-sizing: border-box;
+    }
+
+    #architecture-core-competence-essay a {
+      color: var(--essay-link);
+      text-decoration: none;
+      border-bottom: 1px solid var(--essay-link-border);
+    }
+
+    #architecture-core-competence-essay a:hover {
+      border-bottom-color: rgba(103, 87, 67, 0.86);
+    }
+
+    #architecture-core-competence-essay code {
+      padding: 0.12rem 0.32rem;
+      border-radius: 0.25rem;
+      background: var(--essay-code-bg);
+      color: var(--essay-code-text);
+      font-family: "Cascadia Code", "Consolas", monospace;
+      font-size: 0.92em;
+    }
+
+    #architecture-core-competence-essay .essay-shell {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 1.5rem 0 3.5rem;
+    }
+
+    #architecture-core-competence-essay .essay-hero {
+      position: relative;
+      overflow: hidden;
+      padding: 2.4rem 2rem 1.8rem;
+      border: 1px solid var(--essay-border);
+      background: linear-gradient(180deg, var(--essay-hero-bg-start) 0%, var(--essay-hero-bg-end) 100%);
+    }
+
+    #architecture-core-competence-essay .essay-hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image: linear-gradient(var(--essay-hero-grid) 1px, transparent 1px);
+      background-size: 100% 1.8rem;
+      pointer-events: none;
+    }
+
+    #architecture-core-competence-essay .essay-hero > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    #architecture-core-competence-essay .hero-kicker {
+      margin: 0 0 0.9rem;
+      color: var(--essay-kicker);
+      font-size: 0.82rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+
+    #architecture-core-competence-essay .hero-title {
+      max-width: 52rem;
+      margin: 0;
+      color: var(--essay-text-strong);
+      font-size: clamp(2rem, 5vw, 3.1rem);
+      line-height: 1.14;
+      letter-spacing: 0.02em;
+    }
+
+    #architecture-core-competence-essay .hero-lead {
+      max-width: 54rem;
+      margin: 1.25rem 0 0;
+      color: var(--essay-text-muted);
+      font-size: 1.06rem;
+    }
+
+    #architecture-core-competence-essay .hero-summary {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.9rem;
+      margin-top: 1.5rem;
+    }
+
+    #architecture-core-competence-essay .hero-summary-item {
+      min-height: 8rem;
+      padding: 0.95rem 1rem;
+      border: 1px solid var(--essay-border);
+      background: var(--essay-summary-bg);
+    }
+
+    #architecture-core-competence-essay .hero-summary-item strong {
+      display: block;
+      margin-bottom: 0.35rem;
+      color: var(--essay-text-strong);
+      font-size: 0.95rem;
+    }
+
+    #architecture-core-competence-essay .essay-body {
+      margin-top: 1.6rem;
+    }
+
+    #architecture-core-competence-essay .section-block {
+      margin-top: 2.2rem;
+      padding-top: 1.45rem;
+      border-top: 1px solid var(--essay-border-soft);
+    }
+
+    #architecture-core-competence-essay .section-block:first-child {
+      margin-top: 0;
+      padding-top: 0;
+      border-top: 0;
+    }
+
+    #architecture-core-competence-essay h2,
+    #architecture-core-competence-essay h3,
+    #architecture-core-competence-essay h4 {
+      color: var(--essay-text-strong);
+      font-family: "Georgia", "Times New Roman", "Noto Serif SC", "Songti SC", serif;
+      line-height: 1.32;
+    }
+
+    #architecture-core-competence-essay h2 {
+      margin: 0 0 1rem;
+      font-size: 1.72rem;
+    }
+
+    #architecture-core-competence-essay h3 {
+      margin: 1.4rem 0 0.65rem;
+      font-size: 1.22rem;
+    }
+
+    #architecture-core-competence-essay p {
+      margin: 0.86rem 0;
+    }
+
+    #architecture-core-competence-essay ul,
+    #architecture-core-competence-essay ol {
+      margin: 0.8rem 0 0.8rem 1.35rem;
+      padding: 0;
+    }
+
+    #architecture-core-competence-essay li {
+      margin: 0.36rem 0;
+    }
+
+    #architecture-core-competence-essay .argument-box,
+    #architecture-core-competence-essay .note-box,
+    #architecture-core-competence-essay .ref-box,
+    #architecture-core-competence-essay .card {
+      border: 1px solid var(--essay-border);
+      background: var(--essay-panel-bg);
+    }
+
+    #architecture-core-competence-essay .argument-box,
+    #architecture-core-competence-essay .note-box,
+    #architecture-core-competence-essay .ref-box {
+      margin: 1rem 0;
+      padding: 1rem 1.1rem;
+    }
+
+    #architecture-core-competence-essay .argument-box strong,
+    #architecture-core-competence-essay .note-box strong,
+    #architecture-core-competence-essay .ref-box strong {
+      color: var(--essay-text-strong);
+    }
+
+    #architecture-core-competence-essay .argument-box {
+      background: var(--essay-panel-strong-bg);
+    }
+
+    #architecture-core-competence-essay .card-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.9rem;
+      margin: 1rem 0;
+    }
+
+    #architecture-core-competence-essay .card {
+      padding: 1rem;
+    }
+
+    #architecture-core-competence-essay .card h3 {
+      margin-top: 0;
+      font-size: 1.08rem;
+    }
+
+    #architecture-core-competence-essay .comparison-table {
+      width: 100%;
+      margin: 1rem 0;
+      border-collapse: collapse;
+      font-size: 0.98rem;
+    }
+
+    #architecture-core-competence-essay .comparison-table th,
+    #architecture-core-competence-essay .comparison-table td {
+      padding: 0.75rem 0.8rem;
+      border: 1px solid var(--essay-border);
+      vertical-align: top;
+    }
+
+    #architecture-core-competence-essay .comparison-table th {
+      background: var(--essay-panel-strong-bg);
+      color: var(--essay-text-strong);
+      text-align: left;
+    }
+
+    #architecture-core-competence-essay .flow {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 0.6rem;
+      margin: 1rem 0;
+    }
+
+    #architecture-core-competence-essay .flow-step {
+      position: relative;
+      padding: 0.85rem 0.75rem;
+      border: 1px solid var(--essay-border);
+      background: var(--essay-summary-bg);
+      text-align: center;
+    }
+
+    #architecture-core-competence-essay .flow-step strong {
+      display: block;
+      color: var(--essay-text-strong);
+      font-size: 0.95rem;
+    }
+
+    #architecture-core-competence-essay .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      margin: 1rem 0;
+    }
+
+    #architecture-core-competence-essay .tabs button {
+      cursor: pointer;
+      border: 1px solid var(--essay-border);
+      background: var(--essay-button-bg);
+      color: var(--essay-button-text);
+      padding: 0.48rem 0.72rem;
+      font: inherit;
+      line-height: 1.3;
+    }
+
+    #architecture-core-competence-essay .tabs button.is-active {
+      background: var(--essay-button-active-bg);
+      color: var(--essay-button-active-text);
+    }
+
+    #architecture-core-competence-essay .tab-panel {
+      display: none;
+      padding: 1rem 1.1rem;
+      border: 1px solid var(--essay-border);
+      background: var(--essay-panel-bg);
+    }
+
+    #architecture-core-competence-essay .tab-panel.is-active {
+      display: block;
+    }
+
+    #architecture-core-competence-essay .quote-line {
+      margin: 1.15rem 0;
+      padding: 0.9rem 1rem;
+      border-left: 4px solid var(--essay-accent);
+      background: rgba(255, 253, 249, 0.76);
+      color: var(--essay-text-muted);
+      font-size: 1.02rem;
+    }
+
+    #architecture-core-competence-essay .ref-item {
+      margin: 0.72rem 0;
+      font-size: 0.95rem;
+      line-height: 1.65;
+    }
+
+    #architecture-core-competence-essay .ref-index {
+      margin-right: 0.35rem;
+      font-weight: 700;
+    }
+
+    @media (max-width: 860px) {
+      #architecture-core-competence-essay .hero-summary,
+      #architecture-core-competence-essay .card-grid,
+      #architecture-core-competence-essay .flow {
+        grid-template-columns: 1fr;
+      }
+
+      #architecture-core-competence-essay .essay-shell {
+        padding: 0.8rem 0 2.5rem;
+      }
+
+      #architecture-core-competence-essay .essay-hero {
+        padding: 1.7rem 1.2rem 1.3rem;
+      }
+
+      #architecture-core-competence-essay .comparison-table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+      }
+    }
+  </style>
+
+  <div class="essay-shell">
+    <header class="essay-hero">
+      <p class="hero-kicker">Architecture / Design Patterns / AI Coding / Prompt Architecture</p>
+      <h1 class="hero-title">架构设计才是当下程序员的核心竞争力</h1>
+      <p class="hero-lead">
+        AI 可以越来越快地写出第一版代码，但它不会自动替你判断边界、变化点、依赖关系和长期维护成本。今天真正拉开程序员差距的，不是“谁敲得更快”，而是谁能把混乱需求组织成稳定结构，把一次性实现变成可验证、可演化、可协作的系统。
+      </p>
+      <section class="hero-summary" aria-label="核心摘要">
+        <div class="hero-summary-item">
+          <strong>设计模式不是背名词</strong>
+          它是处理变化点的工具：哪里会变，谁该知道变化，变化如何被隔离。
+        </div>
+        <div class="hero-summary-item">
+          <strong>架构设计不是画大图</strong>
+          它是做边界、职责、依赖、状态、验证和演化路径的系统性决策。
+        </div>
+        <div class="hero-summary-item">
+          <strong>提示词也需要架构</strong>
+          Prompt 不是一句咒语，而是 AI 系统里的推理接口；Harness 才负责秩序。
+        </div>
+      </section>
+    </header>
+
+    <div class="essay-body">
+      <section class="section-block">
+        <h2>一、先说人话：为什么这件事现在更重要</h2>
+        <p>
+          过去，一个程序员的优势很大一部分来自“能不能把代码写出来”。现在，AI 已经能很快生成大量代码。问题变了：代码不再稀缺，稀缺的是判断。你要能判断这段代码该放在哪里、该不该抽象、接口该怎么切、状态该由谁负责、错误怎么恢复、未来改需求时会不会牵一发动全身。
+        </p>
+        <p>
+          AI Coding 把实现速度拉高了，也把结构失控的速度拉高了。以前一个坏设计可能慢慢腐烂，现在模型可以在几分钟内把同一种坏结构复制到十几个文件里。表面上项目进展很快，实际上后面每次改动都越来越痛。
+        </p>
+        <div class="argument-box">
+          <strong>本次分享的核心观点：</strong>
+          当写代码变便宜以后，真正贵的是结构。架构设计能力，就是程序员在高速度、高复杂度、高不确定性环境里维持系统秩序的能力。
+        </div>
+      </section>
+
+      <section class="section-block">
+        <h2>二、设计模式到底是什么</h2>
+        <p>
+          设计模式不是“看起来很高级的类图”，也不是面试时背的标准答案。更通俗地说，设计模式是一批老程序员反复踩坑后总结出来的“变化处理套路”。它们解决的不是“这一行代码怎么写”，而是“这个地方以后经常变，怎么让它变的时候别把系统拖垮”。
+        </p>
+        <p>
+          比如价格计算规则经常变，就不要把所有折扣分支塞进一个大函数里，可以用 <code>Strategy</code> 把不同算法拆出来。第三方接口长得和我们系统不一样，就不要强行改全系统，可以用 <code>Adapter</code> 做一层翻译。主流程完成后有很多附加动作，就不要让主流程认识所有下游，可以用 <code>Observer</code> 只发布事件。
+        </p>
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th>常见误解</th>
+              <th>更准确的理解</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>设计模式是固定模板</td>
+              <td>设计模式是对常见变化结构的命名，重点是意图，不是照抄代码。</td>
+            </tr>
+            <tr>
+              <td>模式越多越专业</td>
+              <td>只有真实变化点值得引入模式；没有变化点时，简单代码通常更好。</td>
+            </tr>
+            <tr>
+              <td>学模式是为了写复杂代码</td>
+              <td>学模式是为了知道什么时候该隔离复杂度，什么时候该克制。</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="section-block">
+        <h2>三、架构设计到底是什么</h2>
+        <p>
+          架构设计不是 PPT 里画几个方框，也不是给项目加很多层。架构设计是对系统重要决策的安排：模块边界怎么划，数据从哪里来，状态归谁管，依赖朝哪个方向走，失败时怎么恢复，哪些地方允许变化，哪些地方必须稳定。
+        </p>
+        <p>
+          可以把架构理解成一座城市的道路、管线和分区。单个函数像一间房，设计模式像常见房型或连接方式，架构则决定整座城市怎么运行。如果主干道规划错了，再漂亮的房间也会堵成一团。
+        </p>
+        <div class="card-grid">
+          <section class="card">
+            <h3>边界</h3>
+            <p>哪些职责应该放一起，哪些必须分开。边界清楚，修改才不会乱扩散。</p>
+          </section>
+          <section class="card">
+            <h3>依赖</h3>
+            <p>谁依赖谁，谁不能知道谁。依赖方向错了，系统会越来越难测、难改。</p>
+          </section>
+          <section class="card">
+            <h3>演化</h3>
+            <p>需求变化时，系统是局部替换，还是全局震动。架构要为真实变化留出空间。</p>
+          </section>
+        </div>
+      </section>
+
+      <section class="section-block">
+        <h2>四、设计模式和架构设计是什么关系</h2>
+        <p>
+          设计模式更偏局部，架构设计更偏全局。模式像一把把工具，架构像决定什么时候用哪把工具、为什么用、用完后系统整体是否更稳的判断过程。
+        </p>
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th>维度</th>
+              <th>设计模式</th>
+              <th>架构设计</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>关注范围</td>
+              <td>局部结构，例如对象创建、算法替换、接口适配。</td>
+              <td>全局结构，例如模块边界、数据流、部署形态、演化路径。</td>
+            </tr>
+            <tr>
+              <td>核心问题</td>
+              <td>某个变化点如何被隔离。</td>
+              <td>整个系统如何长期保持可维护。</td>
+            </tr>
+            <tr>
+              <td>常见失败</td>
+              <td>为了套模式而套模式。</td>
+              <td>只画概念图，不处理真实依赖和验证。</td>
+            </tr>
+            <tr>
+              <td>正确姿势</td>
+              <td>先看变化，再选模式。</td>
+              <td>先定边界，再组织实现。</td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="quote-line">
+          好的架构不是把系统变复杂，而是让复杂度有地方待；好的设计模式不是增加抽象，而是让变化不要污染主干。
+        </p>
+      </section>
+
+      <section class="section-block">
+        <h2>五、为什么 AI Coding 让架构能力更值钱</h2>
+        <p>
+          AI 很擅长根据眼前上下文补代码，但它不天然理解你的组织边界、历史包袱、线上风险和团队维护成本。它会倾向于把当前需求做出来，而不是主动追问“这个变化以后还会不会来”“这段逻辑是不是该独立测试”“这个状态是不是不该放在全局”。
+        </p>
+        <p>
+          所以 AI 时代的程序员，不应该退化成“提示词操作员”。更合理的定位是架构裁判和工程导演：你负责定义边界、目标、验收、风险和验证顺序；AI 在这些约束里做局部实现搜索。
+        </p>
+        <div class="flow" aria-label="AI Coding 架构协作流程">
+          <div class="flow-step"><strong>定目标</strong>说清要什么</div>
+          <div class="flow-step"><strong>划边界</strong>说清不做什么</div>
+          <div class="flow-step"><strong>给上下文</strong>只给必要信息</div>
+          <div class="flow-step"><strong>最小实现</strong>一次只改一片</div>
+          <div class="flow-step"><strong>验证闭环</strong>证明它真的对</div>
+        </div>
+        <div class="note-box">
+          <strong>关键转变：</strong>
+          以前你主要和代码复杂度作斗争；现在你还要和 AI 生成速度带来的结构扩散作斗争。架构能力，就是控制这种扩散的刹车系统。
+        </div>
+      </section>
+
+      <section class="section-block">
+        <h2>六、提示词架构设计：Prompt 也不是随便写一句话</h2>
+        <p>
+          很多人以为提示词工程就是“把话说得更清楚”。这只是第一层。真正进入工程场景以后，Prompt 应该被看成一个推理接口。接口就要有输入、输出、约束、上下文和错误处理边界。
+        </p>
+        <p>
+          一个可控的 Prompt，至少要回答七件事：模型现在扮演什么自然角色，要完成的唯一主目标是什么，应该执行哪些动作，不能越过哪些边界，依据哪些背景材料，本轮输入是什么，最后必须输出什么格式。
+        </p>
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th>字段</th>
+              <th>通俗解释</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>Role</code></td>
+              <td>模型现在应该像谁一样工作，例如资深代码审查者、架构顾问、文档编辑。</td>
+            </tr>
+            <tr>
+              <td><code>Objective</code></td>
+              <td>这次只有一个主目标，避免把多个阶段混成一团。</td>
+            </tr>
+            <tr>
+              <td><code>Instruction</code></td>
+              <td>要做哪些动作，例如阅读、比较、提取、生成、检查。</td>
+            </tr>
+            <tr>
+              <td><code>Constraint</code></td>
+              <td>不能做什么，例如不能改文件、不能编造验证结果、不能越权访问。</td>
+            </tr>
+            <tr>
+              <td><code>Context</code></td>
+              <td>背景材料和已知事实，帮助模型理解环境。</td>
+            </tr>
+            <tr>
+              <td><code>Input</code></td>
+              <td>本轮真正要处理的对象，应该和背景分开。</td>
+            </tr>
+            <tr>
+              <td><code>Output</code></td>
+              <td>输出结构、语言、格式和示例，方便人或程序检查。</td>
+            </tr>
+          </tbody>
+        </table>
+        <p>
+          这就是提示词架构设计。它不是让 Prompt 变长，而是让 Prompt 像接口一样清楚。接口越清楚，模型越不容易乱跑，后续检查和重试也更容易做。
+        </p>
+      </section>
+
+      <section class="section-block">
+        <h2>七、Harness：Prompt 管一轮推理，系统管整个流程</h2>
+        <p>
+          单靠 Prompt 不能构成可靠系统。Prompt 只能告诉模型“这一轮怎么回答”，但它不能天然负责状态保存、失败重试、上下文裁剪、测试执行、权限控制和结果验收。这些事情应该由外部 Harness，也就是围绕模型的一层工程壳来管理。
+        </p>
+        <p>
+          换句话说，LLM 是一个强推理模块，但不应该直接当系统大脑。真正的大脑应该是流程、状态机、检查器和验证机制。模型负责局部生成，Harness 负责让整个过程有秩序。
+        </p>
+        <div class="tabs" role="tablist" aria-label="架构能力训练主题">
+          <button type="button" class="is-active" data-tab-target="human">人类负责什么</button>
+          <button type="button" data-tab-target="ai">AI 负责什么</button>
+          <button type="button" data-tab-target="harness">Harness 负责什么</button>
+        </div>
+        <section class="tab-panel is-active" data-tab-panel="human">
+          <h3>人类负责目标、边界和裁决</h3>
+          <p>人要说清楚什么是成功，什么明确不做，风险在哪里，验收标准是什么。越是重要任务，越不能把裁决权完全交给模型。</p>
+        </section>
+        <section class="tab-panel" data-tab-panel="ai">
+          <h3>AI 负责在约束内搜索实现</h3>
+          <p>AI 适合做局部分析、生成、补全、对比和总结。它可以很强，但它的输出必须被检查，不能把“模型说了”当成完成。</p>
+        </section>
+        <section class="tab-panel" data-tab-panel="harness">
+          <h3>Harness 负责流程秩序</h3>
+          <p>Harness 负责拆阶段、装上下文、运行验证、失败重试、记录中间态和控制权限。没有 Harness，复杂 AI Coding 很容易退化成靠运气聊天。</p>
+        </section>
+      </section>
+
+      <section class="section-block">
+        <h2>八、程序员真正要练的五种架构能力</h2>
+        <div class="card-grid">
+          <section class="card">
+            <h3>变化点识别</h3>
+            <p>能看出哪些需求只是一次性改动，哪些会反复变化。看不见变化点，就谈不上设计。</p>
+          </section>
+          <section class="card">
+            <h3>边界感</h3>
+            <p>知道哪些逻辑应该靠近，哪些逻辑必须隔离。边界感差，项目会越写越黏。</p>
+          </section>
+          <section class="card">
+            <h3>抽象克制</h3>
+            <p>知道什么时候不该抽象。不成熟的架构常常不是太简单，而是过早复杂。</p>
+          </section>
+          <section class="card">
+            <h3>验证设计</h3>
+            <p>能把“看起来对”变成“可以证明对”。没有验证协议，架构讨论很容易空转。</p>
+          </section>
+          <section class="card">
+            <h3>上下文组织</h3>
+            <p>会给人和 AI 提供刚好够用的信息，而不是把所有材料一股脑塞进去。</p>
+          </section>
+          <section class="card">
+            <h3>演化判断</h3>
+            <p>能判断当前设计在下一次需求变化时是局部替换，还是全局返工。</p>
+          </section>
+        </div>
+      </section>
+
+      <section class="section-block">
+        <h2>十、最后收束：当代码不再稀缺，结构就是护城河</h2>
+        <p>
+          AI Coding 的终点，不是程序员不用懂工程了，而是程序员更需要懂工程。因为 AI 让实现变快，也让错误结构扩散变快。未来真正有价值的程序员，不只是能写代码的人，而是能让人、AI、代码、测试、流程和文档协同工作的人。
+        </p>
+        <p>
+          设计模式训练局部结构判断，架构设计训练全局复杂度治理，提示词架构训练 AI 推理接口设计，Harness 训练任务生命周期控制。把这几件事连起来，就是当下程序员最值得投入的核心竞争力。
+        </p>
+        <p class="quote-line">
+          一句话总结：AI 负责加速产出，人类负责守住结构。谁能守住结构，谁就能在 AI 时代继续掌握软件工程的主动权。
+        </p>
+      </section>
+
+      <section class="section-block">
+        <h2>参考文献</h2>
+        <div class="ref-box">
+          <p class="ref-item" id="ref-1"><a class="ref-index" href="https://vortezwohl.github.io/software-engineering/2026/05/23/AI-Coding-%E5%AE%8C%E6%95%B4%E6%96%B9%E6%B3%95%E8%AE%BA.html" target="_blank" rel="noopener noreferrer">[1]</a> Vortezwohl. <em>AI Coding 完整方法论：从让模型写代码，到建立受约束的工程协作系统</em>.</p>
+          <p class="ref-item" id="ref-2"><a class="ref-index" href="https://vortezwohl.github.io/software-engineering/2026/05/22/AI-Coding-%E6%97%B6%E4%BB%A3-%E7%90%86%E8%A7%A3%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E5%8F%98%E5%BE%97%E6%9B%B4%E5%8A%A0%E9%87%8D%E8%A6%81.html" target="_blank" rel="noopener noreferrer">[2]</a> Vortezwohl. <em>AI Coding 时代，理解设计模式变得更加重要</em>.</p>
+          <p class="ref-item" id="ref-3"><a class="ref-index" href="https://vortezwohl.github.io/prompt-engineering/2026/05/23/%E7%BB%93%E6%9E%84%E5%8C%96%E6%8F%90%E7%A4%BA%E8%AF%8D%E8%AE%BE%E8%AE%A1%E6%96%B9%E6%B3%95%E8%AE%BA.html" target="_blank" rel="noopener noreferrer">[3]</a> Vortezwohl. <em>基于 Prompt4Py 的结构化提示词设计方法论</em>.</p>
+          <p class="ref-item" id="ref-4"><a class="ref-index" href="https://vortezwohl.github.io/agent/2003/08/06/AGENTS.html" target="_blank" rel="noopener noreferrer">[4]</a> Vortezwohl. <em>AGENTS.md：面向 AI Coding 的基础工程协作规约</em>.</p>
+          <p class="ref-item" id="ref-5"><a class="ref-index" href="https://openai.com/index/harness-engineering/" target="_blank" rel="noopener noreferrer">[5]</a> OpenAI Research Team. <em>Harness engineering: leveraging Codex in an agent-first world</em>.</p>
+          <p class="ref-item" id="ref-6"><a class="ref-index" href="https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents" target="_blank" rel="noopener noreferrer">[6]</a> Anthropic. <em>Effective harnesses for long-running agents</em>.</p>
+          <p class="ref-item" id="ref-7"><a class="ref-index" href="https://martinfowler.com/articles/exploring-gen-ai/context-engineering-coding-agents.html" target="_blank" rel="noopener noreferrer">[7]</a> Birgitta Böckeler. <em>Context Engineering for Coding Agents</em>. Martin Fowler.</p>
+          <p class="ref-item" id="ref-8"><a class="ref-index" href="https://refactoring.guru/design-patterns" target="_blank" rel="noopener noreferrer">[8]</a> Refactoring.Guru. <em>Design Patterns</em>.</p>
+          <p class="ref-item" id="ref-9"><a class="ref-index" href="https://martinfowler.com/architecture/" target="_blank" rel="noopener noreferrer">[9]</a> Martin Fowler. <em>Software Architecture Guide</em>.</p>
+          <p class="ref-item" id="ref-10"><a class="ref-index" href="https://insights.sei.cmu.edu/blog/what-is-software-architecture/" target="_blank" rel="noopener noreferrer">[10]</a> Carnegie Mellon University Software Engineering Institute. <em>What Is Software Architecture?</em>.</p>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const article = document.getElementById("architecture-core-competence-essay");
+
+      if (!article) {
+        return;
+      }
+
+      const tabButtons = Array.from(article.querySelectorAll("[data-tab-target]"));
+      const tabPanels = Array.from(article.querySelectorAll("[data-tab-panel]"));
+
+      tabButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+          const target = button.getAttribute("data-tab-target");
+
+          tabButtons.forEach((item) => item.classList.toggle("is-active", item === button));
+          tabPanels.forEach((panel) => {
+            panel.classList.toggle("is-active", panel.getAttribute("data-tab-panel") === target);
+          });
+        });
+      });
+    }());
+  </script>
+</article>
