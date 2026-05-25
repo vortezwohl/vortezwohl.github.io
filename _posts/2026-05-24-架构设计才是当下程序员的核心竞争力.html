@@ -24,11 +24,13 @@ author:
       --essay-text: #1c1b18;
       --essay-text-strong: #141310;
       --essay-text-muted: #4a433b;
+      --essay-quote-text: #3a3127;
       --essay-kicker: #7b705f;
       --essay-border: #ddd7cc;
       --essay-border-soft: #e8e1d6;
       --essay-panel-bg: #fbf9f5;
       --essay-panel-strong-bg: #f2ede5;
+      --essay-quote-bg: #f1e7d8;
       --essay-hero-bg-start: #f8f5ef;
       --essay-hero-bg-end: #f4efe6;
       --essay-hero-grid: rgba(80, 72, 60, 0.04);
@@ -51,11 +53,13 @@ author:
       --essay-text: #e6dfd4;
       --essay-text-strong: #fbf7ef;
       --essay-text-muted: #d1c7b8;
+      --essay-quote-text: #f2e3cf;
       --essay-kicker: #b9ab97;
       --essay-border: rgba(239, 229, 213, 0.18);
       --essay-border-soft: rgba(239, 229, 213, 0.14);
       --essay-panel-bg: rgba(33, 30, 26, 0.92);
       --essay-panel-strong-bg: rgba(47, 42, 36, 0.96);
+      --essay-quote-bg: rgba(94, 77, 58, 0.36);
       --essay-hero-bg-start: rgba(33, 29, 24, 0.98);
       --essay-hero-bg-end: rgba(24, 22, 19, 0.98);
       --essay-hero-grid: rgba(241, 232, 216, 0.05);
@@ -338,11 +342,14 @@ author:
 
     #architecture-core-competence-essay .quote-line {
       margin: 1.15rem 0;
-      padding: 0.9rem 1rem;
-      border-left: 4px solid var(--essay-accent);
-      background: rgba(255, 253, 249, 0.76);
-      color: var(--essay-text-muted);
+      padding: 0.95rem 1.05rem;
+      border-left: 5px solid var(--essay-accent);
+      border-radius: 0 0.4rem 0.4rem 0;
+      background: var(--essay-quote-bg);
+      color: var(--essay-quote-text);
       font-size: 1.02rem;
+      font-weight: 600;
+      line-height: 1.9;
     }
 
     #architecture-core-competence-essay .ref-item {
