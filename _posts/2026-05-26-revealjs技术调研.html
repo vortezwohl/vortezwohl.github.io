@@ -1,0 +1,945 @@
+---
+layout: post
+title: "reveal.js 技术调研：从应用场景到实现原理"
+toc: false
+math: false
+excerpt: >-
+  reveal.js 不只是一个“用 HTML 做幻灯片”的前端框架，更准确地说，它是一个把演示文稿转化为网页内容、工程资产和可扩展运行时的浏览器原生演示系统。它在应用层适合技术演讲、教学课件、研究汇报、产品 demo 与静态分发，在工程层则通过中心协调器、控制器体系、插件机制、URL 状态同步、scroll/print 两种特殊视图与 DOM-first 渲染策略，形成了一套成熟的网页演示基础设施。本文从官方文档、GitHub 仓库、Slides.com、demo 页、社区资料与学术论文多个维度，对 reveal.js 的定位、使用方式、生态关系、源码结构、运行链路、优缺点与适用边界进行系统梳理。
+categories: frontend-engineering
+tags:
+  - revealjs
+  - presentation
+  - frontend
+  - javascript
+  - slide-engine
+author:
+  - vortezwohl
+  - 吴子豪
+  - Codex
+---
+
+<article id="revealjs-research-essay" lang="zh-CN">
+  <style>
+    #revealjs-research-essay {
+      --essay-text: #1c1b18;
+      --essay-text-strong: #141310;
+      --essay-text-muted: #3f3a34;
+      --essay-kicker: #7b705f;
+      --essay-border: #ddd7cc;
+      --essay-border-soft: #e2ddd4;
+      --essay-panel-bg: #fbf9f5;
+      --essay-panel-strong-bg: #f2ede5;
+      --essay-hero-bg-start: #f8f5ef;
+      --essay-hero-bg-end: #f4efe6;
+      --essay-hero-grid: rgba(80, 72, 60, 0.03);
+      --essay-summary-bg: rgba(255, 253, 249, 0.9);
+      --essay-code-bg: #f3eee5;
+      --essay-code-inline-bg: #f0eadf;
+      --essay-code-text: #1f1d19;
+      --essay-link: #675743;
+      --essay-link-border: rgba(103, 87, 67, 0.35);
+      --essay-link-border-hover: rgba(103, 87, 67, 0.8);
+      --essay-accent: #8f7d66;
+      color: var(--essay-text);
+      font-family: "Georgia", "Times New Roman", "Noto Serif SC", serif;
+      line-height: 1.85;
+    }
+
+    #revealjs-research-essay[data-tone="dark"] {
+      --essay-text: #e6dfd4;
+      --essay-text-strong: #fbf7ef;
+      --essay-text-muted: #d1c7b8;
+      --essay-kicker: #b9ab97;
+      --essay-border: rgba(239, 229, 213, 0.18);
+      --essay-border-soft: rgba(239, 229, 213, 0.14);
+      --essay-panel-bg: rgba(33, 30, 26, 0.92);
+      --essay-panel-strong-bg: rgba(47, 42, 36, 0.96);
+      --essay-hero-bg-start: rgba(33, 29, 24, 0.98);
+      --essay-hero-bg-end: rgba(24, 22, 19, 0.98);
+      --essay-hero-grid: rgba(241, 232, 216, 0.05);
+      --essay-summary-bg: rgba(53, 47, 40, 0.88);
+      --essay-code-bg: rgba(28, 26, 23, 0.98);
+      --essay-code-inline-bg: rgba(71, 61, 51, 0.82);
+      --essay-code-text: #f2ece2;
+      --essay-link: #8fd6e5;
+      --essay-link-border: rgba(143, 214, 229, 0.45);
+      --essay-link-border-hover: rgba(143, 214, 229, 0.95);
+      --essay-accent: #d1b48a;
+    }
+
+    #revealjs-research-essay .essay-shell {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 1.5rem 0 3rem;
+    }
+
+    #revealjs-research-essay .essay-hero {
+      position: relative;
+      padding: 2.4rem 2rem 1.8rem;
+      border: 1px solid var(--essay-border);
+      background: linear-gradient(180deg, var(--essay-hero-bg-start) 0%, var(--essay-hero-bg-end) 100%);
+    }
+
+    #revealjs-research-essay .essay-hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image: linear-gradient(var(--essay-hero-grid) 1px, transparent 1px);
+      background-size: 100% 1.8rem;
+      pointer-events: none;
+    }
+
+    #revealjs-research-essay .hero-kicker {
+      margin: 0 0 0.9rem;
+      font-size: 0.82rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--essay-kicker);
+    }
+
+    #revealjs-research-essay .hero-title {
+      margin: 0;
+      font-size: 2.4rem;
+      line-height: 1.18;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    #revealjs-research-essay .hero-lead {
+      max-width: 54rem;
+      margin: 1.25rem 0 0;
+      font-size: 1.05rem;
+      color: var(--essay-text-muted);
+    }
+
+    #revealjs-research-essay .hero-summary {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.9rem;
+      margin-top: 1.5rem;
+    }
+
+    #revealjs-research-essay .hero-summary-item {
+      padding: 0.9rem 1rem;
+      border: 1px solid var(--essay-border);
+      background: var(--essay-summary-bg);
+    }
+
+    #revealjs-research-essay .hero-summary-item strong {
+      display: block;
+      margin-bottom: 0.35rem;
+      font-size: 0.94rem;
+    }
+
+    #revealjs-research-essay .essay-body {
+      margin-top: 1.6rem;
+    }
+
+    #revealjs-research-essay .section-block {
+      margin-top: 2.2rem;
+      padding-top: 1.4rem;
+      border-top: 1px solid var(--essay-border-soft);
+    }
+
+    #revealjs-research-essay .section-block:first-child {
+      margin-top: 0;
+      padding-top: 0;
+      border-top: 0;
+    }
+
+    #revealjs-research-essay h2,
+    #revealjs-research-essay h3,
+    #revealjs-research-essay h4 {
+      font-family: "Georgia", "Times New Roman", "Noto Serif SC", serif;
+      line-height: 1.32;
+      color: var(--essay-text-strong);
+    }
+
+    #revealjs-research-essay h2 {
+      margin: 0 0 1rem;
+      font-size: 1.7rem;
+    }
+
+    #revealjs-research-essay h3 {
+      margin: 1.4rem 0 0.7rem;
+      font-size: 1.22rem;
+    }
+
+    #revealjs-research-essay h4 {
+      margin: 1.1rem 0 0.55rem;
+      font-size: 1.03rem;
+    }
+
+    #revealjs-research-essay p {
+      margin: 0.9rem 0;
+    }
+
+    #revealjs-research-essay ul,
+    #revealjs-research-essay ol {
+      margin: 0.8rem 0 0.8rem 1.3rem;
+      padding: 0;
+    }
+
+    #revealjs-research-essay li {
+      margin: 0.35rem 0;
+    }
+
+    #revealjs-research-essay a {
+      color: var(--essay-link);
+      text-decoration: none;
+      border-bottom: 1px solid var(--essay-link-border);
+      transition: border-color 0.2s ease;
+    }
+
+    #revealjs-research-essay a:hover {
+      border-bottom-color: var(--essay-link-border-hover);
+    }
+
+    #revealjs-research-essay code {
+      padding: 0.08rem 0.32rem;
+      border-radius: 0.2rem;
+      background: var(--essay-code-inline-bg);
+      color: var(--essay-code-text);
+      font-family: "Consolas", "SFMono-Regular", "Menlo", monospace;
+      font-size: 0.94em;
+    }
+
+    #revealjs-research-essay pre {
+      margin: 1rem 0;
+      padding: 1rem 1.1rem;
+      overflow-x: auto;
+      border: 1px solid var(--essay-border);
+      background: var(--essay-code-bg);
+      color: var(--essay-code-text);
+      font-family: "Consolas", "SFMono-Regular", "Menlo", monospace;
+      font-size: 0.92rem;
+      line-height: 1.65;
+    }
+
+    #revealjs-research-essay pre code {
+      padding: 0;
+      background: transparent;
+    }
+
+    #revealjs-research-essay .argument-box,
+    #revealjs-research-essay .note-box,
+    #revealjs-research-essay .ref-box,
+    #revealjs-research-essay .source-box {
+      padding: 1rem 1.1rem;
+      margin: 1rem 0;
+      border: 1px solid var(--essay-border);
+      background: var(--essay-panel-bg);
+    }
+
+    #revealjs-research-essay .source-box {
+      background: var(--essay-panel-strong-bg);
+    }
+
+    #revealjs-research-essay .argument-box strong,
+    #revealjs-research-essay .note-box strong,
+    #revealjs-research-essay .ref-box strong,
+    #revealjs-research-essay .source-box strong {
+      color: var(--essay-text-strong);
+    }
+
+    #revealjs-research-essay .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+      font-size: 0.98rem;
+    }
+
+    #revealjs-research-essay .comparison-table th,
+    #revealjs-research-essay .comparison-table td {
+      padding: 0.78rem 0.8rem;
+      border: 1px solid var(--essay-border);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    #revealjs-research-essay .comparison-table th {
+      background: var(--essay-panel-strong-bg);
+      color: var(--essay-text-strong);
+      font-weight: 700;
+    }
+
+    #revealjs-research-essay .insight-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
+      margin: 1rem 0;
+    }
+
+    #revealjs-research-essay .insight-card {
+      padding: 1rem 1.05rem;
+      border: 1px solid var(--essay-border);
+      background: var(--essay-panel-bg);
+    }
+
+    #revealjs-research-essay .insight-card h3 {
+      margin-top: 0;
+    }
+
+    #revealjs-research-essay .essay-divider {
+      margin: 2.2rem 0 0;
+      border: 0;
+      border-top: 1px solid var(--essay-border-soft);
+    }
+
+    #revealjs-research-essay .ref-list-html {
+      display: grid;
+      gap: 0.65rem;
+    }
+
+    #revealjs-research-essay .ref-item {
+      margin: 0;
+    }
+
+    #revealjs-research-essay .ref-index {
+      margin-right: 0.35rem;
+      font-weight: 700;
+      border-bottom: 0;
+    }
+
+    @media (max-width: 820px) {
+      #revealjs-research-essay .hero-summary,
+      #revealjs-research-essay .insight-grid {
+        grid-template-columns: 1fr;
+      }
+
+      #revealjs-research-essay .essay-hero {
+        padding: 2rem 1.2rem 1.5rem;
+      }
+
+      #revealjs-research-essay .hero-title {
+        font-size: 2rem;
+      }
+    }
+  </style>
+
+  <div class="essay-shell">
+    <header class="essay-hero">
+      <p class="hero-kicker">Presentation Engine Research / May 26, 2026</p>
+      <h1 class="hero-title">reveal.js 技术调研：从应用场景到实现原理</h1>
+      <p class="hero-lead">
+        reveal.js 经常被一句话概括为“用 HTML 做幻灯片的框架”，但这个描述太轻了。更准确地说，它是一个把演示文稿变成网页内容、静态资产与可扩展运行时的浏览器原生演示系统。它的价值既在应用层，也在工程层：前者涉及技术演讲、教学课件、研究汇报与产品 demo，后者涉及 DOM-first 渲染、中心协调器架构、插件生命周期、URL 状态同步、内容懒加载、滚动阅读视图与打印导出视图。本文基于 GitHub、官方文档、Slides.com、官方 demo、社区资料与学术论文，对 reveal.js 做一次面向工程实践的系统梳理。
+      </p>
+
+      <div class="hero-summary">
+        <div class="hero-summary-item">
+          <strong>核心定位</strong>
+          一个浏览器原生的网页演示运行时，而不是单纯模板或 UI 皮肤。
+        </div>
+        <div class="hero-summary-item">
+          <strong>应用重点</strong>
+          技术演讲、教学课件、研究汇报、嵌入式 demo、自托管静态演示。
+        </div>
+        <div class="hero-summary-item">
+          <strong>工程重点</strong>
+          中心闭包状态、控制器分层、插件机制、DOM 状态同步与特殊视图。
+        </div>
+      </div>
+    </header>
+
+    <div class="essay-body">
+      <section class="section-block">
+        <h2>一、首先要搞清楚 reveal.js 究竟是什么</h2>
+        <p>
+          从官方表述看，reveal.js 是 <em>The HTML Presentation Framework</em>，也就是“HTML 演示框架”。这个说法没有错，但如果只停在这里，就会低估它的实际工程含义。
+          它并不是把 PowerPoint 的对象模型原样搬到浏览器里，而是反过来做：把浏览器本身的内容能力、布局能力、媒体能力、脚本能力与部署能力，组织成一套适合演讲、阅读与分发的演示系统。
+        </p>
+        <p>
+          因此 reveal.js 的根本优势，不在于“能切页”，而在于它让演示内容天然具备以下属性：
+        </p>
+        <ul>
+          <li>内容是 DOM，可以像网页一样被样式化、脚本化与嵌入。</li>
+          <li>源文件可以是 HTML、Markdown、Quarto、AsciiDoc 等文本格式，适合版本控制。</li>
+          <li>交付结果是静态资源，适合 Git、CI、静态部署与长期归档。</li>
+          <li>运行时有明确 API，可以被嵌入页面、iframe 或远程控制链路。</li>
+          <li>演讲模式、阅读模式、打印模式可以围绕同一套内容组织。</li>
+        </ul>
+
+        <div class="argument-box">
+          <strong>一个更准确的定义：</strong>
+          reveal.js 不是“用网页模仿幻灯片”，而是“以网页原生能力构建演示运行时”。
+        </div>
+      </section>
+
+      <section class="section-block">
+        <h2>二、应用层价值：reveal.js 最适合拿来做什么</h2>
+        <p>
+          如果只从“源码是否优雅”评估 reveal.js，会偏离重点。它之所以长期有生命力，首先是因为应用场景非常清晰，而且这些场景与网页技术天然吻合。
+        </p>
+
+        <div class="insight-grid">
+          <div class="insight-card">
+            <h3>技术演讲</h3>
+            <p>
+              这是 reveal.js 最自然的场景。代码高亮、数学公式、fragment、speaker notes、媒体嵌入、网页 demo 与浏览器内交互都能统一进同一套内容体系里。
+            </p>
+          </div>
+          <div class="insight-card">
+            <h3>教学课件</h3>
+            <p>
+              reveal.js 在教学中最有价值的不是动画，而是可以把“课件 + 交互页面 + 代码/数据演示 + 讲义阅读”放在同一浏览器环境中。
+            </p>
+          </div>
+          <div class="insight-card">
+            <h3>研究汇报</h3>
+            <p>
+              与 Quarto、Markdown、Jupyter、AsciiDoc 等文档链路结合后，reveal.js 很适合做可复现研究汇报，尤其适合包含代码、图表、公式和引用的内容。
+            </p>
+          </div>
+          <div class="insight-card">
+            <h3>产品 demo 与内部汇报</h3>
+            <p>
+              当演示稿需要嵌入真实网页、视频、iframe、API 调试片段甚至 live demo 控制逻辑时，reveal.js 往往比传统文稿工具更直接。
+            </p>
+          </div>
+        </div>
+
+        <h3>不太适合的场景</h3>
+        <p>
+          reveal.js 也并不是所有演示需求的最优解。如果团队主要依赖 Office 审阅链路、母版拖拽排版、非技术作者独立生产或重度商业模板体系，那么它未必比 PowerPoint、Keynote 或 Google Slides 更省事。
+        </p>
+
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th>场景</th>
+              <th>reveal.js 适配度</th>
+              <th>原因</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>技术分享 / conference talk</td>
+              <td>高</td>
+              <td>代码、公式、嵌入 demo、speaker notes 与浏览器运行环境高度匹配。</td>
+            </tr>
+            <tr>
+              <td>教学课件 / 培训</td>
+              <td>高</td>
+              <td>适合把讲义、交互、网页资源和演示动作统一到一个可版本化内容系统中。</td>
+            </tr>
+            <tr>
+              <td>研究汇报 / 数据报告</td>
+              <td>高</td>
+              <td>与 Quarto、Markdown 和代码执行链路结合后很强。</td>
+            </tr>
+            <tr>
+              <td>普通商务汇报</td>
+              <td>中</td>
+              <td>如果不需要网页能力，传统 WYSIWYG 工具通常更省心。</td>
+            </tr>
+            <tr>
+              <td>纯视觉排版型演示</td>
+              <td>中低</td>
+              <td>可以做，但前提是作者愿意承担 HTML/CSS 级别的设计控制成本。</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="section-block">
+        <h2>三、真实使用方式：reveal.js 并不只有“手写 HTML”这一条路</h2>
+        <p>
+          很多人第一次接触 reveal.js，会误以为它的使用方式只有一条：手写一个 HTML 文件，在里面写 <code>&lt;section&gt;</code>。
+          这是最原生的方式，但不是唯一方式。实际上 reveal.js 的使用生态可以分成 4 条路径。
+        </p>
+
+        <h3>1. 直接写 HTML + reveal.js</h3>
+        <p>
+          这是控制力最强的方式。官方的内容模型本身非常简单：<code>.reveal &gt; .slides &gt; section</code>，横向 slide 用并列 <code>section</code>，纵向 slide 用嵌套 <code>section</code>。这种写法在需要高度定制布局、插入复杂组件、写专属交互、深度控制主题时最适合。
+        </p>
+
+        <h3>2. Markdown-first</h3>
+        <p>
+          reveal.js 官方支持 Markdown 内容源。这种方式对“信息密集型而非设计密集型”的演示特别有价值：写作快、diff 友好、适合脚本生成，也便于与 AI 工作流结合。
+        </p>
+
+        <h3>3. Quarto / Asciidoctor 等文档链路</h3>
+        <p>
+          这条路对教学、科研和技术写作团队非常重要。此时 reveal.js 不再是孤立工具，而是文档流水线的渲染后端：同一批源内容既能生成文档页，也能生成 slides。
+        </p>
+
+        <h3>4. Slides.com 作为上层编辑器</h3>
+        <p>
+          对于不希望直接手写 HTML/CSS 的团队，Slides.com 提供了 reveal.js 的可视化上层。它解决的是协作、模板、媒体管理、团队产出与导出体验，而 reveal.js 仍然是底层运行时。
+        </p>
+
+        <div class="note-box">
+          <strong>应用层最重要的判断不是“会不会写 reveal.js”，而是“演示内容要不要变成工程资产”。</strong>
+          如果答案是肯定的，那么 reveal.js 的价值会非常明显。
+        </div>
+      </section>
+
+      <section class="section-block">
+        <h2>四、Slides.com 与 reveal.js 的关系不是“合作”，而是上下层结构</h2>
+        <p>
+          这一点很容易被忽略。Slides.com 并不是 reveal.js 周边随便接入的第三方站点，而是与 reveal.js 共享同一创始人脉络的商业上层产品。Slides.com 官方明确说明它由 Hakim El Hattab 与 Owen Bossola 于 2013 年创立，而 Hakim 本人就是 reveal.js 创建者。
+        </p>
+        <p>
+          从产品结构理解，这两者的关系更像：
+        </p>
+        <ul>
+          <li>reveal.js：底层运行时，负责网页演示的渲染、导航、状态与扩展。</li>
+          <li>Slides.com：上层生产平台，负责可视化编辑、协作、模板、团队功能与导出交付。</li>
+        </ul>
+        <p>
+          这意味着 reveal.js 不是“Slides.com 的导出格式之一”，而是其核心运行内核之一。也正因为如此，Slides.com 的存在本身就是对 reveal.js 技术路线的一种长期验证：这条路线不仅能开源自托管，也能支撑商业化演示编辑器。
+        </p>
+      </section>
+
+      <section class="section-block">
+        <h2>五、从源码看 reveal.js 的真实架构：一个中心协调器 + 多个控制器</h2>
+        <p>
+          reveal.js 的源码结构并不复杂，但它的组织方式非常稳定。它不是现代组件框架那种声明式渲染树，而是一个典型的 <strong>DOM-first、状态闭包式、控制器协作式</strong> 前端架构。
+        </p>
+
+        <h3>1. 主入口集中在 <code>js/reveal.js</code></h3>
+        <p>
+          主入口文件负责创建 Reveal 实例闭包，集中持有核心状态，包括配置、当前 slide 索引、当前与前一张 slide、当前缩放比例、导航历史、DOM 缓存、transition 状态与 auto-slide 状态。
+          这意味着 reveal.js 的“系统真相”是集中持有的，而不是分散在多个 UI 组件树里。
+        </p>
+
+        <h3>2. 各能力按控制器拆分</h3>
+        <p>
+          <code>js/controllers/</code> 下按能力切分出了 <code>location</code>、<code>keyboard</code>、<code>touch</code>、<code>controls</code>、<code>progress</code>、<code>backgrounds</code>、<code>fragments</code>、<code>plugins</code>、<code>overview</code>、<code>scrollview</code>、<code>printview</code>、<code>slidecontent</code> 等控制器。它们不是彼此独立的应用模块，而是共享一个内部 Reveal API 的协作对象。
+        </p>
+
+        <h3>3. 配置是 reveal.js 的能力边界说明书</h3>
+        <p>
+          <code>js/config.ts</code> 不只是默认值文件，它基本定义了 reveal.js 的产品边界：导航模式、hash/history、fragment、auto-animate、viewDistance、scroll view、print view、media 行为、plugin 依赖与 PDF 导出参数等都在这里被正式声明。
+        </p>
+
+        <pre><code>export default function (revealElement, options) {
+  const Reveal = {};
+  let config = {};
+  let indexh, indexv;
+  let previousSlide, currentSlide;
+  let scale = 1;
+  let dom = {};
+
+  const slideContent = new SlideContent(Reveal);
+  const backgrounds = new Backgrounds(Reveal);
+  const scrollView = new ScrollView(Reveal);
+  const fragments = new Fragments(Reveal);
+  const location = new Location(Reveal);
+  const plugins = new Plugins(Reveal);
+
+  function initialize(initOptions) {
+    config = { ...defaultConfig, ...config, ...options, ...initOptions, ...Util.getQueryHash() };
+    plugins.load(config.plugins, config.dependencies).then(start);
+  }
+
+  return API;
+}</code></pre>
+
+        <div class="argument-box">
+          <strong>架构上的核心判断：</strong>
+          reveal.js 不是“很多小功能散落在页面上”，而是一个有明确主状态中心的运行时系统。
+        </div>
+      </section>
+
+      <section class="section-block">
+        <h2>六、启动链路：为什么 reveal.js 的 ready 不是一开始就触发</h2>
+        <p>
+          reveal.js 的启动顺序很值得注意，因为它反映了作者对“系统已经可用”这件事的定义。
+        </p>
+
+        <ol>
+          <li><code>initialize()</code> 校验根节点，找到 <code>.reveal</code> 与 <code>.slides</code>。</li>
+          <li>合并配置：默认值、已有配置、构造参数、初始化参数、URL query 参数。</li>
+          <li>设置 viewport：嵌入模式用 reveal 容器，全页模式用 <code>body</code>。</li>
+          <li>先加载插件与依赖，再进入 <code>start()</code>。</li>
+          <li><code>start()</code> 内部建立 DOM 附属层、配置交互、建立背景、激活特殊视图、读取 URL 状态。</li>
+          <li>最后异步触发 <code>ready</code> 事件。</li>
+        </ol>
+
+        <p>
+          这个链路说明 reveal.js 把“插件初始化完成”视为 ready 的前提，而不是附加能力。对于一个强调扩展的演示系统，这种设计是合理的：插件不是皮肤，而是生命周期的一部分。
+        </p>
+      </section>
+
+      <section class="section-block">
+        <h2>七、导航、URL 与状态同步：reveal.js 的核心不是切页动画，而是状态一致性</h2>
+        <p>
+          很多演示框架的导航系统很浅，只负责上一页下一页。reveal.js 的导航系统更像一个状态同步层。
+        </p>
+
+        <h3><code>location.js</code> 做了什么</h3>
+        <ul>
+          <li>支持基于数字索引的路径，如 <code>#/2/1/3</code>。</li>
+          <li>支持基于 slide <code>id</code> 或 <code>data-id</code> 的命名路径。</li>
+          <li>支持 fragment 索引进入 URL。</li>
+          <li>支持一基索引和零基索引切换。</li>
+          <li>支持 hash 与 history 两种浏览器路径同步策略。</li>
+        </ul>
+
+        <p>
+          这意味着 reveal.js 的 URL 不只是“方便复制链接”，而是演示状态的一种正式表示。对教学、远程协作、文档引用和长期归档来说，这一点很关键。
+        </p>
+
+        <h3>为什么这个设计重要</h3>
+        <p>
+          一旦 slide 状态可以稳定映射到 URL，就意味着演示稿不再只是“当场播放的对象”，而变成了“可引用、可定位、可恢复、可分享”的网页文档。
+        </p>
+      </section>
+
+      <section class="section-block">
+        <h2>八、插件机制：reveal.js 的扩展不是挂回调，而是参与生命周期</h2>
+        <p>
+          <code>plugins.js</code> 的实现很能说明 reveal.js 的工程成熟度。插件对象先被注册，再被串行初始化；如果某个插件的 <code>init()</code> 返回 Promise，reveal.js 会等待它完成之后再继续下一个插件。
+        </p>
+
+        <p>
+          这背后有两个重要信号：
+        </p>
+        <ul>
+          <li>插件被视为系统的一等能力，而不是事后挂上的修饰层。</li>
+          <li>插件初始化允许异步，因此 reveal.js 可以把远程资源、复杂预处理、外部依赖引入正式启动链路。</li>
+        </ul>
+
+        <pre><code>load(plugins, dependencies) {
+  this.state = 'loading';
+  plugins.forEach(this.registerPlugin.bind(this));
+  return new Promise(resolve =&gt; {
+    // 先处理同步依赖，再 initPlugins，最后再 loadAsync
+  });
+}
+
+initPlugins() {
+  // 插件串行初始化，若返回 Promise 则等待完成
+}</code></pre>
+
+        <p>
+          也正因为插件机制较重，reveal.js 更像“演示运行时平台”，而不是“只负责几种转场的页面脚本”。
+        </p>
+      </section>
+
+      <section class="section-block">
+        <h2>九、渲染原理：它不是虚拟 DOM，而是基于 DOM 状态与 transform 的运行时</h2>
+        <p>
+          reveal.js 的渲染模型非常传统，也非常有效：不构建虚拟 DOM，不维护独立渲染树，不做声明式 diff，而是直接操作已有 slide DOM。
+        </p>
+        <p>
+          它的主要手段包括：
+        </p>
+        <ul>
+          <li>给 slide 与背景节点打 class。</li>
+          <li>为节点写入 <code>display</code>、<code>transform</code>、<code>left/top</code> 等 style。</li>
+          <li>在 overview、scroll、print 等模式下重排 DOM 或重设布局规则。</li>
+          <li>通过 data-attribute 与 CSS transition 驱动 fragment 和 auto-animate。</li>
+        </ul>
+
+        <p>
+          这套方式看上去“老派”，但对 reveal.js 这种运行时非常合适。因为 slide 内容本来就是作者直接写好的 DOM，框架的职责不是重新解释内容，而是管理内容在不同视图和状态下的呈现方式。
+        </p>
+      </section>
+
+      <section class="section-block">
+        <h2>十、Auto-Animate 的实现原理：本质上是结构化 FLIP</h2>
+        <p>
+          reveal.js 的 auto-animate 不是简单的“给当前页淡入下一页淡出”。从 <code>autoanimate.js</code> 可以看出，它采用的是非常典型的 FLIP 思路：
+        </p>
+        <ol>
+          <li>识别 from-slide 与 to-slide 之间可匹配的元素。</li>
+          <li>读取两边元素的位置、大小与样式。</li>
+          <li>计算 delta。</li>
+          <li>动态注入一整块 CSS。</li>
+          <li>通过 <code>data-auto-animate</code> 与 <code>data-auto-animate-target</code> 切换状态，触发真正动画。</li>
+        </ol>
+
+        <p>
+          更重要的是，它不是只匹配 <code>data-id</code>。源码里还会按文本节点、媒体资源、代码块内容做匹配，对代码行号甚至有更细的处理逻辑。
+          这也是为什么 reveal.js 的 auto-animate 在文本和代码演示场景里往往比想象中更自然。
+        </p>
+      </section>
+
+      <section class="section-block">
+        <h2>十一、内容生命周期：slidecontent 控制器比想象中更关键</h2>
+        <p>
+          很多人会把 reveal.js 理解成“切 slide 的系统”，但对真实演示来说，更棘手的问题其实是：什么时候加载 iframe、什么时候播放媒体、什么时候停止媒体、浏览器不允许自动播放怎么办、iframe 自动抢焦点怎么办。
+        </p>
+        <p>
+          这些问题主要由 <code>slidecontent.js</code> 处理。它负责：
+        </p>
+        <ul>
+          <li>按视距或可见性加载懒加载内容。</li>
+          <li>进入当前 slide 时启动媒体。</li>
+          <li>离开 slide 时停止媒体或按需卸载 iframe。</li>
+          <li>在浏览器阻止自动播放时提供手工播放或取消静音按钮。</li>
+          <li>处理 <code>preventIframeAutoFocus</code> 这类现实问题。</li>
+        </ul>
+
+        <p>
+          这说明 reveal.js 的职责不是“把内容画出来”就结束，而是要承担内容运行时的资源与交互管理。
+        </p>
+      </section>
+
+      <section class="section-block">
+        <h2>十二、scroll view 与 print view：reveal.js 不是只有一种观看方式</h2>
+        <p>
+          reveal.js 早期很容易被理解成“只能一页一页切的演讲模式”，但 5.x 之后的 scroll view 说明它已经明确支持另一类需求：同一套内容既可以被讲，也可以被当成长页面阅读。
+        </p>
+
+        <h3>Scroll View</h3>
+        <p>
+          scroll view 并不是单纯加一点 CSS，而是单独的控制器与单独的行为模型。它涉及滚动激活、scroll snap、进度条、阅读视口和 slide 状态触发逻辑，是一个独立运行模式。
+        </p>
+
+        <h3>Print View</h3>
+        <p>
+          print view 的实现也很重。<code>printview.js</code> 会计算页面尺寸、重排 slide、插入页码、处理 notes、按 fragment 拆分页面，并在必要时克隆页面状态。
+          所以 reveal.js 的 PDF 导出不是“把当前页面截图”，而是专门构造一套打印布局。
+        </p>
+
+        <div class="argument-box">
+          <strong>这两个视图非常关键：</strong>
+          它们说明 reveal.js 追求的不是单一演讲体验，而是同一内容在不同消费方式下的可用性。
+        </div>
+      </section>
+
+      <section class="section-block">
+        <h2>十三、为什么 reveal.js 在学术和教学里持续有价值</h2>
+        <p>
+          学术与教学场景对 reveal.js 的兴趣点，并不主要在转场，而在“交互式讲授介质”这一层。
+        </p>
+        <p>
+          例如数据库教学论文中，作者直接基于 reveal.js 扩展了 SQL 执行展示、JSON 驱动 ER 图与手机投票能力。
+          这类用法说明 reveal.js 并不是把网页嵌进幻灯片里，而是反过来把幻灯片变成网页交互界面。
+        </p>
+        <p>
+          对科研团队来说，它与 Quarto / Markdown / Notebook 体系的天然兼容也很重要：一份内容既能成为文档，又能成为演示，又能保留代码、公式、图表和引用的完整链路。
+        </p>
+      </section>
+
+      <section class="section-block">
+        <h2>十四、源码中值得注意的安全与约束意识</h2>
+        <p>
+          reveal.js 的安全策略并不激进，但能看出明确的边界意识。
+        </p>
+        <ul>
+          <li><code>getQueryHash()</code> 会读取 query 参数并做基础反序列化，但显式删除 <code>dependencies</code>，避免通过 URL 注入依赖脚本。</li>
+          <li><code>postMessage</code> API 不是全量开放，而是通过黑名单拦掉插件注册、键盘绑定、预览能力等高风险方法。</li>
+          <li>URL 写回带节流，避免浏览器状态被频繁震荡。</li>
+        </ul>
+        <p>
+          这些实现细节说明 reveal.js 虽然是一个前端演示框架，但它并没有把“运行时可编程”理解为“全部入口无限开放”。
+        </p>
+      </section>
+
+      <section class="section-block">
+        <h2>十五、从工程判断看 reveal.js 的优点与短板</h2>
+
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th>维度</th>
+              <th>优点</th>
+              <th>短板</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>内容形态</td>
+              <td>HTML/Markdown/Quarto 友好，适合版本控制与自动化。</td>
+              <td>对纯非技术作者不够友好。</td>
+            </tr>
+            <tr>
+              <td>交互能力</td>
+              <td>天然可嵌网页、JS、媒体、iframe、公式与代码高亮。</td>
+              <td>复杂交互也意味着作者要承担浏览器兼容与调试成本。</td>
+            </tr>
+            <tr>
+              <td>部署与分发</td>
+              <td>静态站点友好，可自托管，易归档。</td>
+              <td>打印/PDF 与屏幕视图仍需分开验证。</td>
+            </tr>
+            <tr>
+              <td>架构扩展</td>
+              <td>插件机制成熟，运行时 API 明确。</td>
+              <td>社区插件维护新鲜度不一致，升级时需逐项核对兼容性。</td>
+            </tr>
+            <tr>
+              <td>阅读体验</td>
+              <td>scroll view 让演示与阅读共用同一内容源。</td>
+              <td>不同消费模式下的排版与节奏要额外设计。</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="section-block">
+        <h2>十六、最后的判断：什么时候应该选 reveal.js</h2>
+        <p>
+          如果一个团队真正需要的是“拖拽一下就完”的普通文稿工具，reveal.js 可能不是最直接的答案。但如果团队关心下面这些问题，reveal.js 就非常值得考虑：
+        </p>
+        <ul>
+          <li>演示内容是否要进入 Git 与 CI。</li>
+          <li>演示是否要和代码、公式、网页资源天然融合。</li>
+          <li>内容是否需要自托管、长期归档与稳定分享。</li>
+          <li>一份内容是否要兼顾演讲模式与网页阅读模式。</li>
+          <li>团队是否接受文本源、工程化内容与有限前端控制成本。</li>
+        </ul>
+
+        <p>
+          站在这个角度看，reveal.js 的竞争对手并不只是其他幻灯片工具，而是“你的演示内容到底属于文稿资产，还是工程资产”这个更根本的问题。
+        </p>
+
+        <div class="argument-box">
+          <strong>一句话收束全文：</strong>
+          reveal.js 最重要的价值，不是让网页看起来像幻灯片，而是让幻灯片第一次真正具备网页与工程系统的全部属性。
+        </div>
+      </section>
+
+      <section class="section-block">
+        <h2>十七、本次调研的关键资料来源</h2>
+        <div class="source-box">
+          <strong>资料范围：</strong>
+          本文调研覆盖了 GitHub 仓库、官方文档、官方 demo、Slides.com 官方资料、社区工具链资料与学术论文资料，并且尽量优先使用一手来源或接近一手来源的文档。
+        </div>
+      </section>
+
+      <hr class="essay-divider">
+
+      <section class="section-block">
+        <h2>参考资料</h2>
+        <div class="ref-box">
+          <div class="ref-list-html">
+            <p class="ref-item" id="ref-1"><a class="ref-index" href="https://github.com/hakimel/reveal.js" target="_blank" rel="noopener noreferrer">[1]</a> GitHub. <em>hakimel/reveal.js</em>.</p>
+            <p class="ref-item" id="ref-2"><a class="ref-index" href="https://github.com/hakimel/reveal.js/releases" target="_blank" rel="noopener noreferrer">[2]</a> GitHub Releases. <em>reveal.js Releases</em>.</p>
+            <p class="ref-item" id="ref-3"><a class="ref-index" href="https://revealjs.com/" target="_blank" rel="noopener noreferrer">[3]</a> reveal.js Official Site. <em>reveal.js</em>.</p>
+            <p class="ref-item" id="ref-4"><a class="ref-index" href="https://revealjs.com/markup/" target="_blank" rel="noopener noreferrer">[4]</a> reveal.js Official Documentation. <em>Markup</em>.</p>
+            <p class="ref-item" id="ref-5"><a class="ref-index" href="https://revealjs.com/api/" target="_blank" rel="noopener noreferrer">[5]</a> reveal.js Official Documentation. <em>API</em>.</p>
+            <p class="ref-item" id="ref-6"><a class="ref-index" href="https://revealjs.com/plugins/" target="_blank" rel="noopener noreferrer">[6]</a> reveal.js Official Documentation. <em>Plugins</em>.</p>
+            <p class="ref-item" id="ref-7"><a class="ref-index" href="https://revealjs.com/creating-plugins/" target="_blank" rel="noopener noreferrer">[7]</a> reveal.js Official Documentation. <em>Creating Plugins</em>.</p>
+            <p class="ref-item" id="ref-8"><a class="ref-index" href="https://revealjs.com/markdown/" target="_blank" rel="noopener noreferrer">[8]</a> reveal.js Official Documentation. <em>Markdown</em>.</p>
+            <p class="ref-item" id="ref-9"><a class="ref-index" href="https://revealjs.com/auto-animate/" target="_blank" rel="noopener noreferrer">[9]</a> reveal.js Official Documentation. <em>Auto-Animate</em>.</p>
+            <p class="ref-item" id="ref-10"><a class="ref-index" href="https://revealjs.com/speaker-view/" target="_blank" rel="noopener noreferrer">[10]</a> reveal.js Official Documentation. <em>Speaker View</em>.</p>
+            <p class="ref-item" id="ref-11"><a class="ref-index" href="https://revealjs.com/pdf-export/" target="_blank" rel="noopener noreferrer">[11]</a> reveal.js Official Documentation. <em>PDF Export</em>.</p>
+            <p class="ref-item" id="ref-12"><a class="ref-index" href="https://revealjs.com/demo/?transition=none" target="_blank" rel="noopener noreferrer">[12]</a> reveal.js Official Demo. <em>Demo</em>.</p>
+            <p class="ref-item" id="ref-13"><a class="ref-index" href="https://revealjs.com/react/" target="_blank" rel="noopener noreferrer">[13]</a> reveal.js Official Documentation. <em>React</em>.</p>
+            <p class="ref-item" id="ref-14"><a class="ref-index" href="https://revealjs.com/upgrading/" target="_blank" rel="noopener noreferrer">[14]</a> reveal.js Official Documentation. <em>Upgrading to 6.0</em>.</p>
+            <p class="ref-item" id="ref-15"><a class="ref-index" href="https://slides.com/about" target="_blank" rel="noopener noreferrer">[15]</a> Slides.com. <em>About Slides</em>.</p>
+            <p class="ref-item" id="ref-16"><a class="ref-index" href="https://slides.com/for-developers" target="_blank" rel="noopener noreferrer">[16]</a> Slides.com. <em>For Developers</em>.</p>
+            <p class="ref-item" id="ref-17"><a class="ref-index" href="https://slides.com/features" target="_blank" rel="noopener noreferrer">[17]</a> Slides.com. <em>Features</em>.</p>
+            <p class="ref-item" id="ref-18"><a class="ref-index" href="https://quarto.org/docs/presentations/revealjs/index.html" target="_blank" rel="noopener noreferrer">[18]</a> Quarto Documentation. <em>Presentations with reveal.js</em>.</p>
+            <p class="ref-item" id="ref-19"><a class="ref-index" href="https://docs.asciidoctor.org/reveal.js-converter/latest/" target="_blank" rel="noopener noreferrer">[19]</a> Asciidoctor Documentation. <em>Asciidoctor reveal.js Converter</em>.</p>
+            <p class="ref-item" id="ref-20"><a class="ref-index" href="https://github.com/webpro/reveal-md" target="_blank" rel="noopener noreferrer">[20]</a> GitHub. <em>webpro/reveal-md</em>.</p>
+            <p class="ref-item" id="ref-21"><a class="ref-index" href="https://github.com/denehyg/reveal.js-menu" target="_blank" rel="noopener noreferrer">[21]</a> GitHub. <em>reveal.js-menu</em>.</p>
+            <p class="ref-item" id="ref-22"><a class="ref-index" href="https://github.com/rajgoel/reveal.js-plugins" target="_blank" rel="noopener noreferrer">[22]</a> GitHub. <em>rajgoel/reveal.js-plugins</em>.</p>
+            <p class="ref-item" id="ref-23"><a class="ref-index" href="https://link.springer.com/article/10.1007/s13222-020-00364-6" target="_blank" rel="noopener noreferrer">[23]</a> Schicker, M., et al. <em>Interactive Presentations for Teaching Databases</em>. Datenbank-Spektrum, 2020.</p>
+            <p class="ref-item" id="ref-24"><a class="ref-index" href="https://publish.illinois.edu/glherman/files/2016/03/2015-ASEE-Intro-Computing.pdf" target="_blank" rel="noopener noreferrer">[24]</a> Herman, G. L., et al. <em>Transforming an Introductory Computing Course with a Web-Native Content Stack</em>. ASEE, 2015.</p>
+            <p class="ref-item" id="ref-25"><a class="ref-index" href="https://arxiv.org/abs/2107.06639" target="_blank" rel="noopener noreferrer">[25]</a> Pimentel, J. F., et al. <em>From Notebooks to Documents and Slides with a Single Source</em>, 2021.</p>
+            <p class="ref-item" id="ref-26"><a class="ref-index" href="https://arbor.bfh.ch/entities/publication/60d48c66-b074-4524-be1f-b0d686a439fb" target="_blank" rel="noopener noreferrer">[26]</a> Biedermann, S. <em>Open Source Presentation Workflows with reveal.js</em>, 2024.</p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const article = document.getElementById("revealjs-research-essay");
+
+      function parseRgb(colorValue) {
+        const match = colorValue && colorValue.match(/\d+(\.\d+)?/g);
+        if (!match || match.length < 3) {
+          return null;
+        }
+        return match.slice(0, 3).map(Number);
+      }
+
+      function luminance(rgb) {
+        return (0.299 * rgb[0]) + (0.587 * rgb[1]) + (0.114 * rgb[2]);
+      }
+
+      function mixRgb(source, target, weight) {
+        return source.map(function (channel, index) {
+          return Math.round((channel * (1 - weight)) + (target[index] * weight));
+        });
+      }
+
+      function toRgbString(rgb) {
+        return "rgb(" + rgb.join(", ") + ")";
+      }
+
+      function toRgbaString(rgb, alpha) {
+        return "rgba(" + rgb.join(", ") + ", " + alpha + ")";
+      }
+
+      function applyEssayPalette(backgroundRgb) {
+        const isDark = luminance(backgroundRgb) < 156;
+        const warmLight = [250, 243, 231];
+        const warmDark = [28, 26, 23];
+        const textBase = isDark ? mixRgb(backgroundRgb, [255, 248, 239], 0.84) : mixRgb(backgroundRgb, [24, 22, 19], 0.94);
+        const textStrong = isDark ? mixRgb(backgroundRgb, [255, 252, 245], 0.92) : mixRgb(backgroundRgb, [15, 14, 12], 0.97);
+        const textMuted = isDark ? mixRgb(textBase, backgroundRgb, 0.22) : mixRgb(textBase, backgroundRgb, 0.3);
+        const kicker = isDark ? mixRgb(textBase, [214, 191, 158], 0.38) : mixRgb(textMuted, [116, 98, 76], 0.48);
+        const border = isDark ? toRgbaString(mixRgb(backgroundRgb, [255, 239, 214], 0.28), 0.34) : toRgbaString(mixRgb(backgroundRgb, [118, 101, 81], 0.82), 0.22);
+        const borderSoft = isDark ? toRgbaString(mixRgb(backgroundRgb, [255, 239, 214], 0.18), 0.24) : toRgbaString(mixRgb(backgroundRgb, [118, 101, 81], 0.58), 0.14);
+        const panelBg = isDark ? toRgbString(mixRgb(backgroundRgb, warmLight, 0.11)) : toRgbString(mixRgb(backgroundRgb, warmLight, 0.58));
+        const panelStrongBg = isDark ? toRgbString(mixRgb(backgroundRgb, warmLight, 0.18)) : toRgbString(mixRgb(backgroundRgb, [236, 226, 212], 0.7));
+        const heroStart = isDark ? toRgbString(mixRgb(backgroundRgb, warmLight, 0.09)) : toRgbString(mixRgb(backgroundRgb, [251, 247, 239], 0.74));
+        const heroEnd = isDark ? toRgbString(mixRgb(backgroundRgb, warmDark, 0.2)) : toRgbString(mixRgb(backgroundRgb, [244, 238, 227], 0.68));
+        const heroGrid = isDark ? toRgbaString(mixRgb(backgroundRgb, warmLight, 0.4), 0.08) : toRgbaString(mixRgb(backgroundRgb, [98, 84, 68], 0.6), 0.045);
+        const summaryBg = isDark ? toRgbaString(mixRgb(backgroundRgb, warmLight, 0.16), 0.88) : toRgbaString(mixRgb(backgroundRgb, [255, 252, 247], 0.72), 0.94);
+        const codeBg = isDark ? toRgbString(mixRgb(backgroundRgb, [17, 16, 14], 0.42)) : toRgbString(mixRgb(backgroundRgb, [243, 237, 228], 0.74));
+        const codeInlineBg = isDark ? toRgbString(mixRgb(backgroundRgb, [76, 67, 56], 0.48)) : toRgbString(mixRgb(backgroundRgb, [240, 233, 222], 0.78));
+        const codeText = isDark ? toRgbString(mixRgb(backgroundRgb, [248, 239, 227], 0.92)) : toRgbString(mixRgb(backgroundRgb, [30, 28, 24], 0.94));
+        const link = isDark ? toRgbString(mixRgb(backgroundRgb, [151, 223, 237], 0.88)) : toRgbString(mixRgb(backgroundRgb, [101, 83, 63], 0.92));
+        const linkBorder = isDark ? toRgbaString(mixRgb(backgroundRgb, [151, 223, 237], 0.84), 0.52) : toRgbaString(mixRgb(backgroundRgb, [101, 83, 63], 0.9), 0.34);
+        const linkBorderHover = isDark ? toRgbaString(mixRgb(backgroundRgb, [151, 223, 237], 0.96), 0.96) : toRgbaString(mixRgb(backgroundRgb, [101, 83, 63], 0.96), 0.84);
+        const accent = isDark ? toRgbString(mixRgb(backgroundRgb, [221, 188, 145], 0.82)) : toRgbString(mixRgb(backgroundRgb, [143, 125, 102], 0.9));
+
+        article.style.setProperty("--essay-text", toRgbString(textBase));
+        article.style.setProperty("--essay-text-strong", toRgbString(textStrong));
+        article.style.setProperty("--essay-text-muted", toRgbString(textMuted));
+        article.style.setProperty("--essay-kicker", toRgbString(kicker));
+        article.style.setProperty("--essay-border", border);
+        article.style.setProperty("--essay-border-soft", borderSoft);
+        article.style.setProperty("--essay-panel-bg", panelBg);
+        article.style.setProperty("--essay-panel-strong-bg", panelStrongBg);
+        article.style.setProperty("--essay-hero-bg-start", heroStart);
+        article.style.setProperty("--essay-hero-bg-end", heroEnd);
+        article.style.setProperty("--essay-hero-grid", heroGrid);
+        article.style.setProperty("--essay-summary-bg", summaryBg);
+        article.style.setProperty("--essay-code-bg", codeBg);
+        article.style.setProperty("--essay-code-inline-bg", codeInlineBg);
+        article.style.setProperty("--essay-code-text", codeText);
+        article.style.setProperty("--essay-link", link);
+        article.style.setProperty("--essay-link-border", linkBorder);
+        article.style.setProperty("--essay-link-border-hover", linkBorderHover);
+        article.style.setProperty("--essay-accent", accent);
+        article.dataset.tone = isDark ? "dark" : "light";
+      }
+
+      function resolveBackgroundColor(node) {
+        let current = node;
+        while (current) {
+          const style = window.getComputedStyle(current);
+          const rgb = parseRgb(style.backgroundColor);
+          if (rgb && style.backgroundColor !== "rgba(0, 0, 0, 0)" && style.backgroundColor !== "transparent") {
+            return rgb;
+          }
+          current = current.parentElement;
+        }
+        return [255, 255, 255];
+      }
+
+      function applyEssayTone() {
+        if (!article) {
+          return;
+        }
+        const rgb = resolveBackgroundColor(article.parentElement || document.body);
+        applyEssayPalette(rgb);
+      }
+
+      applyEssayTone();
+      window.addEventListener("load", applyEssayTone);
+      window.addEventListener("resize", applyEssayTone);
+    })();
+  </script>
+</article>
