@@ -323,26 +323,51 @@ author:
     }
 
     #revealjs-research-essay .live-demo-frame {
-      margin-top: 1.2rem;
-      padding: 0.95rem;
-      border: 1px solid var(--essay-border);
+      position: relative;
+      margin-top: 1.35rem;
+      padding: 1rem;
+      border: 1px solid rgba(231, 214, 186, 0.88);
       background:
-        linear-gradient(135deg, rgba(22, 20, 18, 0.94) 0%, rgba(48, 42, 36, 0.94) 100%);
-      box-shadow: 0 18px 42px rgba(24, 20, 16, 0.16);
+        radial-gradient(circle at top left, rgba(255, 236, 196, 0.72), transparent 20rem),
+        radial-gradient(circle at bottom right, rgba(255, 199, 112, 0.4), transparent 22rem),
+        linear-gradient(145deg, rgba(255, 250, 240, 0.98) 0%, rgba(248, 238, 220, 0.98) 52%, rgba(243, 232, 212, 0.98) 100%);
+      box-shadow:
+        0 24px 54px rgba(128, 90, 39, 0.16),
+        inset 0 1px 0 rgba(255, 255, 255, 0.72);
+      overflow: hidden;
+    }
+
+    #revealjs-research-essay .live-demo-frame::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(120deg, rgba(255, 255, 255, 0.32), transparent 34%),
+        linear-gradient(300deg, rgba(255, 232, 187, 0.22), transparent 42%);
+      pointer-events: none;
     }
 
     #revealjs-research-essay .live-demo-caption {
-      margin: 0 0 0.8rem;
+      position: relative;
+      z-index: 1;
+      margin: 0 0 0.9rem;
       font-size: 0.92rem;
-      letter-spacing: 0.08em;
+      letter-spacing: 0.1em;
       text-transform: uppercase;
-      color: rgba(247, 240, 231, 0.78);
+      color: #7a5d34;
     }
 
     #revealjs-research-essay .reveal-demo {
-      height: clamp(460px, 61vw, 760px);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      background: #111;
+      position: relative;
+      z-index: 1;
+      height: clamp(480px, 62vw, 760px);
+      border: 1px solid rgba(153, 116, 56, 0.22);
+      border-radius: 1rem;
+      background:
+        linear-gradient(180deg, rgba(255, 250, 242, 0.96) 0%, rgba(246, 236, 219, 0.96) 100%);
+      box-shadow:
+        0 22px 44px rgba(119, 88, 42, 0.14),
+        inset 0 1px 0 rgba(255, 255, 255, 0.88);
     }
 
     #revealjs-research-essay .reveal-demo .slides section,
@@ -373,7 +398,7 @@ author:
       font-size: 0.86rem;
       letter-spacing: 0.14em;
       text-transform: uppercase;
-      opacity: 0.82;
+      color: rgba(92, 62, 18, 0.78);
     }
 
     #revealjs-research-essay .reveal-demo .deck-metric-grid {
@@ -385,16 +410,17 @@ author:
 
     #revealjs-research-essay .reveal-demo .deck-metric {
       padding: 0.85rem 0.95rem;
-      border: 1px solid rgba(255, 255, 255, 0.18);
-      background: rgba(255, 255, 255, 0.08);
-      backdrop-filter: blur(5px);
+      border: 1px solid rgba(169, 129, 65, 0.2);
+      background: rgba(255, 252, 246, 0.72);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
+      backdrop-filter: blur(7px);
     }
 
     #revealjs-research-essay .reveal-demo .deck-metric strong {
       display: block;
       margin-bottom: 0.18rem;
       font-size: 1.3rem;
-      color: #fff;
+      color: #5a3900;
     }
 
     #revealjs-research-essay .reveal-demo .deck-pills {
@@ -409,11 +435,13 @@ author:
       align-items: center;
       padding: 0.28rem 0.6rem;
       border-radius: 999px;
-      border: 1px solid rgba(255, 255, 255, 0.22);
-      background: rgba(255, 255, 255, 0.11);
+      border: 1px solid rgba(162, 117, 48, 0.24);
+      background: rgba(255, 249, 240, 0.82);
+      color: #6a4714;
       font-size: 0.7em;
       letter-spacing: 0.06em;
       text-transform: uppercase;
+      box-shadow: 0 8px 18px rgba(164, 121, 57, 0.08);
     }
 
     #revealjs-research-essay .reveal-demo .split-two {
@@ -428,14 +456,16 @@ author:
       max-height: 24rem;
       object-fit: cover;
       border: 0;
-      box-shadow: 0 16px 34px rgba(12, 10, 8, 0.25);
+      border-radius: 1rem;
+      box-shadow: 0 18px 34px rgba(78, 54, 20, 0.18);
     }
 
     #revealjs-research-essay .reveal-demo .visual-note {
       padding: 0.8rem 0.9rem;
-      background: rgba(255, 255, 255, 0.88);
-      border-left: 4px solid #8b6d4d;
+      background: rgba(255, 251, 245, 0.96);
+      border-left: 4px solid #b8832f;
       font-size: 0.9em;
+      color: #4d3820;
     }
 
     #revealjs-research-essay .reveal-demo .video-shell {
@@ -443,8 +473,9 @@ author:
       width: 100%;
       padding-top: 56.25%;
       overflow: hidden;
-      border: 1px solid rgba(255, 255, 255, 0.18);
-      box-shadow: 0 18px 44px rgba(15, 12, 10, 0.35);
+      border: 1px solid rgba(176, 130, 64, 0.22);
+      border-radius: 1rem;
+      box-shadow: 0 20px 40px rgba(96, 66, 22, 0.2);
     }
 
     #revealjs-research-essay .reveal-demo .video-shell iframe {
@@ -457,18 +488,58 @@ author:
 
     #revealjs-research-essay .reveal-demo .dark-panel {
       padding: 1rem 1.05rem;
-      background: rgba(15, 16, 18, 0.74);
-      color: #f8f4ed;
+      background: rgba(255, 249, 239, 0.82);
+      color: #3d2a13;
+      border-left: 4px solid rgba(193, 132, 42, 0.82);
+      box-shadow: 0 14px 28px rgba(116, 84, 34, 0.12);
     }
 
     #revealjs-research-essay .reveal-demo .dark-panel h3,
     #revealjs-research-essay .reveal-demo .dark-panel p,
     #revealjs-research-essay .reveal-demo .dark-panel li {
-      color: #f8f4ed;
+      color: #3d2a13;
     }
 
     #revealjs-research-essay .reveal-demo .fit-code {
       font-size: 0.66em;
+    }
+
+    #revealjs-research-essay .reveal-demo .reveal-viewport,
+    #revealjs-research-essay .reveal-demo .slides {
+      border-radius: 1rem;
+    }
+
+    #revealjs-research-essay .reveal-demo .slides {
+      color: #25190f;
+    }
+
+    #revealjs-research-essay .reveal-demo .slides section {
+      padding: 1rem 1.15rem;
+    }
+
+    #revealjs-research-essay .reveal-demo .slides section:not(.hero-slide) h1,
+    #revealjs-research-essay .reveal-demo .slides section:not(.hero-slide) h2,
+    #revealjs-research-essay .reveal-demo .slides section:not(.hero-slide) h3,
+    #revealjs-research-essay .reveal-demo .slides section:not(.hero-slide) p,
+    #revealjs-research-essay .reveal-demo .slides section:not(.hero-slide) li {
+      color: #2f2217;
+    }
+
+    #revealjs-research-essay .reveal-demo .slides section:not(.hero-slide) {
+      background:
+        radial-gradient(circle at top right, rgba(255, 222, 173, 0.26), transparent 24rem),
+        linear-gradient(180deg, rgba(255, 252, 246, 0.92) 0%, rgba(248, 238, 221, 0.92) 100%);
+      border-radius: 1.1rem;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.76);
+    }
+
+    #revealjs-research-essay .reveal-demo .hero-slide {
+      text-shadow: 0 10px 30px rgba(34, 18, 3, 0.22);
+    }
+
+    #revealjs-research-essay .reveal-demo .controls,
+    #revealjs-research-essay .reveal-demo .progress {
+      color: #9a6b22;
     }
 
     #revealjs-research-essay .live-demo-footnote {
@@ -526,7 +597,7 @@ author:
   </style>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@6.0.1/dist/reveal.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@6.0.1/dist/theme/white.css">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@6.0.1/plugin/highlight/monokai.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@6.0.1/dist/plugin/highlight/monokai.css">
 
   <div class="essay-shell">
     <header class="essay-hero">
@@ -772,10 +843,10 @@ deck.initialize();</code></pre>
                 真正的 reveal.js 项目还可以继续接数学公式、搜索、白板、菜单、远程控制、Quarto、Slides.com、React 集成与自定义插件。
               </p>
               <div class="deck-pills">
-                <span class="deck-pill" style="color:#1e1a16;border-color:rgba(31,28,24,0.18);background:rgba(31,28,24,0.06);">Speaker Notes</span>
-                <span class="deck-pill" style="color:#1e1a16;border-color:rgba(31,28,24,0.18);background:rgba(31,28,24,0.06);">Background Images</span>
-                <span class="deck-pill" style="color:#1e1a16;border-color:rgba(31,28,24,0.18);background:rgba(31,28,24,0.06);">Nested Slides</span>
-                <span class="deck-pill" style="color:#1e1a16;border-color:rgba(31,28,24,0.18);background:rgba(31,28,24,0.06);">Lazy Media</span>
+                <span class="deck-pill">Speaker Notes</span>
+                <span class="deck-pill">Background Images</span>
+                <span class="deck-pill">Nested Slides</span>
+                <span class="deck-pill">Lazy Media</span>
               </div>
             </section>
           </div>
@@ -1287,9 +1358,9 @@ initPlugins() {
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/reveal.js@6.0.1/dist/reveal.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/reveal.js@6.0.1/plugin/markdown/markdown.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/reveal.js@6.0.1/plugin/highlight/highlight.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/reveal.js@6.0.1/plugin/notes/notes.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/reveal.js@6.0.1/dist/plugin/markdown.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/reveal.js@6.0.1/dist/plugin/highlight.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/reveal.js@6.0.1/dist/plugin/notes.js"></script>
   <script>
     (function () {
       const article = document.getElementById("revealjs-research-essay");
