@@ -1,10 +1,10 @@
 ---
 layout: post
-title: "SkillOS 深度调研：把 Agent 操作系统写成 Markdown，这条路能走通吗"
+title: "SkillOS 深度调研：当 Skill 成为 Agent 系统的基本程序单元，这条路能走通吗"
 toc: false
 math: false
 excerpt: >-
-  SkillOS 是一个非常有野心的 agent 系统原型：它试图把 agent、tool、planner、memory、security 乃至运行时协议都改写成 markdown 规格，并把 LLM 本身当作解释器来运行这些规格。它最有价值的地方，不在于已经成为成熟生产级 Agent OS，而在于把“规格即程序”“分层技能树”“懒加载路由”“认知流水线”“Dialect 压缩层”这些想法系统化了；它最需要警惕的地方，则是文档叙事、测试口径与公开仓库快照之间仍然存在明显错位，尤其体现在多运行时实现与可复现性边界上。本文基于公开仓库、文档、测试与 benchmark，对 SkillOS 做一次面向工程判断的综述式梳理。
+  SkillOS 是一个非常有野心的 agent 系统原型：它试图把 agent、tool、planner、memory、security 乃至运行时协议都组织成 skill 体系，并用 markdown 去定义这些 skill 的规格，再让 LLM 充当这些规格的解释器。它最有价值的地方，不在于已经成为成熟生产级 Agent OS，而在于把“规格即程序”“分层技能树”“懒加载路由”“认知流水线”“Dialect 压缩层”这些想法系统化了；它最需要警惕的地方，则是文档叙事、测试口径与公开仓库快照之间仍然存在明显错位，尤其体现在多运行时实现与可复现性边界上。本文基于公开仓库、文档、测试与 benchmark，对 SkillOS 做一次面向工程判断的综述式梳理。
 categories: ai-systems
 tags:
   - skillos
@@ -383,9 +383,9 @@ author:
   <div class="survey-shell">
     <header class="survey-hero">
       <p class="hero-kicker">AI Systems / Agent OS / Survey Essay</p>
-      <h1 class="hero-title">SkillOS 深度调研：把 Agent 操作系统写成 Markdown，这条路能走通吗</h1>
+      <h1 class="hero-title">SkillOS 深度调研：当 Skill 成为 Agent 系统的基本程序单元，这条路能走通吗</h1>
       <p class="hero-lead">
-        在最近一波 agent system 叙事里，很多项目在讨论“工具调用”“多智能体协作”“记忆”“规划”，但 SkillOS 想做的事情更激进：它试图把 agent、tool、planner、memory、security、runtime 乃至项目目录结构都重新解释成 markdown 规格，并宣称由 LLM 直接充当这些规格的解释器。换句话说，它不是在一个既有 runtime 上“挂几个 agent”，而是在尝试把整个 agent runtime 本身描述成一种 markdown 操作系统。
+        在最近一波 agent system 叙事里，很多项目在讨论“工具调用”“多智能体协作”“记忆”“规划”，但 SkillOS 想做的事情更激进：它试图把 agent、tool、planner、memory、security、runtime 乃至项目目录结构都重新组织成一套 skill 体系，并用 markdown 去定义这些 skill 的规格，再让 LLM 直接充当这些规格的解释器。换句话说，它不是在一个既有 runtime 上“挂几个 agent”，而是在尝试把 skill 变成 agent 系统里的基本程序单元。
       </p>
       <p class="hero-lead">
         这使它成为一个非常值得单独调研的项目。它既不是传统的工作流编排框架，也不是单个研究论文的代码附件，而更像“研究型原型 + 架构宣言 + 文档驱动实验平台”的混合体。本文基于公开仓库、README、架构文档、测试文件、benchmark 脚本与相关论文锚点，对 SkillOS 做一次尽量克制、面向工程判断的综述式梳理。
@@ -450,7 +450,7 @@ author:
           从 GitHub 元数据来看，<a href="https://github.com/EvolvingAgentsLabs/skillos" target="_blank" rel="noopener noreferrer">SkillOS 仓库</a>是 EvolvingAgentsLabs 在 2026-03-17 创建的公开仓库，仓库描述直接写着 <code>PoC about how generate an Agentic OS, based in Skills as programs</code>。这个描述其实很诚实：它自己就把项目定位成 <code>PoC</code>，也就是 proof of concept，而不是 production-ready 平台。
         </p>
         <p>
-          公开文档里对 SkillOS 的主叙事非常一致：它是一个 <code>Pure Markdown Operating System</code>。系统中的 agent、tool、memory、planner 和 validation 组件都以 markdown 文档形式存在；这些文档用 YAML frontmatter 描述元信息，用 markdown body 描述行为，最终由 Claude Code、Qwen、Gemini、Gemma 这类 LLM runtime 在执行时读取、解释和调用工具。
+          公开文档里对 SkillOS 的主叙事非常一致：它把自己描述成一个 <code>Pure Markdown Operating System</code>。但更准确地说，系统中的 agent、tool、memory、planner 和 validation 能力被组织成 skill，而这些 skill 再以 markdown 文档形式存在；文档用 YAML frontmatter 描述元信息，用 markdown body 描述行为，最终由 Claude Code、Qwen、Gemini、Gemma 这类 LLM runtime 在执行时读取、解释和调用工具。
         </p>
 
         <div class="stack-grid">
