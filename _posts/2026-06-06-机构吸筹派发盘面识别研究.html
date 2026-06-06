@@ -480,7 +480,53 @@ author:
       </div>
     </header>
 
-    <div class="essay-body">      <section class="section-block" style="--essay-idx: 1;">
+    <div class="essay-body">
+      <section class="section-block" style="--essay-idx: 0;">
+        <h2>术语速查表</h2>
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th>术语</th>
+              <th>全称 / 中文</th>
+              <th>本文中的含义</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>VWAP</code></td>
+              <td>Volume Weighted Average Price / 成交量加权平均价</td>
+              <td>反映当日市场的成交均价与平均持仓成本锚。价格长期位于 <code>VWAP</code> 上方，通常更像买盘主导；长期位于下方，通常更像卖压主导。</td>
+            </tr>
+            <tr>
+              <td><code>CAS</code></td>
+              <td>Closing Auction Session / 收市竞价交易时段</td>
+              <td>港股的收盘定价窗口。尾盘大成交若主要发生在 <code>CAS</code>，首先应解释为定价与撮合行为，而不是直接视为方向性资金表达。</td>
+            </tr>
+            <tr>
+              <td><code>NOII</code></td>
+              <td>Net Order Imbalance Indicator / 净订单失衡指标</td>
+              <td>美股开收盘拍卖前用于观察买卖失衡的信息窗口。它更适合判断拍卖时段的大单偏向，而不是单独用来预测全天趋势。</td>
+            </tr>
+            <tr>
+              <td><code>MOC</code></td>
+              <td>Market-On-Close / 收盘市价单</td>
+              <td>在收盘拍卖中按最终收盘价成交的市价订单，常见于被动资金、指数资金或基准对齐需求。</td>
+            </tr>
+            <tr>
+              <td><code>LOC</code></td>
+              <td>Limit-On-Close / 收盘限价单</td>
+              <td>在收盘拍卖中以限定价格参与成交的订单。与 <code>MOC</code> 一样，更多体现收盘执行需求，而不天然等同于主动看多或看空。</td>
+            </tr>
+            <tr>
+              <td><code>TWAP / POV</code></td>
+              <td>Time Weighted Average Price / Participation of Volume</td>
+              <td>常见机构执行算法。<code>TWAP</code> 偏按时间均匀拆单，<code>POV</code> 偏按市场成交量比例参与；它们更强调低冲击完成执行，不一定直接表达方向判断。</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="section-block" style="--essay-idx: 1;">
         <h2>一、研究问题到底是什么</h2>
         <p>
           “机构吸筹”与“机构派发”是交易语境里非常常见的词，但如果直接把它理解为可被盘面单日证明的事实，结论往往会失真。更稳妥的表述应当是：某段量价行为，是否更一致于某类大资金执行需求，例如主动配置、主动减仓、<code>VWAP/TWAP/POV</code> 执行、收盘基准单、指数再平衡、事件驱动抢单，或大宗与配售后的再定价。
