@@ -1,0 +1,1333 @@
+---
+layout: post
+title: "如何从量价里识别机构吸筹与派发：盘面图谱、可量化因子与交易员看板"
+toc: false
+math: false
+excerpt: >-
+  机构吸筹与派发的识别，关键不在于“今天放量了没有”，而在于价格推进效率、VWAP 位置、制度窗口与后续连续性。本文在美股、港股与 A 股的交易机制框架下，系统整理机构执行行为的盘面图谱、可回测因子与盘中观察看板，重点回答三个问题：哪些痕迹更像吸筹，哪些更像派发，哪些其实只是收盘基准单、指数再平衡或制度性大成交。
+categories: quant-research
+tags:
+  - market-microstructure
+  - institutional-flow
+  - execution
+  - us-stocks
+  - hk-stocks
+  - a-shares
+author:
+  - vortezwohl
+  - Codex
+---
+
+<article id="institutional-flow-essay" lang="zh-CN">
+  <style>
+    #institutional-flow-essay {
+      --essay-text: #182028;
+      --essay-text-strong: #10161c;
+      --essay-text-muted: #465563;
+      --essay-kicker: #617181;
+      --essay-border: #d6dee6;
+      --essay-border-soft: #e4eaf0;
+      --essay-panel-bg: #f8fbfd;
+      --essay-panel-strong-bg: #eef4f8;
+      --essay-hero-bg-start: #f2f8fb;
+      --essay-hero-bg-end: #ecf4f8;
+      --essay-hero-grid: rgba(51, 88, 116, 0.06);
+      --essay-summary-bg: rgba(255, 255, 255, 0.86);
+      --essay-button-bg: #f2f7fa;
+      --essay-button-text: #17222d;
+      --essay-button-active-bg: #152531;
+      --essay-button-active-text: #f7fbff;
+      --essay-code-bg: #eef4f8;
+      --essay-code-inline-bg: #e7eff4;
+      --essay-code-text: #13212d;
+      --essay-link: #1f628b;
+      --essay-link-border: rgba(31, 98, 139, 0.34);
+      --essay-link-border-hover: rgba(31, 98, 139, 0.78);
+      --essay-accent: #3c799f;
+      color: var(--essay-text);
+      font-family: "Iowan Old Style", "Palatino Linotype", "Noto Serif SC", "Source Han Serif SC", serif;
+      line-height: 1.86;
+      word-break: break-word;
+    }
+
+    #institutional-flow-essay[data-tone="dark"] {
+      --essay-text: #d7e4ec;
+      --essay-text-strong: #f5fbff;
+      --essay-text-muted: #b8c9d6;
+      --essay-kicker: #93b0c4;
+      --essay-border: rgba(226, 239, 248, 0.2);
+      --essay-border-soft: rgba(226, 239, 248, 0.12);
+      --essay-panel-bg: rgba(22, 31, 39, 0.92);
+      --essay-panel-strong-bg: rgba(32, 43, 54, 0.96);
+      --essay-hero-bg-start: rgba(24, 34, 42, 0.98);
+      --essay-hero-bg-end: rgba(15, 21, 27, 0.98);
+      --essay-hero-grid: rgba(197, 223, 241, 0.09);
+      --essay-summary-bg: rgba(38, 50, 62, 0.88);
+      --essay-button-bg: rgba(40, 52, 64, 0.94);
+      --essay-button-text: #e7f4fc;
+      --essay-button-active-bg: #dbeefa;
+      --essay-button-active-text: #12212c;
+      --essay-code-bg: rgba(17, 26, 34, 0.98);
+      --essay-code-inline-bg: rgba(55, 73, 88, 0.8);
+      --essay-code-text: #edf8ff;
+      --essay-link: #9edbff;
+      --essay-link-border: rgba(158, 219, 255, 0.42);
+      --essay-link-border-hover: rgba(158, 219, 255, 0.94);
+      --essay-accent: #8bc8e7;
+    }
+
+    #institutional-flow-essay .essay-shell {
+      max-width: 1040px;
+      margin: 0 auto;
+      padding: 1.5rem 0 3rem;
+    }
+
+    #institutional-flow-essay .essay-hero {
+      position: relative;
+      overflow: hidden;
+      padding: 2.5rem 2rem 2rem;
+      border: 1px solid var(--essay-border);
+      background: linear-gradient(180deg, var(--essay-hero-bg-start) 0%, var(--essay-hero-bg-end) 100%);
+      box-shadow: 0 22px 52px rgba(20, 34, 46, 0.08);
+    }
+
+    #institutional-flow-essay .essay-hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(var(--essay-hero-grid) 1px, transparent 1px),
+        linear-gradient(90deg, var(--essay-hero-grid) 1px, transparent 1px);
+      background-size: 100% 1.75rem, 1.75rem 100%;
+      pointer-events: none;
+    }
+
+    #institutional-flow-essay .essay-hero::after {
+      content: "";
+      position: absolute;
+      width: 18rem;
+      height: 18rem;
+      right: -4rem;
+      top: -6rem;
+      background: radial-gradient(circle, rgba(107, 163, 197, 0.18) 0%, rgba(107, 163, 197, 0) 72%);
+      pointer-events: none;
+    }
+
+    #institutional-flow-essay .hero-kicker {
+      position: relative;
+      margin: 0 0 0.9rem;
+      font-size: 0.82rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--essay-kicker);
+    }
+
+    #institutional-flow-essay .hero-title {
+      position: relative;
+      margin: 0;
+      font-size: 2.46rem;
+      line-height: 1.16;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      color: var(--essay-text-strong);
+    }
+
+    #institutional-flow-essay .hero-lead {
+      position: relative;
+      max-width: 56rem;
+      margin: 1.2rem 0 0;
+      font-size: 1.05rem;
+      color: var(--essay-text-muted);
+    }
+
+    #institutional-flow-essay .hero-summary {
+      position: relative;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.95rem;
+      margin-top: 1.55rem;
+    }
+
+    #institutional-flow-essay .hero-summary-item {
+      padding: 0.98rem 1rem;
+      border: 1px solid var(--essay-border);
+      background: var(--essay-summary-bg);
+      backdrop-filter: blur(6px);
+    }
+
+    #institutional-flow-essay .hero-summary-item strong {
+      display: block;
+      margin-bottom: 0.38rem;
+      font-size: 0.94rem;
+      color: var(--essay-text-strong);
+    }
+
+    #institutional-flow-essay .essay-body {
+      margin-top: 1.8rem;
+    }
+
+    #institutional-flow-essay .section-block {
+      margin-top: 2.25rem;
+      padding-top: 1.35rem;
+      border-top: 1px solid var(--essay-border-soft);
+      animation: essay-fade-up 0.7s ease both;
+      animation-delay: calc(var(--essay-idx, 0) * 0.06s);
+    }
+
+    #institutional-flow-essay .section-block:first-child {
+      margin-top: 0;
+      padding-top: 0;
+      border-top: 0;
+    }
+
+    #institutional-flow-essay h2,
+    #institutional-flow-essay h3,
+    #institutional-flow-essay h4 {
+      color: var(--essay-text-strong);
+      line-height: 1.34;
+      font-family: "Iowan Old Style", "Palatino Linotype", "Noto Serif SC", "Source Han Serif SC", serif;
+    }
+
+    #institutional-flow-essay h2 {
+      margin: 0 0 1rem;
+      font-size: 1.72rem;
+    }
+
+    #institutional-flow-essay h3 {
+      margin: 1.4rem 0 0.7rem;
+      font-size: 1.2rem;
+    }
+
+    #institutional-flow-essay h4 {
+      margin: 1.1rem 0 0.55rem;
+      font-size: 1rem;
+    }
+
+    #institutional-flow-essay p {
+      margin: 0.88rem 0;
+    }
+
+    #institutional-flow-essay ul,
+    #institutional-flow-essay ol {
+      margin: 0.85rem 0 0.9rem 1.35rem;
+      padding: 0;
+    }
+
+    #institutional-flow-essay li {
+      margin: 0.34rem 0;
+    }
+
+    #institutional-flow-essay code {
+      padding: 0.08rem 0.32rem;
+      border-radius: 0.2rem;
+      background: var(--essay-code-inline-bg);
+      color: var(--essay-code-text);
+      font-family: "Consolas", "SFMono-Regular", monospace;
+      font-size: 0.92em;
+    }
+
+    #institutional-flow-essay a {
+      color: var(--essay-link);
+      text-decoration: none;
+      border-bottom: 1px solid var(--essay-link-border);
+      transition: border-color 0.2s ease, color 0.2s ease;
+    }
+
+    #institutional-flow-essay a:hover {
+      border-color: var(--essay-link-border-hover);
+    }
+
+    #institutional-flow-essay .argument-box,
+    #institutional-flow-essay .note-box,
+    #institutional-flow-essay .risk-box,
+    #institutional-flow-essay .ref-box,
+    #institutional-flow-essay .signal-grid,
+    #institutional-flow-essay .score-card,
+    #institutional-flow-essay .glossary-grid > div {
+      border: 1px solid var(--essay-border);
+      background: var(--essay-panel-bg);
+    }
+
+    #institutional-flow-essay .argument-box,
+    #institutional-flow-essay .note-box,
+    #institutional-flow-essay .risk-box,
+    #institutional-flow-essay .ref-box,
+    #institutional-flow-essay .score-card {
+      padding: 1rem 1.12rem;
+      margin: 1rem 0;
+    }
+
+    #institutional-flow-essay .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.95rem;
+      margin: 1rem 0 1.3rem;
+    }
+
+    #institutional-flow-essay .glossary-grid > div {
+      padding: 1rem;
+    }
+
+    #institutional-flow-essay .glossary-grid h3 {
+      margin-top: 0;
+      font-size: 1.02rem;
+    }
+
+    #institutional-flow-essay .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+      font-size: 0.97rem;
+    }
+
+    #institutional-flow-essay .comparison-table th,
+    #institutional-flow-essay .comparison-table td {
+      padding: 0.8rem 0.9rem;
+      border: 1px solid var(--essay-border);
+      vertical-align: top;
+      text-align: left;
+    }
+
+    #institutional-flow-essay .comparison-table th {
+      background: var(--essay-panel-strong-bg);
+      font-weight: 700;
+      color: var(--essay-text-strong);
+    }
+
+    #institutional-flow-essay .comparison-table td strong {
+      color: var(--essay-text-strong);
+    }
+
+    #institutional-flow-essay .tab-nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.55rem;
+      margin: 1rem 0 1rem;
+      padding: 0;
+      list-style: none;
+    }
+
+    #institutional-flow-essay .tab-nav button {
+      border: 1px solid var(--essay-border);
+      background: var(--essay-button-bg);
+      color: var(--essay-button-text);
+      padding: 0.46rem 0.84rem;
+      font: inherit;
+      cursor: pointer;
+      transition: transform 0.2s ease, background 0.2s ease, color 0.2s ease;
+    }
+
+    #institutional-flow-essay .tab-nav button:hover {
+      transform: translateY(-1px);
+    }
+
+    #institutional-flow-essay .tab-nav button.is-active {
+      background: var(--essay-button-active-bg);
+      color: var(--essay-button-active-text);
+      border-color: transparent;
+    }
+
+    #institutional-flow-essay .tab-panel {
+      display: none;
+      border: 1px solid var(--essay-border);
+      background: var(--essay-panel-bg);
+      padding: 1rem 1.1rem;
+    }
+
+    #institutional-flow-essay .tab-panel.is-active {
+      display: block;
+      animation: essay-fade-up 0.4s ease both;
+    }
+
+    #institutional-flow-essay .signal-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0;
+      margin: 1rem 0;
+      overflow: hidden;
+    }
+
+    #institutional-flow-essay .signal-grid > div {
+      padding: 1rem 1.05rem;
+      border-right: 1px solid var(--essay-border);
+      border-top: 1px solid var(--essay-border);
+    }
+
+    #institutional-flow-essay .signal-grid > div:nth-child(2n) {
+      border-right: 0;
+    }
+
+    #institutional-flow-essay .signal-grid > div:nth-child(-n+2) {
+      border-top: 0;
+    }
+
+    #institutional-flow-essay .signal-grid h4 {
+      margin-top: 0;
+    }
+
+    #institutional-flow-essay .score-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.95rem;
+      margin: 1rem 0;
+    }
+
+    #institutional-flow-essay .score-card h3 {
+      margin-top: 0;
+      font-size: 1.02rem;
+    }
+
+    #institutional-flow-essay .section-meta {
+      margin: -0.2rem 0 0.85rem;
+      font-size: 0.95rem;
+      color: var(--essay-text-muted);
+    }
+
+    #institutional-flow-essay .ref-box p {
+      margin: 0.55rem 0;
+    }
+
+    #institutional-flow-essay .essay-divider {
+      margin: 2.6rem 0 0;
+      border: 0;
+      border-top: 1px solid var(--essay-border-soft);
+    }
+
+    @keyframes essay-fade-up {
+      from {
+        opacity: 0;
+        transform: translateY(12px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (max-width: 920px) {
+      #institutional-flow-essay .hero-summary,
+      #institutional-flow-essay .glossary-grid,
+      #institutional-flow-essay .score-grid,
+      #institutional-flow-essay .signal-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    @media (max-width: 720px) {
+      #institutional-flow-essay .essay-shell {
+        padding-top: 1rem;
+      }
+
+      #institutional-flow-essay .essay-hero {
+        padding: 1.7rem 1.1rem 1.35rem;
+      }
+
+      #institutional-flow-essay .hero-title {
+        font-size: 1.92rem;
+      }
+
+      #institutional-flow-essay .hero-summary,
+      #institutional-flow-essay .glossary-grid,
+      #institutional-flow-essay .score-grid,
+      #institutional-flow-essay .signal-grid {
+        grid-template-columns: 1fr;
+      }
+
+      #institutional-flow-essay .signal-grid > div {
+        border-right: 0;
+      }
+
+      #institutional-flow-essay .signal-grid > div:nth-child(2) {
+        border-top: 1px solid var(--essay-border);
+      }
+
+      #institutional-flow-essay .comparison-table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+      }
+
+      #institutional-flow-essay .tab-panel {
+        padding: 0.9rem;
+      }
+    }
+  </style>
+
+  <div class="essay-shell">
+    <header class="essay-hero">
+      <p class="hero-kicker">Market Microstructure / Institutional Flow / US-HK-CN Equities</p>
+      <h1 class="hero-title">如何从量价里识别机构吸筹与派发：盘面图谱、可量化因子与交易员看板</h1>
+      <p class="hero-lead">
+        盘面里真正有价值的，不是“今天是不是放量”，而是这些量把价格推到了哪里、推得有多高效、主要集中在什么制度窗口，以及这种痕迹在次日到未来 <code>3-5</code> 个交易日里有没有延续。把吸筹与派发表述为“更一致于某类执行行为”，比把一根线、一笔大单或一段尾盘异动直接解读成“主力在干什么”，更接近真实的市场微观结构。
+      </p>
+      <div class="hero-summary">
+        <div class="hero-summary-item">
+          <strong>核心判断</strong>
+          单日放量几乎没有结论力，真正有判别力的是价格推进效率、<code>VWAP</code> 位置、制度窗口与后续连续性。
+        </div>
+        <div class="hero-summary-item">
+          <strong>最强观察口</strong>
+          美股看开收盘拍卖与失衡信息，港股看 <code>CAS</code> 与南向/配售修复，A 股看集合竞价、尾盘竞价、大宗与北向连续性。
+        </div>
+        <div class="hero-summary-item">
+          <strong>最适合回测的因子</strong>
+          尾盘成交占比、<code>VWAP</code> 偏离、收盘竞价冲击、北向或南向连续性、大宗折价修复。
+        </div>
+        <div class="hero-summary-item">
+          <strong>最大误判源</strong>
+          把收盘基准单、指数再平衡、配售后再定价或低流动性伪信号误当成方向型资金执行。
+        </div>
+      </div>
+    </header>
+
+    <div class="essay-body">      <section class="section-block" style="--essay-idx: 1;">
+        <h2>一、研究问题到底是什么</h2>
+        <p>
+          “机构吸筹”与“机构派发”是交易语境里非常常见的词，但如果直接把它理解为可被盘面单日证明的事实，结论往往会失真。更稳妥的表述应当是：某段量价行为，是否更一致于某类大资金执行需求，例如主动配置、主动减仓、<code>VWAP/TWAP/POV</code> 执行、收盘基准单、指数再平衡、事件驱动抢单，或大宗与配售后的再定价。
+        </p>
+        <p>
+          这一区分非常关键。因为同样是尾盘巨量，同样是收盘站上高点，同样是盘中多次大单扫盘，背后可能对应完全不同的动机。真正可用的研究框架，不是寻找“主力证据”，而是把盘面痕迹翻译成更有解释力的执行画像，并且用制度背景和后续连续性去做二次确认。
+        </p>
+        <div class="argument-box">
+          <strong>本文统一口径</strong>
+          吸筹、派发、承接、出货这些词，以下都按“更一致于某类执行行为”来写，而不是把它们当成单日图形可以绝对证明的事实。
+        </div>
+      </section>
+
+      <section class="section-block" style="--essay-idx: 2;">
+        <h2>二、研究依据：为什么这套框架值得采用</h2>
+        <p class="section-meta">本研究的支撑来自两层：一层是交易所机制，一层是市场微观结构文献。</p>
+        <div class="glossary-grid">
+          <div>
+            <h3>交易所机制层</h3>
+            <p>不同市场的开盘、尾盘、收盘竞价、盘后固定价和大宗机制不同，大资金最容易露出痕迹的地方，往往正是这些流动性最深、冲击成本最低、最适合对齐基准的制度窗口。</p>
+          </div>
+          <div>
+            <h3>微观结构层</h3>
+            <p><code>Kyle (1985)</code> 指向信息型订单会通过连续交易逐步影响价格；<code>Admati &amp; Pfleiderer (1988)</code> 解释了开盘与尾盘为何天然更容易聚集成交与波动；<code>Hasbrouck (1991)</code> 强调一笔交易的信息含量应看其最终价格影响，而非仅看瞬时成交。</p>
+          </div>
+          <div>
+            <h3>实战落地层</h3>
+            <p>因此，盘面识别不应先问“量大不大”，而应先问“量是否高效推动价格、价格大部分时间位于 <code>VWAP</code> 哪一侧、量主要发生在什么窗口、后续是否连续”。</p>
+          </div>
+        </div>
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th>研究维度</th>
+              <th>可直接观察的对象</th>
+              <th>对交易判断的意义</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>制度窗口</td>
+              <td>开盘集合竞价、尾盘连续竞价、收盘竞价、收盘交叉、盘后固定价、大宗</td>
+              <td>先分辨量是方向表达，还是机制性交割</td>
+            </tr>
+            <tr>
+              <td>价格推进效率</td>
+              <td>放量后是否站上更高平台，冲击后是否快速回摆</td>
+              <td>过滤“有换手无推进”的伪强势或伪弱势</td>
+            </tr>
+            <tr>
+              <td><code>VWAP</code> 行为</td>
+              <td>价格大部分时间位于 <code>VWAP</code> 之上还是之下，回踩是否修复</td>
+              <td>判断更像承接型执行，还是减仓型执行</td>
+            </tr>
+            <tr>
+              <td>连续性</td>
+              <td>次日承接、未来 <code>3-5</code> 日低点和收盘重心变化</td>
+              <td>把单日线索升级为更有置信度的执行画像</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="section-block" style="--essay-idx: 3;">
+        <h2>三、先建立统一框架：盘面看到的量，先分哪一类</h2>
+        <p>
+          盘中看到任何一笔异常成交，最稳妥的第一反应不是“有人在拉”或“有人在出”，而是先问这笔量更像哪类订单。只有先分类，后面的价格解释才不会跑偏。
+        </p>
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th>订单或执行类型</th>
+              <th>典型量价痕迹</th>
+              <th>更像哪类资金</th>
+              <th>最关键验证</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>隐蔽吸筹</td>
+              <td>价稳步抬高，回撤浅，盘中多次放量但不破均价，收盘偏强</td>
+              <td>主动长线、公募、部分中线配置资金</td>
+              <td>连续 <code>3-5</code> 天低点抬升、均价上移、回撤被承接</td>
+            </tr>
+            <tr>
+              <td>隐蔽派发</td>
+              <td>放量但上冲效率差，冲高回落，收盘偏离高点，跌破 <code>VWAP</code> 难修复</td>
+              <td>主动减仓、解禁或减持前后资金</td>
+              <td>连续数日反弹无力，反抽不过前高或前均价</td>
+            </tr>
+            <tr>
+              <td><code>VWAP/TWAP/POV</code> 执行</td>
+              <td>成交跟随市场自然量曲线，价格围绕 <code>VWAP</code> 摆动，不急于突破关键价</td>
+              <td>基准型机构单、低信息泄露执行单</td>
+              <td>尾盘若无额外冲击，次日通常缺乏强 follow-through</td>
+            </tr>
+            <tr>
+              <td>收盘基准单或指数再平衡</td>
+              <td>最后 <code>10-20</code> 分钟成交占比异常抬升，收盘撮合量大，收盘价与日内 <code>VWAP</code> 突然偏离</td>
+              <td>被动指数、ETF、被动跟踪账户</td>
+              <td>是否成分股群体共振；次日若回吐，更像基准单</td>
+            </tr>
+            <tr>
+              <td>事件驱动抢单</td>
+              <td>短时大冲击、吃穿多档盘口、价差扩张、量价同步爆发</td>
+              <td>对冲基金、事件驱动、短线机构</td>
+              <td>看消息强度与次日延续，真信息单通常不是一根尾盘线结束</td>
+            </tr>
+            <tr>
+              <td>大宗、配售后的再定价</td>
+              <td>先出现折价或协议成交，随后观察二级市场能否吃掉抛压并重回密集区</td>
+              <td>配售承接资金、套利资金、长线承接盘</td>
+              <td>关键不是当天反弹，而是折价是否被快速修复</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="section-block" style="--essay-idx: 4;">
+        <h2>四、三地市场里最有效的观察口</h2>
+        <h3>美股：开收盘拍卖、失衡信息与尾盘成交结构</h3>
+        <p>
+          美股里最强的观察口是 <code>Opening/Closing Cross</code>、<code>NOII</code> 与尾盘成交结构。根据 Nasdaq 官方开收盘机制页面，开盘失衡信息窗口对应 <code>9:25-9:30 ET</code>，收盘失衡信息窗口对应 <code>3:50-4:00 ET</code>，相关订单和信息字段包括 <code>MOC</code>、<code>LOC</code>、<code>IO</code>、<code>NOII</code>。因此，尾盘突然巨量，第一层解释通常不是“机构强烈看多或看空”，而更可能是收盘基准单、ETF 或指数再平衡、风险模型日终仓位对齐，或者事件驱动资金在流动性最深的窗口集中完成。
+        </p>
+        <h3>港股：<code>CAS</code>、南向与配售修复</h3>
+        <p>
+          港股里最强的观察口是 <code>Closing Auction Session</code>、南向流向与配售或旧股减持后的折价消化。HKEX 官方机制页明确了 <code>CAS</code>、<code>Reference Price</code>、<code>At-auction Order</code>、<code>At-auction Limit Order</code> 与 <code>Random Closing Period</code>，这意味着港股尾盘异动必须优先区分：究竟是定价成交、指数股权重调整、南向持续买盘，还是配售和旧股减持后的再平衡。港股最容易误判的是流动性薄的小票，因为几笔单就能画出很像“机构吸筹”的形态。
+        </p>
+        <h3>A 股：集合竞价、尾盘竞价、大宗与北向连续性</h3>
+        <p>
+          A 股里更值得看的，不是“北向今天净买了多少”，而是北向是否连续 <code>3-5</code> 天偏向同一方向、个股是否持续强于板块和指数、尾盘 <code>14:30-15:00</code> 是否出现程序化调仓痕迹、大宗折价后数日是否被快速修复，以及龙虎榜或公告能否解释盘中的异常量价。深市和沪市机制页同时给出 <code>call auction</code>、<code>continuous auction</code>、<code>block trading</code>、<code>after-hours fixed-price</code> 等窗口，这决定了 A 股尾盘与盘后异常量价必须先做制度归因。
+        </p>
+        <div class="note-box">
+          <strong>三地市场共同点</strong>
+          真正更像有信息含量的方向性执行，通常都满足同一个共性：异常成交之后，后续仍有人愿意在更高或更低的价格继续成交，而不是只在制度窗口里完成一次性撮合。
+        </div>
+      </section>
+
+      <section class="section-block" style="--essay-idx: 5;">
+        <h2>五、统一判断顺序：先制度，再价格，再连续性</h2>
+        <div class="signal-grid">
+          <div>
+            <h4>第一步：先判断是不是制度窗口造成的量</h4>
+            <p>开盘集合竞价、尾盘连续竞价、收盘交叉、收盘竞价、盘后固定价和大宗，是大资金最愿意使用的低冲击窗口。先把这些机制性成交识别出来，能显著减少误判。</p>
+          </div>
+          <div>
+            <h4>第二步：再判断是不是基准执行，而非方向表达</h4>
+            <p>很多机构单的目标不是表态，而是低冲击地完成执行。若价格始终围绕 <code>VWAP</code> 摆动，却不愿付出额外冲击去突破关键价位，就更像基准执行。</p>
+          </div>
+          <div>
+            <h4>第三步：看有没有板块、ETF、成分股共振</h4>
+            <p>若单票尾盘异动同时伴随相关篮子共振，更可能是指数调整、被动资金或主题性配置；若只有单票异动，则更需警惕事件单、做价或低流动性伪信号。</p>
+          </div>
+          <div>
+            <h4>第四步：最后用次日和 <code>3-5</code> 天连续性确认</h4>
+            <p>单日只能提供线索。真吸筹更常见低点和均价持续抬升，真派发更常见高点下移和收盘重心下移。任何尾盘信号若没有次日承接，都不宜升级为高置信度判断。</p>
+          </div>
+        </div>
+      </section>      <section class="section-block" style="--essay-idx: 6;">
+        <h2>六、四层拆解：<code>K 线 / 分时 / 尾盘 / 次日承接</code></h2>
+        <p>
+          这一部分的目标不是把单日图形神化成“主力证据”，而是把更一致于某类执行行为的痕迹拆开看。核心仍然只有三个问题：量主要发生在什么制度窗口，价格冲击是否有效，后续连续性是否成立。
+        </p>
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th>层次</th>
+              <th>更像吸筹</th>
+              <th>更像派发</th>
+              <th>容易误判的反例</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>K 线层</strong></td>
+              <td>连续数日低点抬高，放量突破后缩量横住，不跌回突破位，下影更多出现在关键成本区</td>
+              <td>高位连续上影，放量但不涨，创新高当天收盘远离日高，波动放大但重心下移</td>
+              <td>A 股涨跌停、港股小票薄流动性、美股事件股缺口，都可能扭曲日 K 的直觉解释</td>
+            </tr>
+            <tr>
+              <td><strong>分时层</strong></td>
+              <td>价格大部分时间位于 <code>VWAP</code> 上方，回踩即修复，急跌时卖压被吸收，均价稳步上移</td>
+              <td>长时间压在 <code>VWAP</code> 下方，上冲即被卖回，均价抬升缓慢甚至走平，午后持续走弱</td>
+              <td>新闻刺激下的短时扫盘会制造强脉冲，但若无法驻留，通常不应等同于吸筹</td>
+            </tr>
+            <tr>
+              <td><strong>尾盘层</strong></td>
+              <td>尾盘成交占比抬升，价格有效脱离日内均价，且次日不回吐，行业和篮子同步偏强</td>
+              <td>尾盘量巨大但次日立即均值回归，只在制度窗口里显形，全天其实弱于 <code>VWAP</code></td>
+              <td>收盘基准单、指数再平衡、<code>CAS</code> 定价、A 股收盘竞价做价，都会制造“尾盘很强”的错觉</td>
+            </tr>
+            <tr>
+              <td><strong>次日承接层</strong></td>
+              <td>高开不回补，平开或小低开后仍能站稳前日高成交密集区上方，首小时继续强于板块和指数</td>
+              <td>尾盘拉高后次日低开低走，第一小时无法回到前收附近，任何反弹都迅速受阻</td>
+              <td>单次事件型消息可能让次日继续波动，但若之后数日无法形成平台抬升，依旧难称吸筹</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3><code>K 线</code> 层：看的是平台抬升与收盘重心</h3>
+        <p>
+          更像吸筹的 <code>K 线</code> 痕迹，往往不是一味暴涨，而是“慢抬 + 少回吐”：连续数日低点抬高，收盘强度偏高，放量阳线后的整理日缩量且不回到突破位。更像派发的 <code>K 线</code> 痕迹，则常表现为高位连续上影、放量但不涨、创新高当日却收在区间中下部，以及阴阳交错放量但收盘重心持续下移。
+        </p>
+
+        <h3>分时层：看的是冲击能否被市场接受</h3>
+        <p>
+          分时比单根日线更重要，因为真正有信息含量的订单流，价格影响更容易表现为连续、可持续、非瞬时。盘中最关键的不是“出现过大单”，而是“大单之后价格能否站住、均价是否上移、冲击是否被后续成交承接”。如果冲击一出现就回到原区间，通常说明这更像一次流动性事件，而不是方向性执行。
+        </p>
+
+        <h3>尾盘层：最容易出信号，也最容易误判</h3>
+        <p>
+          尾盘本来就是大资金最偏好的低冲击执行窗口，因此最容易显形，也最容易制造错觉。尾盘放量本身没有结论力，必须联看两个条件：第一，尾盘之后价格是否真正脱离全天均价；第二，次日是否有延续。如果缺少其中任何一个条件，尾盘异动更可能是机制流，而不是信息流。
+        </p>
+
+        <h3>次日承接层：单列出来是因为它是最硬的验证</h3>
+        <p>
+          一笔交易的完整价格影响往往并不是当下就走完。判断“昨天尾盘像不像有大资金执行”，不能只看昨天最后十分钟，而要看次日最初一段交易是否愿意继续在更高或更低价格成交。次日承接，是把盘面观察从线索升级成结论的最后一层门槛。
+        </p>
+      </section>
+
+      <section class="section-block" style="--essay-idx: 7;">
+        <h2>七、三地市场最常见的 <code>20</code> 个可观察形态</h2>
+        <p class="section-meta">以下是实战观察框架，不是确定性结论。每个市场都按“更像吸筹”和“更像派发”拆开，合计各 <code>20</code> 个形态。</p>
+        <div class="tab-nav" id="market-pattern-nav">
+          <button type="button" data-tab-target="us-patterns">美股</button>
+          <button type="button" data-tab-target="hk-patterns">港股</button>
+          <button type="button" data-tab-target="cn-patterns">A 股</button>
+        </div>
+
+        <div class="tab-panel" data-tab-panel="us-patterns">
+          <h3>美股：更像吸筹的 <code>10</code> 个形态</h3>
+          <ol>
+            <li>开盘失衡偏买入，盘中不追高但低点持续抬升，收盘靠近日高。</li>
+            <li>价格全天大部分时间运行在日内 <code>VWAP</code> 之上，回踩 <code>VWAP</code> 后很快修复。</li>
+            <li>盘中多次放量突破小平台，突破后不回到原平台下方。</li>
+            <li>最后 <code>30</code> 分钟量能抬升，但收盘后次日仍有延续，而不是一次性脉冲。</li>
+            <li>尾盘 <code>Closing Cross</code> 成交放大，且相关行业 ETF、成分股同步偏强。</li>
+            <li>消息驱动后首日高换手，次日不回吐，反而继续缩量上行。</li>
+            <li>早盘急跌后迅速被买回，全天形成长下影并站上日内均价。</li>
+            <li>多日出现“低开不弱、盘中慢推、收盘偏强”的一致节奏。</li>
+            <li>放量阳线后的整理日显著缩量，价格重心保持不下移。</li>
+            <li>个股强于所在行业和大盘，且强势不是只集中在尾盘一分钟。</li>
+          </ol>
+          <h3>美股：更像派发的 <code>10</code> 个形态</h3>
+          <ol start="11">
+            <li>开盘冲高后全天回落，价格多数时间压在 <code>VWAP</code> 下方。</li>
+            <li>盘中多次上冲新高但都被快速卖回，留下上影线。</li>
+            <li>尾盘放出巨量却没有次日延续，更像收盘基准单或减仓单集中成交。</li>
+            <li>利好消息后高开低走，全天成交放大但收盘跌回消息前平台。</li>
+            <li>价格创新高但成交集中在冲高回落区间，收盘远离日高。</li>
+            <li>多日出现“早盘拉高、午后走弱、尾盘再压”的重复节奏。</li>
+            <li>行业 ETF 走平或走弱，但个股借事件脉冲独自冲高后回落。</li>
+            <li>大阴大阳交替、波动率放大，但均价和收盘重心持续下移。</li>
+            <li>多次跌破日内 <code>VWAP</code> 后无法重新站回，反弹都成减仓点。</li>
+            <li>收盘交叉放量后，次日低开低走，显示尾盘更像对手盘出货而非抢配。</li>
+          </ol>
+        </div>
+
+        <div class="tab-panel" data-tab-panel="hk-patterns">
+          <h3>港股：更像吸筹的 <code>10</code> 个形态</h3>
+          <ol>
+            <li>全天成交较均匀，价格始终围绕上行通道运行，尾盘 <code>CAS</code> 仅做温和放大确认。</li>
+            <li>南向连续净流入背景下，权重股多日收盘强于日内均价。</li>
+            <li>配售或旧股减持后，折价很快被修复，二级市场成交承接明显。</li>
+            <li>盘中回踩前高或日内 <code>VWAP</code> 即出现稳定买盘，低点逐日抬高。</li>
+            <li><code>CAS</code> 成交放大，但不是单日脉冲，次日仍能在高位稳住。</li>
+            <li>指数横盘时，个股持续温和放量上行，且并非单靠尾盘撮合抬价。</li>
+            <li>利空兑现后不再创新低，反而出现缩量止跌、放量上攻的节奏切换。</li>
+            <li>连续多日出现“早盘整理、午后走强、收盘偏强”的节奏。</li>
+            <li>回购或股权披露后，价格并未一次性拉高，而是缓慢抬升平台。</li>
+            <li>南向可交易标的中，个股相对板块和恒指持续跑赢，且收盘重心不断上移。</li>
+          </ol>
+          <h3>港股：更像派发的 <code>10</code> 个形态</h3>
+          <ol start="11">
+            <li>尾盘 <code>CAS</code> 放出异常大成交，但次日无承接，收盘抬价痕迹重。</li>
+            <li>早盘冲高后成交持续放大，但午后一路回落，收盘接近日低。</li>
+            <li>配售后折价长期无法修复，反弹即遇卖压。</li>
+            <li>利好公告当天高开高走失败，尾盘被明显压回 <code>Reference Price</code> 附近。</li>
+            <li>中小票在流动性偏薄时被几笔单快速拉起，但全天均价并未同步抬升。</li>
+            <li>南向单日净流入很高，但股价只在尾盘短暂走强，之后迅速回吐。</li>
+            <li>多日出现上影线，且每次接近历史成交密集区都放量受阻。</li>
+            <li>全天多数时间低于 <code>VWAP</code>，仅在 <code>CAS</code> 前被被动拉起。</li>
+            <li>旧股减持或股东变动之后，价格重心持续下移，量能却居高不下。</li>
+            <li>指数股尾盘被动拉高，但相关板块和同类资产不跟，次日回归原区间。</li>
+          </ol>
+        </div>
+
+        <div class="tab-panel" data-tab-panel="cn-patterns">
+          <h3>A 股：更像吸筹的 <code>10</code> 个形态</h3>
+          <ol>
+            <li>开盘集合竞价温和高开，盘中不急拉，全天稳步抬升并收在高位。</li>
+            <li>尾盘 <code>14:30-15:00</code> 有持续买盘推升，但次日仍能延续，不是纯做价。</li>
+            <li>北向连续 <code>3-5</code> 天净流入，个股相对板块和指数持续偏强。</li>
+            <li>大宗折价成交后，二级市场在随后数日迅速修复折价。</li>
+            <li>盘中多次回踩日内 <code>VWAP</code> 或前日均价均被承接，低点持续抬高。</li>
+            <li>放量突破平台后，接下来几天缩量横住，不跌回突破位。</li>
+            <li>龙虎榜显示机构席位净买后，次日未高开出货，反而继续平稳上行。</li>
+            <li>利空消息后低开但不破前低，随后多日放量上行，显示筹码被接走。</li>
+            <li>连续多日出现“上午震荡、下午走强、尾盘稳收”的一致节奏。</li>
+            <li>热点板块退潮时，个股仍能保持强于同板块的独立性，显示承接更偏机构化。</li>
+          </ol>
+          <h3>A 股：更像派发的 <code>10</code> 个形态</h3>
+          <ol start="11">
+            <li>竞价高开后全天震荡下行，收盘跌破日内均价。</li>
+            <li>尾盘被快速拉高，但次日低开低走，典型做价或短线出货特征。</li>
+            <li>龙虎榜游资席位活跃但机构席位缺位，且次日承接很差。</li>
+            <li>放量长上影后，接下来几天持续阴跌，说明上方派发成功。</li>
+            <li>北向单日净流入较高，但个股只在尾盘被动走强，随后没有连续性。</li>
+            <li>大宗交易折价明显，且二级市场迟迟不能修复，反而继续下探。</li>
+            <li>高位平台反复冲击但每次都放量回落，成交重心逐日下移。</li>
+            <li>全天多数时间低于 <code>VWAP</code>，午后任何反弹都成为减仓点。</li>
+            <li>收盘集合竞价明显放量压低，次日继续低开，显示卖盘集中完成。</li>
+            <li>同题材板块已经转弱，个股仍被短暂拉高吸引跟风，随后快速回落。</li>
+          </ol>
+        </div>
+      </section>
+
+      <section class="section-block" style="--essay-idx: 8;">
+        <h2>八、把这些痕迹翻成可回测因子</h2>
+        <p>
+          下面这些指标更适合做事件研究、截面排序和条件过滤，而不是单独作为交易信号。它们的效果高度依赖市场、流动性分层、样本区间、去极值方式以及事件过滤质量。最重要的是，同一个因子在权重股、题材股与 ETF 成分股中的解释力并不一样。
+        </p>
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th>因子</th>
+              <th>定义示例</th>
+              <th>研究含义</th>
+              <th>实战解释</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>尾盘成交占比</td>
+              <td><code>tail_vol_ratio_30</code>、<code>tail_vol_ratio_15</code>、<code>tail_amt_ratio_10</code></td>
+              <td>识别收盘基准单、指数再平衡、尾盘抢单或做价</td>
+              <td>若高尾盘成交占比伴随次日延续，更偏信息型或配置型；若次日回吐，更偏被动撮合或出货</td>
+            </tr>
+            <tr>
+              <td><code>VWAP</code> 偏离</td>
+              <td><code>close_vwap_dev</code>、<code>last30_vwap_dev</code>、<code>intraday_above_vwap_ratio</code></td>
+              <td>衡量收盘位置、尾盘均价与全天均价的关系</td>
+              <td>收盘显著高于 <code>VWAP</code> 且次日延续，更像主动拿货；高于 <code>VWAP</code> 却迅速回归，更像尾盘冲击</td>
+            </tr>
+            <tr>
+              <td>价格推进效率</td>
+              <td><code>impact_efficiency</code>、<code>range_efficiency</code>、<code>up_move_per_amt</code></td>
+              <td>比较相同成交额换来了多少方向推进</td>
+              <td>放巨量但收盘接近中位或低位，通常不是高质量吸筹</td>
+            </tr>
+            <tr>
+              <td>收盘竞价冲击</td>
+              <td><code>close_auction_impact</code>、<code>close_cross_impact</code>、<code>close_auction_amt_ratio</code></td>
+              <td>识别尾盘撮合带来的价格跳变</td>
+              <td>与次日收益联用，可区分真实配置需求和收盘被动成交</td>
+            </tr>
+            <tr>
+              <td>北向连续性</td>
+              <td><code>north_inflow_streak</code>、<code>north_buy_ratio</code>、<code>north_alpha</code></td>
+              <td>弱化单日噪声，观察连续渠道偏向</td>
+              <td>持续净流入且个股持续跑赢板块时，更接近配置型吸筹</td>
+            </tr>
+            <tr>
+              <td>南向连续性</td>
+              <td><code>south_inflow_streak</code>、<code>south_buy_ratio</code>、<code>south_close_strength</code></td>
+              <td>观察港股边际买盘是否持续落在高流动性标的</td>
+              <td>比单日南向流量更重要的是持续性与收盘强度</td>
+            </tr>
+            <tr>
+              <td>相对强弱与独立性</td>
+              <td><code>rel_strength_sector</code>、<code>rel_strength_index</code>、<code>independence_score</code></td>
+              <td>区分个股是否只是跟随市场贝塔</td>
+              <td>机构吸筹更常见于“相对强而不浮躁”的票</td>
+            </tr>
+            <tr>
+              <td>大宗折价率</td>
+              <td><code>block_discount</code>、<code>block_repair_days</code>、<code>block_repair_return</code></td>
+              <td>把大宗看作再定价事件，而非方向结论</td>
+              <td>低折价且快速修复更像承接强，高折价且持续走弱更像抛压未完</td>
+            </tr>
+            <tr>
+              <td>收盘强度</td>
+              <td><code>close_in_range</code>、<code>close_vs_high</code>、<code>close_strength_streak</code></td>
+              <td>衡量谁控制了当日收盘</td>
+              <td>吸筹型标的常表现为高收盘强度和连续高收盘重心</td>
+            </tr>
+            <tr>
+              <td>盘后固定价与次日承接</td>
+              <td><code>after_hours_fix_amt_ratio</code>、<code>after_hours_follow_through</code>、<code>after_hours_gap_fill</code></td>
+              <td>把盘后固定价当成制度窗口而非方向证据</td>
+              <td>关键看次日是否有真实承接，而不是盘后本身有多大成交</td>
+            </tr>
+            <tr>
+              <td>竞价强弱</td>
+              <td><code>open_auction_gap</code>、<code>close_auction_jump</code>、<code>auction_reversal</code></td>
+              <td>识别开盘抢单、收盘做价与尾盘集中撮合</td>
+              <td>与次日反转或延续联用，识别力更强</td>
+            </tr>
+            <tr>
+              <td>波动吸收能力</td>
+              <td><code>dip_recovery_ratio</code>、<code>selloff_absorption</code>、<code>high_rejection</code></td>
+              <td>观察急跌是否被买回，冲高是否被砸回</td>
+              <td>吸筹型个股更常见“跌得下去但买得回来”</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>组合标签比单因子更适合拿来识别执行行为</h3>
+        <ul>
+          <li><strong>可能吸筹事件</strong>：高尾盘成交占比 + 收盘高于 <code>VWAP</code> + 次日延续 + 近 <code>3</code> 日低点抬升。</li>
+          <li><strong>可能派发事件</strong>：放量冲高回落 + 收盘低于 <code>VWAP</code> + 次日继续走弱。</li>
+          <li><strong>可能收盘基准单</strong>：收盘竞价冲击大 + 次日回归 + 相关指数成分同步异常。</li>
+          <li><strong>可能大宗消化事件</strong>：大宗折价 + <code>3</code> 日内快速修复 + 相对板块走强。</li>
+          <li><strong>可能程序化调仓事件</strong>：尾盘量占比异常 + 篮子化共振 + 个股独立消息缺失。</li>
+        </ul>
+
+        <div class="risk-box">
+          <strong>因子回测必须加的约束</strong>
+          不能把超大盘股与小票混在一起，不能忽略公告、财报、停复牌、指数调整、配售等重大事件干扰，不能跨美股、港股和 A 股直接复用同一阈值，也不能只看当日不看次日、<code>3</code> 日、<code>5</code> 日与 <code>10</code> 日 follow-through。
+        </div>
+      </section>      <section class="section-block" style="--essay-idx: 9;">
+        <h2>九、交易员监控版：盘中判断“今天这票像不像有大资金在执行”</h2>
+        <p>
+          这套清单的目的不是预测涨跌，而是判断今天的成交，究竟更像真实大资金执行，还是只是情绪脉冲、被动撮合或低流动性噪声。最适合使用的对象，是高流动性个股、权重股、ETF 成分股，以及事件驱动但需要甄别真伪的标的。
+        </p>
+        <h3>通用盘中观察流程</h3>
+        <ol>
+          <li>先看今天是不是机制窗口主导：拍卖、收盘竞价、指数再平衡、配售、大宗或公告。</li>
+          <li>再看价格相对 <code>VWAP</code> 的位置和回踩修复能力。</li>
+          <li>再看板块、指数成分股、ETF 篮子是否共振。</li>
+          <li>最后才把“尾盘很强”升级为方向判断，而且前提必须是次日仍有承接。</li>
+        </ol>
+
+        <div class="tab-nav" id="dashboard-nav">
+          <button type="button" data-tab-target="us-dashboard">美股看板</button>
+          <button type="button" data-tab-target="hk-dashboard">港股看板</button>
+          <button type="button" data-tab-target="cn-dashboard">A 股看板</button>
+        </div>
+
+        <div class="tab-panel" data-tab-panel="us-dashboard">
+          <table class="comparison-table">
+            <thead>
+              <tr>
+                <th>实时观察项</th>
+                <th>为什么看</th>
+                <th>更像吸筹/派发的信号</th>
+                <th>限制</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>开盘失衡与开盘拍卖节奏</td>
+                <td>官方拍卖本身就是大单最集中的低冲击窗口</td>
+                <td>开盘失衡偏买且开盘后不回吐，更像真实需求；失衡大但开盘后迅速回落，更像拍卖性交割</td>
+                <td><code>NOII</code> 或失衡数据通常需要订阅或终端支持</td>
+              </tr>
+              <tr>
+                <td>前 <code>15-30</code> 分钟相对成交量</td>
+                <td>区分普通活跃与异常执行</td>
+                <td>同时放量且稳居 <code>VWAP</code> 上方，更偏买；放量却站不住，更偏卖</td>
+                <td>需用历史同时间段均值做基线</td>
+              </tr>
+              <tr>
+                <td>相对 <code>VWAP</code> 位置与回踩修复</td>
+                <td><code>VWAP</code> 是执行与价格冲击的核心锚</td>
+                <td>回踩 <code>VWAP</code> 即修复，更偏吸筹；反抽 <code>VWAP</code> 失败，更偏派发</td>
+                <td>对新闻股需结合波动放宽阈值</td>
+              </tr>
+              <tr>
+                <td>相对行业 ETF 与指数的强弱</td>
+                <td>排除只是市场贝塔在推</td>
+                <td>个股强于 <code>SPY/QQQ</code> 和行业 ETF，方向性更强</td>
+                <td>行业 ETF 选错会误判</td>
+              </tr>
+              <tr>
+                <td>大单后价格驻留时间</td>
+                <td>看冲击是被吸收还是被逆转</td>
+                <td>大单后价格能停在高位，更偏买；立刻打回原位，更偏卖</td>
+                <td>需要分钟级或更细的成交数据</td>
+              </tr>
+              <tr>
+                <td><code>15:50-16:00 ET</code> 收盘失衡与交叉</td>
+                <td>美股尾盘最关键制度窗口</td>
+                <td>失衡偏买且次日延续，更偏配置单；失衡大但次日回吐，更偏收盘基准单</td>
+                <td>官方失衡信息存在可得性门槛</td>
+              </tr>
+              <tr>
+                <td>收盘位置在日区间中的分位</td>
+                <td>快速衡量日内谁控制了收盘</td>
+                <td>连续高分位收盘更偏吸筹；连续中低分位更偏派发</td>
+                <td>单日意义有限，至少联看 <code>2-3</code> 天</td>
+              </tr>
+              <tr>
+                <td>事件与指数日历</td>
+                <td>过滤制度性大成交</td>
+                <td>再平衡、财报、纳入剔除日更容易出现“假机构感”</td>
+                <td>需要人工维护日历</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="tab-panel" data-tab-panel="hk-dashboard">
+          <table class="comparison-table">
+            <thead>
+              <tr>
+                <th>实时观察项</th>
+                <th>为什么看</th>
+                <th>更像吸筹/派发的信号</th>
+                <th>限制</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>早盘缺口与回补速度</td>
+                <td>港股流动性分层明显，真假强弱早盘差异大</td>
+                <td>高开后不回补或浅回补，更偏买；高开快速回补，更偏卖</td>
+                <td>小票缺口噪声大</td>
+              </tr>
+              <tr>
+                <td>日内 <code>VWAP</code> 与低点抬升</td>
+                <td>判断承接是否稳定</td>
+                <td>长时间在 <code>VWAP</code> 上方且低点抬高，更偏吸筹；多数时间在下方，更偏派发</td>
+                <td>对权证与杠反产品不适用</td>
+              </tr>
+              <tr>
+                <td>南向渠道级流入节奏</td>
+                <td>南向是港股重要边际买盘之一</td>
+                <td>南向流入增强且权重股同步强，更偏买；南向不强但尾盘单票异动，更需警惕做价</td>
+                <td>官方更适合看渠道级，单股实时归因有限</td>
+              </tr>
+              <tr>
+                <td><code>CAS</code> 资格与尾盘参考价关系</td>
+                <td>港股尾盘必须尊重 <code>CAS</code> 机制</td>
+                <td><code>CAS</code> 前已强、<code>CAS</code> 后次日继续稳，更偏买；只在 <code>CAS</code> 被抬价，次日即回吐，更偏非方向单</td>
+                <td>先确认是否为 <code>CAS</code> 证券</td>
+              </tr>
+              <tr>
+                <td><code>Reference Price</code> 附近的尾盘行为</td>
+                <td>判断尾盘是定价还是趋势表达</td>
+                <td>脱离参考价后仍有承接更偏买；只围绕参考价短时跳动更偏定价成交</td>
+                <td>随机收市期会抬高噪声</td>
+              </tr>
+              <tr>
+                <td>权重股、南向标的、指数成分共振</td>
+                <td>港股里共振比单票更可信</td>
+                <td>多只高流动性权重股共振更偏机构化</td>
+                <td>中小票独立异动误判率高</td>
+              </tr>
+              <tr>
+                <td>回购、配售、旧股减持相关公告窗口</td>
+                <td>港股很多异常量价来自公司资本动作</td>
+                <td>配售后快速修复折价更偏承接强；长期不修复更偏抛压未完</td>
+                <td>很多信息需要盘中临时核对公告</td>
+              </tr>
+              <tr>
+                <td>盘口深度与单笔成交的相对尺寸</td>
+                <td>过滤低流动性伪信号</td>
+                <td>对深盘口都能推动价格，才更像真资金；薄盘口被几笔单拉起不可信</td>
+                <td>需要盘口深度数据</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="tab-panel" data-tab-panel="cn-dashboard">
+          <table class="comparison-table">
+            <thead>
+              <tr>
+                <th>实时观察项</th>
+                <th>为什么看</th>
+                <th>更像吸筹/派发的信号</th>
+                <th>限制</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>9:15-9:25</code> 集合竞价强弱</td>
+                <td>A 股竞价对全天预期影响很大</td>
+                <td>温和高开且开盘后继续承接，更偏买；竞价很强但开盘即回落，更偏虚强</td>
+                <td>竞价容易被情绪和板块联动扭曲</td>
+              </tr>
+              <tr>
+                <td>开盘后前 <code>30</code> 分钟量价效率</td>
+                <td>区分真放量和情绪换手</td>
+                <td>放量同时平台上移，更偏吸筹；放量但重心不升，更偏派发</td>
+                <td>需结合板块强弱</td>
+              </tr>
+              <tr>
+                <td>相对 <code>VWAP</code> 的运行时间</td>
+                <td>比单看涨跌更稳健</td>
+                <td>多数时间在 <code>VWAP</code> 上方，更偏买；下方时间长，更偏卖</td>
+                <td>高波动题材股噪声较大</td>
+              </tr>
+              <tr>
+                <td>相对板块与指数的独立强弱</td>
+                <td>排除只是题材情绪</td>
+                <td>板块一般而个股稳强，更值得怀疑有执行盘；板块强但个股不跟，反而偏弱</td>
+                <td>题材切换日容易失真</td>
+              </tr>
+              <tr>
+                <td><code>14:30-15:00</code> 尾盘加速</td>
+                <td>A 股程序化调仓与尾盘做价都常在这里显形</td>
+                <td>尾盘放量上行且次日延续，更偏真实拿货；尾盘脉冲次日回吐，更偏做价</td>
+                <td>必须联看次日承接</td>
+              </tr>
+              <tr>
+                <td><code>14:57-15:00</code> 收盘集合竞价跳变</td>
+                <td>这是官方收盘定价窗口</td>
+                <td>竞价跳升后次日继续站稳，更偏配置；竞价跳升后次日回补，更偏基准单或做价</td>
+                <td>不同板块的制度细节需分开看</td>
+              </tr>
+              <tr>
+                <td>沪股通、深股通渠道级余额或流入节奏</td>
+                <td>北向仍是重要边际资金线索</td>
+                <td>渠道级持续流入同时北向偏好权重股走强，更偏买</td>
+                <td>官方实时更适合看渠道级，不宜把盘中“个股北向净买”当成铁事实</td>
+              </tr>
+              <tr>
+                <td>盘中不应误用的“伪实时项”</td>
+                <td>控制误判</td>
+                <td>龙虎榜、个股北向精确净买、大宗最终结果，多数不是官方实时项，盘中只能作假设不能当结论</td>
+                <td>这是纪律项，不是行情项</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="section-block" style="--essay-idx: 10;">
+        <h2>十、把三地看板压成统一评分卡</h2>
+        <p>
+          若实盘时间有限，可以把盘中判断压成一套简化评分卡。它的目标不是替代判断，而是强迫自己不被单一现象带走。最直接的做法，是每项打 <code>0/1</code> 或 <code>-1/0/1</code> 分，再做总分比较。
+        </p>
+        <div class="score-grid">
+          <div class="score-card">
+            <h3>执行强度分</h3>
+            <p>看量占比、尾盘冲击、盘口持续性、大单后价格驻留时间。它回答的是：今天到底有没有大资金在执行。</p>
+          </div>
+          <div class="score-card">
+            <h3>方向确认分</h3>
+            <p>看收盘强度、<code>VWAP</code> 上下方、回踩修复能力、次日延续。它回答的是：这些执行更像买入还是卖出。</p>
+          </div>
+          <div class="score-card">
+            <h3>制度折减分</h3>
+            <p>看是否主要由收盘竞价、指数再平衡、<code>CAS</code>、大宗、配售、盘后固定价解释。制度性解释越强，方向权重就应越低。</p>
+          </div>
+        </div>
+        <div class="note-box">
+          <strong>最稳的经验</strong>
+          盘中像吸筹，通常是上方驻留时间长、回撤浅、<code>VWAP</code> 上方时间长、尾盘强化后次日不回吐；盘中像派发，通常是冲高失败频繁、<code>VWAP</code> 下方时间长、尾盘异动却无次日承接；盘中像基准或被动单，则更常见于制度窗口内突然大成交，但方向延续弱、篮子共振强于个股逻辑。
+        </div>
+      </section>
+
+      <section class="section-block" style="--essay-idx: 11;">
+        <h2>十一、最常见的误判</h2>
+        <ul>
+          <li>把收盘基准单误判成机构强烈看多或看空。</li>
+          <li>把低流动性小票的几笔大单误判成机构吸筹。</li>
+          <li>把北向或南向的单日净流入直接等同于趋势判断。</li>
+          <li>把“放量”本身当结论，而不看这些量换来了什么价格位置和收盘结构。</li>
+          <li>把事件驱动抢单和长期配置吸筹混为一类。</li>
+          <li>把尾盘竞价跳变视作方向单，却忽略了它恰好发生在定价窗口。</li>
+          <li>把大宗折价本身视作利空或利多，却不去看随后数日的折价修复效率。</li>
+        </ul>
+        <div class="risk-box">
+          <strong>误判背后的共同问题</strong>
+          绝大多数误判都不是因为观察不够细，而是因为没有先做制度归因。制度窗口是所有“大成交错觉”的源头之一。如果先跳过这一层，后面的盘面解释很容易越看越像故事。
+        </div>
+      </section>
+
+      <section class="section-block" style="--essay-idx: 12;">
+        <h2>十二、适用边界</h2>
+        <ul>
+          <li>这套图谱更适用于高流动性个股、权重股、ETF 成分股，以及事件后需要甄别真伪的标的。</li>
+          <li>对低流动性港股小票、A 股高控盘题材股、美股极小盘股，相同形态的噪声会显著更高。</li>
+          <li>单日痕迹只能给出“更一致于什么执行行为”，不能直接证明“就是某类机构在吸筹或派发”。</li>
+          <li>任何尾盘信号若没有次日承接，都不宜升级为高置信度结论。</li>
+        </ul>
+      </section>
+
+      <section class="section-block" style="--essay-idx: 13;">
+        <h2>十三、最后收敛成一句话</h2>
+        <p>
+          识别机构吸筹与派发，最关键的不是看今天是不是放量，而是看这些量有没有高效改变价格位置、价格大部分时间站在 <code>VWAP</code> 的哪一侧、量主要集中在什么制度窗口，以及这种痕迹在次日到未来 <code>3-5</code> 天里是否继续成立。
+        </p>
+        <p>
+          如果把所有单日异动都先翻译成“更像哪类执行行为”，再用制度机制、相对强弱和后续连续性去过滤，盘面会比传统的“主力拉升”“主力出货”叙事更清楚，也更适合做系统化研究、量化回测与交易员的盘中决策看板。
+        </p>
+      </section>
+
+      <hr class="essay-divider" />
+
+      <section class="section-block" style="--essay-idx: 14;">
+        <h2>参考资料</h2>
+        <div class="ref-box">
+          <p><strong>[1]</strong> Nasdaq Trader. <em>Opening and Closing Crosses</em>.</p>
+          <p><strong>[2]</strong> NYSE. <em>Auctions</em>.</p>
+          <p><strong>[3]</strong> Hong Kong Exchanges and Clearing. <em>Trading Mechanism</em>.</p>
+          <p><strong>[4]</strong> Hong Kong Exchanges and Clearing. <em>Northbound Program Trading Reporting</em>.</p>
+          <p><strong>[5]</strong> Shanghai Stock Exchange. <em>Trading Mechanism</em>.</p>
+          <p><strong>[6]</strong> Shenzhen Stock Exchange. <em>Trading Overview / Trading Mechanism</em>.</p>
+          <p><strong>[7]</strong> Kyle, Albert S. (1985). <em>Continuous Auctions and Insider Trading</em>. Econometrica, 53(6). DOI: <code>10.2307/1913210</code>.</p>
+          <p><strong>[8]</strong> Admati, Anat R. and Paul Pfleiderer (1988). <em>A Theory of Intraday Patterns: Volume and Price Variability</em>. Review of Financial Studies, 1(1). DOI: <code>10.1093/rfs/1.1.3</code>.</p>
+          <p><strong>[9]</strong> Hasbrouck, Joel (1991). <em>Measuring the Information Content of Stock Trades</em>. Journal of Finance, 46(1). DOI: <code>10.1111/j.1540-6261.1991.tb03749.x</code>.</p>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const article = document.getElementById("institutional-flow-essay");
+      const marketButtons = Array.from(article.querySelectorAll("#market-pattern-nav [data-tab-target]"));
+      const dashboardButtons = Array.from(article.querySelectorAll("#dashboard-nav [data-tab-target]"));
+      const marketPanels = Array.from(article.querySelectorAll('[data-tab-panel="us-patterns"], [data-tab-panel="hk-patterns"], [data-tab-panel="cn-patterns"]'));
+      const dashboardPanels = Array.from(article.querySelectorAll('[data-tab-panel="us-dashboard"], [data-tab-panel="hk-dashboard"], [data-tab-panel="cn-dashboard"]'));
+
+      function parseRgb(colorValue) {
+        const match = colorValue && colorValue.match(/\d+(\.\d+)?/g);
+        if (!match || match.length < 3) {
+          return null;
+        }
+        return match.slice(0, 3).map(Number);
+      }
+
+      function luminance(rgb) {
+        return (0.299 * rgb[0]) + (0.587 * rgb[1]) + (0.114 * rgb[2]);
+      }
+
+      function mixRgb(source, target, weight) {
+        return source.map(function (channel, index) {
+          return Math.round((channel * (1 - weight)) + (target[index] * weight));
+        });
+      }
+
+      function toRgbString(rgb) {
+        return "rgb(" + rgb.join(", ") + ")";
+      }
+
+      function toRgbaString(rgb, alpha) {
+        return "rgba(" + rgb.join(", ") + ", " + alpha + ")";
+      }
+
+      function applyEssayPalette(backgroundRgb) {
+        const isDark = luminance(backgroundRgb) < 156;
+        const oceanLight = [241, 248, 253];
+        const oceanDark = [15, 22, 28];
+        const textBase = isDark ? mixRgb(backgroundRgb, [237, 247, 255], 0.84) : mixRgb(backgroundRgb, [20, 29, 38], 0.94);
+        const textStrong = isDark ? mixRgb(backgroundRgb, [250, 253, 255], 0.92) : mixRgb(backgroundRgb, [11, 17, 23], 0.97);
+        const textMuted = isDark ? mixRgb(textBase, backgroundRgb, 0.22) : mixRgb(textBase, backgroundRgb, 0.3);
+        const kicker = isDark ? mixRgb(textBase, [146, 188, 214], 0.4) : mixRgb(textMuted, [81, 110, 133], 0.5);
+        const border = isDark ? toRgbaString(mixRgb(backgroundRgb, [232, 246, 255], 0.3), 0.34) : toRgbaString(mixRgb(backgroundRgb, [58, 95, 126], 0.82), 0.22);
+        const borderSoft = isDark ? toRgbaString(mixRgb(backgroundRgb, [232, 246, 255], 0.2), 0.24) : toRgbaString(mixRgb(backgroundRgb, [58, 95, 126], 0.58), 0.14);
+        const panelBg = isDark ? toRgbString(mixRgb(backgroundRgb, oceanLight, 0.1)) : toRgbString(mixRgb(backgroundRgb, oceanLight, 0.58));
+        const panelStrongBg = isDark ? toRgbString(mixRgb(backgroundRgb, oceanLight, 0.16)) : toRgbString(mixRgb(backgroundRgb, [228, 239, 247], 0.72));
+        const heroStart = isDark ? toRgbString(mixRgb(backgroundRgb, oceanLight, 0.08)) : toRgbString(mixRgb(backgroundRgb, [244, 250, 253], 0.74));
+        const heroEnd = isDark ? toRgbString(mixRgb(backgroundRgb, oceanDark, 0.2)) : toRgbString(mixRgb(backgroundRgb, [236, 244, 249], 0.7));
+        const heroGrid = isDark ? toRgbaString(mixRgb(backgroundRgb, oceanLight, 0.44), 0.08) : toRgbaString(mixRgb(backgroundRgb, [61, 93, 119], 0.66), 0.05);
+        const summaryBg = isDark ? toRgbaString(mixRgb(backgroundRgb, oceanLight, 0.14), 0.86) : toRgbaString(mixRgb(backgroundRgb, [255, 255, 255], 0.72), 0.92);
+        const buttonBg = isDark ? toRgbString(mixRgb(backgroundRgb, oceanLight, 0.12)) : toRgbString(mixRgb(backgroundRgb, [242, 247, 251], 0.66));
+        const buttonText = toRgbString(textStrong);
+        const buttonActiveBg = isDark ? toRgbString(mixRgb(backgroundRgb, oceanLight, 0.84)) : toRgbString(mixRgb(backgroundRgb, oceanDark, 0.92));
+        const buttonActiveText = isDark ? toRgbString(mixRgb(backgroundRgb, oceanDark, 0.94)) : toRgbString(mixRgb(backgroundRgb, [245, 251, 255], 0.96));
+        const codeBg = isDark ? toRgbString(mixRgb(backgroundRgb, [14, 22, 29], 0.42)) : toRgbString(mixRgb(backgroundRgb, [238, 244, 248], 0.76));
+        const codeInlineBg = isDark ? toRgbString(mixRgb(backgroundRgb, [55, 74, 89], 0.48)) : toRgbString(mixRgb(backgroundRgb, [230, 238, 244], 0.8));
+        const codeText = isDark ? toRgbString(mixRgb(backgroundRgb, [238, 248, 255], 0.92)) : toRgbString(mixRgb(backgroundRgb, [18, 31, 44], 0.94));
+        const link = isDark ? toRgbString(mixRgb(backgroundRgb, [154, 222, 255], 0.9)) : toRgbString(mixRgb(backgroundRgb, [30, 95, 134], 0.94));
+        const linkBorder = isDark ? toRgbaString(mixRgb(backgroundRgb, [154, 222, 255], 0.84), 0.52) : toRgbaString(mixRgb(backgroundRgb, [30, 95, 134], 0.92), 0.34);
+        const linkBorderHover = isDark ? toRgbaString(mixRgb(backgroundRgb, [154, 222, 255], 0.96), 0.96) : toRgbaString(mixRgb(backgroundRgb, [30, 95, 134], 0.98), 0.84);
+        const accent = isDark ? toRgbString(mixRgb(backgroundRgb, [140, 201, 233], 0.82)) : toRgbString(mixRgb(backgroundRgb, [61, 122, 162], 0.9));
+
+        article.style.setProperty("--essay-text", toRgbString(textBase));
+        article.style.setProperty("--essay-text-strong", toRgbString(textStrong));
+        article.style.setProperty("--essay-text-muted", toRgbString(textMuted));
+        article.style.setProperty("--essay-kicker", toRgbString(kicker));
+        article.style.setProperty("--essay-border", border);
+        article.style.setProperty("--essay-border-soft", borderSoft);
+        article.style.setProperty("--essay-panel-bg", panelBg);
+        article.style.setProperty("--essay-panel-strong-bg", panelStrongBg);
+        article.style.setProperty("--essay-hero-bg-start", heroStart);
+        article.style.setProperty("--essay-hero-bg-end", heroEnd);
+        article.style.setProperty("--essay-hero-grid", heroGrid);
+        article.style.setProperty("--essay-summary-bg", summaryBg);
+        article.style.setProperty("--essay-button-bg", buttonBg);
+        article.style.setProperty("--essay-button-text", buttonText);
+        article.style.setProperty("--essay-button-active-bg", buttonActiveBg);
+        article.style.setProperty("--essay-button-active-text", buttonActiveText);
+        article.style.setProperty("--essay-code-bg", codeBg);
+        article.style.setProperty("--essay-code-inline-bg", codeInlineBg);
+        article.style.setProperty("--essay-code-text", codeText);
+        article.style.setProperty("--essay-link", link);
+        article.style.setProperty("--essay-link-border", linkBorder);
+        article.style.setProperty("--essay-link-border-hover", linkBorderHover);
+        article.style.setProperty("--essay-accent", accent);
+        article.dataset.tone = isDark ? "dark" : "light";
+      }
+
+      function resolveBackgroundColor(node) {
+        let current = node;
+        while (current) {
+          const style = window.getComputedStyle(current);
+          const rgb = parseRgb(style.backgroundColor);
+          if (rgb && style.backgroundColor !== "rgba(0, 0, 0, 0)" && style.backgroundColor !== "transparent") {
+            return rgb;
+          }
+          current = current.parentElement;
+        }
+        return [255, 255, 255];
+      }
+
+      function applyEssayTone() {
+        if (!article) {
+          return;
+        }
+        const rgb = resolveBackgroundColor(article.parentElement || document.body);
+        applyEssayPalette(rgb);
+      }
+
+      function activateGroup(buttons, panels, target) {
+        buttons.forEach(function (button) {
+          button.classList.toggle("is-active", button.dataset.tabTarget === target);
+        });
+        panels.forEach(function (panel) {
+          panel.classList.toggle("is-active", panel.dataset.tabPanel === target);
+        });
+      }
+
+      applyEssayTone();
+      window.addEventListener("load", applyEssayTone);
+      window.addEventListener("resize", applyEssayTone);
+
+      marketButtons.forEach(function (button) {
+        button.addEventListener("click", function () {
+          activateGroup(marketButtons, marketPanels, button.dataset.tabTarget);
+        });
+      });
+
+      dashboardButtons.forEach(function (button) {
+        button.addEventListener("click", function () {
+          activateGroup(dashboardButtons, dashboardPanels, button.dataset.tabTarget);
+        });
+      });
+
+      activateGroup(marketButtons, marketPanels, "us-patterns");
+      activateGroup(dashboardButtons, dashboardPanels, "us-dashboard");
+    })();
+  </script>
+</article>
