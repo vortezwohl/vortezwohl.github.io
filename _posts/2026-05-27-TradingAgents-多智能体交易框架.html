@@ -1,0 +1,999 @@
+---
+layout: post
+title: "TradingAgents 多智能体交易框架：技术设计、交易理论与相关量化框架比较"
+toc: false
+math: false
+excerpt: >-
+  TradingAgents 不是传统量化引擎，也不是单一预测模型，而是一个用大语言模型模拟投研组织结构的多智能体交易框架。它将技术分析、基本面、新闻、情绪、研究辩论、风险辩论和组合决策串联成一条结构化工作流，试图用“团队协作”而不是“单模型打分”来生成交易结论。本文系统梳理其论文与开源实现的核心方法、工程架构、交易理论基础、实验边界，以及它与 FinMem、TradingGPT、FinCon、FinAgent、QuantAgent、FinRobot、Qlib、LEAN、FinRL 等框架之间的真实差异，并讨论它在研究原型与生产级量化系统之间究竟处于什么位置。
+categories: ai-finance
+tags:
+  - tradingagents
+  - llm
+  - multi-agent
+  - quantitative-trading
+  - financial-ai
+  - langgraph
+author:
+  - vortezwohl
+  - 吴子豪
+  - Codex
+---
+
+<article id="tradingagents-survey" lang="zh-CN">
+  <style>
+    #tradingagents-survey {
+      --survey-text: #171d24;
+      --survey-text-strong: #0f141a;
+      --survey-text-muted: #42505c;
+      --survey-kicker: #5b6976;
+      --survey-border: #d5dde5;
+      --survey-border-soft: #e2e8ef;
+      --survey-panel-bg: #f8fbfd;
+      --survey-panel-strong-bg: #eef4f8;
+      --survey-hero-bg-start: #f3f8fb;
+      --survey-hero-bg-end: #edf4f8;
+      --survey-hero-grid: rgba(61, 93, 119, 0.05);
+      --survey-summary-bg: rgba(255, 255, 255, 0.84);
+      --survey-button-bg: #f3f7fa;
+      --survey-button-text: #16202a;
+      --survey-button-active-bg: #182531;
+      --survey-button-active-text: #f6fbff;
+      --survey-code-bg: #eef4f8;
+      --survey-code-inline-bg: #e7eff4;
+      --survey-code-text: #12202d;
+      --survey-output-bg: #182531;
+      --survey-output-text: #edf7ff;
+      --survey-link: #205f86;
+      --survey-link-border: rgba(32, 95, 134, 0.34);
+      --survey-link-border-hover: rgba(32, 95, 134, 0.82);
+      --survey-accent: #3f7aa2;
+      color: var(--survey-text);
+      font-family: "Georgia", "Times New Roman", "Noto Serif SC", serif;
+      line-height: 1.86;
+    }
+
+    #tradingagents-survey[data-tone="dark"] {
+      --survey-text: #d8e4ec;
+      --survey-text-strong: #f5fbff;
+      --survey-text-muted: #b9cad7;
+      --survey-kicker: #92adc1;
+      --survey-border: rgba(228, 240, 248, 0.18);
+      --survey-border-soft: rgba(228, 240, 248, 0.12);
+      --survey-panel-bg: rgba(24, 32, 40, 0.92);
+      --survey-panel-strong-bg: rgba(34, 45, 56, 0.96);
+      --survey-hero-bg-start: rgba(24, 33, 41, 0.98);
+      --survey-hero-bg-end: rgba(16, 22, 28, 0.98);
+      --survey-hero-grid: rgba(197, 223, 241, 0.08);
+      --survey-summary-bg: rgba(39, 50, 62, 0.86);
+      --survey-button-bg: rgba(39, 50, 61, 0.94);
+      --survey-button-text: #e9f5fc;
+      --survey-button-active-bg: #dbeefa;
+      --survey-button-active-text: #142330;
+      --survey-code-bg: rgba(18, 26, 34, 0.98);
+      --survey-code-inline-bg: rgba(56, 74, 90, 0.78);
+      --survey-code-text: #edf8ff;
+      --survey-output-bg: #e7f4fb;
+      --survey-output-text: #10202d;
+      --survey-link: #9bdcff;
+      --survey-link-border: rgba(155, 220, 255, 0.42);
+      --survey-link-border-hover: rgba(155, 220, 255, 0.95);
+      --survey-accent: #8bc7e7;
+    }
+
+    #tradingagents-survey .survey-shell {
+      max-width: 1020px;
+      margin: 0 auto;
+      padding: 1.5rem 0 3rem;
+    }
+
+    #tradingagents-survey .survey-hero {
+      position: relative;
+      padding: 2.5rem 2rem 1.9rem;
+      border: 1px solid var(--survey-border);
+      background: linear-gradient(180deg, var(--survey-hero-bg-start) 0%, var(--survey-hero-bg-end) 100%);
+      overflow: hidden;
+    }
+
+    #tradingagents-survey .survey-hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image: linear-gradient(var(--survey-hero-grid) 1px, transparent 1px);
+      background-size: 100% 1.75rem;
+      pointer-events: none;
+    }
+
+    #tradingagents-survey .hero-kicker {
+      margin: 0 0 0.9rem;
+      font-size: 0.82rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--survey-kicker);
+    }
+
+    #tradingagents-survey .hero-title {
+      margin: 0;
+      font-size: 2.34rem;
+      line-height: 1.18;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    #tradingagents-survey .hero-lead {
+      max-width: 56rem;
+      margin: 1.25rem 0 0;
+      font-size: 1.05rem;
+      color: var(--survey-text-muted);
+    }
+
+    #tradingagents-survey .hero-summary {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.9rem;
+      margin-top: 1.55rem;
+    }
+
+    #tradingagents-survey .hero-summary-item {
+      padding: 0.95rem 1rem;
+      border: 1px solid var(--survey-border);
+      background: var(--survey-summary-bg);
+    }
+
+    #tradingagents-survey .hero-summary-item strong {
+      display: block;
+      margin-bottom: 0.32rem;
+      font-size: 0.95rem;
+      color: var(--survey-text-strong);
+    }
+
+    #tradingagents-survey .survey-body {
+      margin-top: 1.65rem;
+    }
+
+    #tradingagents-survey .section-block {
+      margin-top: 2.25rem;
+      padding-top: 1.4rem;
+      border-top: 1px solid var(--survey-border-soft);
+    }
+
+    #tradingagents-survey .section-block:first-child {
+      margin-top: 0;
+      padding-top: 0;
+      border-top: 0;
+    }
+
+    #tradingagents-survey h2,
+    #tradingagents-survey h3,
+    #tradingagents-survey h4 {
+      font-family: "Georgia", "Times New Roman", "Noto Serif SC", serif;
+      line-height: 1.32;
+      color: var(--survey-text-strong);
+    }
+
+    #tradingagents-survey h2 {
+      margin: 0 0 1rem;
+      font-size: 1.72rem;
+    }
+
+    #tradingagents-survey h3 {
+      margin: 1.35rem 0 0.7rem;
+      font-size: 1.22rem;
+    }
+
+    #tradingagents-survey h4 {
+      margin: 1.05rem 0 0.55rem;
+      font-size: 1.03rem;
+    }
+
+    #tradingagents-survey p {
+      margin: 0.92rem 0;
+    }
+
+    #tradingagents-survey ul,
+    #tradingagents-survey ol {
+      margin: 0.8rem 0 0.8rem 1.3rem;
+      padding: 0;
+    }
+
+    #tradingagents-survey li {
+      margin: 0.35rem 0;
+    }
+
+    #tradingagents-survey .argument-box,
+    #tradingagents-survey .note-box,
+    #tradingagents-survey .ref-box,
+    #tradingagents-survey .insight-card,
+    #tradingagents-survey .stack-card {
+      border: 1px solid var(--survey-border);
+      background: var(--survey-panel-bg);
+    }
+
+    #tradingagents-survey .argument-box,
+    #tradingagents-survey .note-box,
+    #tradingagents-survey .ref-box {
+      padding: 1rem 1.1rem;
+      margin: 1rem 0;
+    }
+
+    #tradingagents-survey .argument-box strong,
+    #tradingagents-survey .note-box strong,
+    #tradingagents-survey .ref-box strong {
+      color: var(--survey-text-strong);
+    }
+
+    #tradingagents-survey .insight-grid,
+    #tradingagents-survey .stack-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
+      margin: 1.05rem 0 1.2rem;
+    }
+
+    #tradingagents-survey .insight-card,
+    #tradingagents-survey .stack-card {
+      padding: 1rem;
+    }
+
+    #tradingagents-survey .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+      font-size: 0.97rem;
+    }
+
+    #tradingagents-survey .comparison-table th,
+    #tradingagents-survey .comparison-table td {
+      padding: 0.82rem 0.9rem;
+      border: 1px solid var(--survey-border);
+      vertical-align: top;
+      text-align: left;
+    }
+
+    #tradingagents-survey .comparison-table th {
+      background: var(--survey-panel-strong-bg);
+      font-weight: 700;
+    }
+
+    #tradingagents-survey .article-nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin: 1.25rem 0 1rem;
+      padding: 0;
+      list-style: none;
+    }
+
+    #tradingagents-survey .article-nav button {
+      border: 1px solid var(--survey-border);
+      background: var(--survey-button-bg);
+      color: var(--survey-button-text);
+      padding: 0.42rem 0.78rem;
+      font: inherit;
+      cursor: pointer;
+    }
+
+    #tradingagents-survey .article-nav button.is-active {
+      background: var(--survey-button-active-bg);
+      color: var(--survey-button-active-text);
+      border-color: var(--survey-button-active-bg);
+    }
+
+    #tradingagents-survey .tab-panel {
+      display: none;
+      margin-top: 1rem;
+      border-top: 1px solid var(--survey-border);
+      padding-top: 1rem;
+    }
+
+    #tradingagents-survey .tab-panel.is-active {
+      display: block;
+    }
+
+    #tradingagents-survey code {
+      padding: 0.12rem 0.32rem;
+      border-radius: 0.2rem;
+      background: var(--survey-code-inline-bg);
+      color: var(--survey-code-text);
+      font-family: "SFMono-Regular", "Consolas", "Liberation Mono", monospace;
+      font-size: 0.93em;
+    }
+
+    #tradingagents-survey pre {
+      margin: 1rem 0;
+      padding: 1rem 1.05rem;
+      overflow-x: auto;
+      background: var(--survey-code-bg);
+      color: var(--survey-code-text);
+      border: 1px solid var(--survey-border);
+      font-family: "SFMono-Regular", "Consolas", "Liberation Mono", monospace;
+      font-size: 0.92rem;
+      line-height: 1.7;
+    }
+
+    #tradingagents-survey pre code {
+      padding: 0;
+      background: transparent;
+      color: inherit;
+    }
+
+    #tradingagents-survey a {
+      color: var(--survey-link);
+      text-decoration: none;
+      border-bottom: 1px solid var(--survey-link-border);
+    }
+
+    #tradingagents-survey a:hover {
+      border-bottom-color: var(--survey-link-border-hover);
+    }
+
+    #tradingagents-survey .accent-line {
+      margin: 1.4rem 0 1rem;
+      width: 5.2rem;
+      height: 2px;
+      background: var(--survey-accent);
+    }
+
+    #tradingagents-survey .essay-divider {
+      margin: 2.2rem 0 0;
+      border: 0;
+      border-top: 1px solid var(--survey-border);
+    }
+
+    #tradingagents-survey .ref-box p {
+      margin: 0.55rem 0;
+      font-size: 0.98rem;
+    }
+
+    @media (max-width: 920px) {
+      #tradingagents-survey .hero-summary,
+      #tradingagents-survey .insight-grid,
+      #tradingagents-survey .stack-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    @media (max-width: 680px) {
+      #tradingagents-survey .survey-hero {
+        padding: 2rem 1.2rem 1.5rem;
+      }
+
+      #tradingagents-survey .hero-title {
+        font-size: 1.86rem;
+      }
+
+      #tradingagents-survey .hero-summary,
+      #tradingagents-survey .insight-grid,
+      #tradingagents-survey .stack-grid {
+        grid-template-columns: 1fr;
+      }
+
+      #tradingagents-survey .comparison-table {
+        display: block;
+        overflow-x: auto;
+      }
+    }
+  </style>
+
+  <div class="survey-shell">
+    <header class="survey-hero">
+      <p class="hero-kicker">AI Finance / Multi-Agent Trading / Survey Essay</p>
+      <h1 class="hero-title">TradingAgents 多智能体交易框架综述：它究竟是 AI 投委会、研究原型，还是下一代量化系统的上层入口？</h1>
+      <p class="hero-lead">
+        在大语言模型逐步进入金融研究和交易决策领域之后，很多系统都试图证明一件事：语言模型不仅能读新闻、看财报、总结情绪，还能参与更复杂的交易判断。
+        <code>TradingAgents</code> 是这一波尝试里非常有代表性的一个项目。它没有把交易抽象成一个单模型预测分数，也没有把重点放在单个超级代理身上，而是反过来模拟现实中的投研组织结构，
+        将技术分析、基本面研究、新闻解读、情绪判断、多空辩论、风险辩论和组合经理审批串成一条可执行工作流。
+      </p>
+      <p class="hero-lead">
+        这让它既不同于传统量化框架，也不同于很多只强调 memory、reflection 或单体 reasoning 的金融 LLM 框架。本文结合其论文、开源代码与版本演进，系统讨论它的技术设计、
+        交易理论基础、实验边界，以及它和 FinMem、TradingGPT、FinCon、FinAgent、QuantAgent、FinRobot、Qlib、LEAN、FinRL 等框架之间的真实差异。
+      </p>
+
+      <div class="hero-summary">
+        <div class="hero-summary-item">
+          <strong>核心判断</strong>
+          <span>它首先是一个 AI 投研组织模拟器，其次才是一个交易建议生成器。</span>
+        </div>
+        <div class="hero-summary-item">
+          <strong>最大价值</strong>
+          <span>把异质文本信息和多角色讨论压缩成结构化决策状态，而不是单次 prompt 输出。</span>
+        </div>
+        <div class="hero-summary-item">
+          <strong>最大短板</strong>
+          <span>组合优化、执行建模、成本控制和风险测度仍明显弱于成熟量化基础设施。</span>
+        </div>
+        <div class="hero-summary-item">
+          <strong>最准确定位</strong>
+          <span>研究型多智能体交易上层，不是生产级量化执行底座。</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="survey-body">
+      <section class="section-block">
+        <h2>一、为什么 TradingAgents 值得单独讨论</h2>
+        <p>
+          在金融 AI 领域，很多系统会把“交易”理解成预测问题：给一个时间窗、一组特征和一个训练目标，最后输出涨跌、收益或仓位。也有一些系统会把重点放在单体代理上，
+          例如给代理更强的检索、更长的记忆、更复杂的 reflection，让它像一个经验丰富的交易员一样逐步学会判断。
+        </p>
+        <p>
+          <code>TradingAgents</code> 走的是第三条路径。它默认认为，现实中的交易判断并不是一个人独立完成的，而是一个组织流程：分析师先分工收集不同来源的信息；
+          研究员再从多空两个方向辩论；交易员基于研究计划给出具体方案；风险团队从激进、中性、保守三种风险偏好继续争论；最终由组合经理给出结论。
+          这个设定让它天然更接近“投委会自动化”，而不是“预测器自动化”。
+        </p>
+
+        <div class="insight-grid">
+          <div class="insight-card">
+            <h3>它解决的不是单点预测</h3>
+            <p>它试图解决的是“复杂异质信息如何被组织成交易判断”的流程问题，而不是仅仅给出一个涨跌分类结果。</p>
+          </div>
+          <div class="insight-card">
+            <h3>它不是把 prompt 写长</h3>
+            <p>它的关键创新不在于更长的提示词，而在于状态拆分、角色分工和结构化交接协议。</p>
+          </div>
+          <div class="insight-card">
+            <h3>它也不等于传统量化框架</h3>
+            <p>它没有以执行、成本、组合优化、风控约束求解为中心，因此不能被简单看作另一种 Qlib 或 LEAN。</p>
+          </div>
+          <div class="insight-card">
+            <h3>它最接近研究型工作流</h3>
+            <p>它真正擅长的是把新闻、情绪、基本面、技术面这些难以直接数值化的信息组织成一个可解释的判断链条。</p>
+          </div>
+        </div>
+
+        <div class="argument-box">
+          <strong>一句话概括：</strong>
+          TradingAgents 的真正研究问题不是“LLM 能不能预测价格”，而是“LLM 能不能模拟投研组织的分工、争论与决策收敛过程”。
+        </div>
+      </section>
+
+      <section class="section-block">
+        <h2>二、论文与项目的核心主张</h2>
+        <p>
+          论文版本 <code>arXiv:2412.20138v7</code> 将 TradingAgents 描述为一个受现实交易公司组织结构启发的多智能体金融交易框架，角色包括
+          <code>Fundamentals Analyst</code>、<code>Sentiment Analyst</code>、<code>News Analyst</code>、<code>Technical Analyst</code>、
+          <code>Bull Researcher</code>、<code>Bear Researcher</code>、<code>Trader</code>、<code>Risk Management Team</code> 与 <code>Fund Manager</code>。
+        </p>
+        <p>
+          论文的两个核心论点很明确：
+        </p>
+        <ol>
+          <li>现实中的交易判断本来就是多角色协作完成的，所以多智能体结构比单体代理更贴近真实工作流。</li>
+          <li>仅靠自然语言聊天历史传递信息容易出现“电话游戏效应”，因此需要更强的结构化通信协议。</li>
+        </ol>
+        <p>
+          从代码角度看，第二点是最关键的。项目当前主干里真正稳定下来的不是某个 prompt 细节，而是 <code>AgentState</code> 中那些显式字段：
+          <code>market_report</code>、<code>sentiment_report</code>、<code>news_report</code>、<code>fundamentals_report</code>、
+          <code>investment_debate_state</code>、<code>risk_debate_state</code>、<code>investment_plan</code>、<code>trader_investment_plan</code>、
+          <code>final_trade_decision</code> 等。这些字段决定了各角色的输入和输出边界，也决定了工作流如何从“讨论”收敛为“决策”。
+        </p>
+
+        <div class="note-box">
+          <strong>需要注意的事实：</strong>
+          论文描述和当前主干实现并不完全一致。尤其是 analyst team 在论文图示中更像并行研究，但当前开源主干图编排仍主要是顺序执行；另外部分角色所用模型深浅层分工也与论文表述有偏移。
+          因此，阅读 TradingAgents 时必须同时区分“论文方法主张”和“当前可运行仓库实现”。
+        </div>
+      </section>
+
+      <section class="section-block">
+        <h2>三、从代码看它的真实技术设计</h2>
+        <div class="accent-line"></div>
+        <p>
+          如果把项目技术栈向下剖开，可以把它拆成六层：数据工具层、分析师层、辩论状态层、管理者/交易员决策层、记忆与反思层、可恢复执行层。
+          这六层共同构成了它区别于普通 prompt 应用的工程骨架。
+        </p>
+
+        <div class="stack-grid">
+          <div class="stack-card">
+            <h3>1. 数据工具层</h3>
+            <p>
+              项目通过 <code>tool -&gt; route_to_vendor -&gt; vendor implementation</code> 统一路由股票、指标、财务报表、新闻与内幕交易数据。
+              默认供应商多为 <code>yfinance</code>，也支持 <code>alpha_vantage</code>，并带有限的 fallback 逻辑。
+            </p>
+          </div>
+          <div class="stack-card">
+            <h3>2. Analyst 层</h3>
+            <p>
+              <code>Market / Fundamentals / News / Sentiment</code> 四类分析师将原始数据压缩成长文本报告。它们并不直接下单，而是生产结构化决策所需的中间研究文档。
+            </p>
+          </div>
+          <div class="stack-card">
+            <h3>3. 辩论状态层</h3>
+            <p>
+              项目维护两套显式辩论状态：一套用于 bull/bear 投资辩论，一套用于 aggressive/conservative/neutral 风险辩论。这里是整个系统最重要的“去聊天历史污染”设计。
+            </p>
+          </div>
+          <div class="stack-card">
+            <h3>4. 决策层</h3>
+            <p>
+              <code>Research Manager</code> 把多空争论压成投资计划，<code>Trader</code> 再把计划翻成更具体的交易提案，<code>Portfolio Manager</code> 综合风险辩论产出最终 5 档评级。
+            </p>
+          </div>
+          <div class="stack-card">
+            <h3>5. Memory / Reflection 层</h3>
+            <p>
+              当前版本将每次决策持久化到 markdown decision log，并在未来运行时注入同 ticker 历史决策与跨 ticker lesson。这更像复盘日志，不是强化学习。
+            </p>
+          </div>
+          <div class="stack-card">
+            <h3>6. Checkpoint 层</h3>
+            <p>
+              基于 LangGraph checkpoint 的中断恢复机制可以按 ticker + date 续跑。这不提升 alpha，但显著提升多步 LLM pipeline 的工程可靠性。
+            </p>
+          </div>
+        </div>
+
+        <h3>结构化通信比 prompt 工程更重要</h3>
+        <p>
+          很多金融 LLM 项目最后会退化成“让模型读更多上下文”。TradingAgents 当前主干中真正稳住的设计不是更长的上下文，而是把不同角色的产物拆成明确定义的槽位。
+          这意味着后续代理读的是“研究报告字段”和“辩论状态字段”，而不是靠自由检索在漫长对话里自己提炼重点。
+        </p>
+        <p>
+          从工程角度看，这种设计至少有三点收益：
+        </p>
+        <ol>
+          <li>降低长上下文污染，避免前面角色的陈旧噪音持续干扰后面节点。</li>
+          <li>让角色职责边界更可见，便于单点替换与局部验证。</li>
+          <li>为后续结构化输出和 deterministic signal extraction 留出空间。</li>
+        </ol>
+
+        <h3>当前主干不是“全并行协作”</h3>
+        <p>
+          论文里 analyst team 常被理解为并行收集信息，但代码实现仍主要是顺序执行链：一个 analyst 完成并清消息后，才进入下一个 analyst。
+          这说明项目的“组织结构”更多体现在角色分工和状态交接上，而不在真实的并发调度拓扑上。
+        </p>
+
+        <h3>结构化输出是后期工程化增强</h3>
+        <p>
+          从版本演进看，<code>Research Manager</code>、<code>Trader</code>、<code>Portfolio Manager</code> 后来都加上了
+          <code>with_structured_output(PydanticSchema)</code> 路径，并在失败时回退自由文本。这一点非常关键，因为它把最终决策从“纯 prose”变成了“typed schema + markdown render”。
+          也正因为如此，当前主干里最终信号的读取已经不需要再次调用 LLM，而可以从稳定的 markdown 结构中解析出 5 档评级。
+        </p>
+      </section>
+
+      <section class="section-block">
+        <h2>四、它背后的交易理论基础是什么</h2>
+        <p>
+          TradingAgents 没有发明新的交易理论。相反，它做的是把几类传统交易研究范式并排摆上桌，再用 LLM 执行一个高层次的信息整合过程。
+          这些范式包括基本面投资、技术分析、新闻与宏观驱动、情绪与行为金融，以及风险偏好博弈。
+        </p>
+
+        <h3>1. 基本面投资：内在价值与财务健康</h3>
+        <p>
+          <code>Fundamentals Analyst</code> 对应的是最经典的公司研究逻辑：盈利能力、现金流、资产负债、业务画像、财务稳健性、估值与潜在红旗。
+          这一层理论假设很传统，即市场价格短期可能偏离，但中长期仍会围绕公司基本面和内在价值波动。项目里没有把这套逻辑写成严格的 DCF 或多因子价值模型，
+          但其职责明显继承了 buy-side / sell-side fundamental research 的思维方式。
+        </p>
+
+        <h3>2. 技术分析：趋势、动量、波动率与量价关系</h3>
+        <p>
+          <code>Market Analyst</code> 主要围绕均线、MACD、RSI、Bollinger、ATR、VWMA、MFI 等技术指标工作。它背后组合了几种常见假设：
+        </p>
+        <ul>
+          <li>趋势延续：均线、MACD 代表趋势追踪与动量确认。</li>
+          <li>超买超卖与反转：RSI、MFI 更偏区间与反转判断。</li>
+          <li>波动率与风险调节：ATR、布林带更像 stop-loss 与波动环境感知工具。</li>
+          <li>量价确认：VWMA 代表价格行为是否被成交量支持。</li>
+        </ul>
+        <p>
+          换句话说，TradingAgents 没有发明新指标，而是让 LLM 在既有指标空间里“按上下文选指标、解释指标、整合指标”。
+        </p>
+
+        <h3>3. 新闻与宏观驱动：事件如何改变资产定价环境</h3>
+        <p>
+          <code>News Analyst</code> 假设价格不仅由公司内生变量决定，也受利率、通胀、政策、地缘、行业周期和重大事件影响。
+          这接近传统 discretionary macro 和 event-driven desk 的工作方式，即把离散新闻流解释为资产定价环境的变化，而不是直接把它们编码成几个固定因子。
+        </p>
+
+        <h3>4. 情绪与行为金融：市场并不总是理性的</h3>
+        <p>
+          <code>Sentiment Analyst</code> 当前版本会预抓取 Yahoo News、StockTwits 与 Reddit 数据，再让 LLM 判断叙事强度、立场分布和社群参与度。
+          它背后的理论更接近行为金融和情绪交易：市场价格会受投资者情绪、叙事扩散速度和社群拥挤度影响，新闻与散户叙事的背离本身也是一种信号。
+        </p>
+
+        <h3>5. 风险偏好博弈：并不是真正的风险测度系统</h3>
+        <p>
+          风险团队的激进、中性、保守三种角色，更多是在模拟不同的效用函数，而不是在做严格的风险测度。也就是说，这一层更像“风险偏好辩论”，而不是
+          <code>VaR / CVaR / beta / stress test / liquidity impact</code> 这类量化风险建模。它对于主观交易工作流很有解释性，但对于生产级资产管理来说仍明显偏弱。
+        </p>
+
+        <div class="argument-box">
+          <strong>归纳起来：</strong>
+          TradingAgents 的理论核心不是单一市场假说，而是把基本面、技术面、宏观新闻、情绪叙事与风险偏好争论组织成一个“主观研究委员会”，再让 LLM 担任这个委员会的流程执行者。
+        </div>
+      </section>
+
+      <section class="section-block">
+        <h2>五、实验结果能说明什么，不能说明什么</h2>
+        <p>
+          论文的实验窗口是 <code>2024-01-01</code> 到 <code>2024-03-29</code> 的短期回测。作者报告其在若干科技股上相对简单规则基线取得了更高的累计收益、年化收益和 Sharpe Ratio，
+          并在正文脚注中承认：因为每个预测要付出多次 LLM 调用和大量工具调用，成本太高，所以只能回测约 3 个月。
+        </p>
+
+        <h3>它证明了什么</h3>
+        <ul>
+          <li>多角色研究与辩论流程在短窗口、弱基线下，可能比简单规则策略更能捕捉复杂信息。</li>
+          <li>结构化状态 + 多视角讨论可以提升解释性，让每一次决策更像一份投研备忘录而不是黑盒输出。</li>
+          <li>在新闻、情绪、基本面与技术面同时起作用的环境里，单一因子策略可能不如异质信息合成流程。</li>
+        </ul>
+
+        <h3>它没有证明什么</h3>
+        <ul>
+          <li>没有证明它在更长时间、更多资产、不同市场 regime 下依然稳定有效。</li>
+          <li>没有证明它优于更强的现代 LLM/agent 金融框架，因为主要对手仍是简单规则基线。</li>
+          <li>没有证明它已经具备真实可部署的执行质量，因为交易成本、滑点、冲击、组合约束不是方法核心。</li>
+          <li>没有证明它具备生产环境所需的风险控制能力，因为风险团队更多是语言层辩论而不是数值层建模。</li>
+        </ul>
+
+        <h3>为什么 Sharpe 看起来异常高</h3>
+        <p>
+          论文中个别标的的 Sharpe Ratio 高得异常，作者自己也承认这超过经验常见区间，并解释为短窗口内回撤较少所致。这是一个很重要的自我限定：
+          高 Sharpe 在短窗口内并不罕见，但这类结果极其依赖样本期，不能直接外推成普适的策略稳定性结论。
+        </p>
+
+        <div class="note-box">
+          <strong>一个更严格的读法：</strong>
+          TradingAgents 的实验更适合被解释为“多智能体投研工作流在短样本期内对简单基线有优势”，而不是“它已经证明了一套可大规模部署的稳健交易策略”。
+        </div>
+      </section>
+
+      <section class="section-block">
+        <h2>六、和相关 LLM / Agent 金融框架的差异</h2>
+        <p>
+          为了避免“凡是金融 LLM 框架都差不多”这种粗糙判断，最好先把它和同谱系方法拉开比较。下面这组对比更关注研究对象、学习机制、记忆机制和组织结构，而不是 API 细节。
+        </p>
+
+        <ul class="article-nav" id="framework-nav">
+          <li><button type="button" data-tab-target="agent-family">同类 Agent 框架</button></li>
+          <li><button type="button" data-tab-target="quant-family">传统量化基础设施</button></li>
+          <li><button type="button" data-tab-target="integration-family">分层集成视角</button></li>
+        </ul>
+
+        <div class="tab-panel" data-tab-panel="agent-family">
+          <table class="comparison-table">
+            <thead>
+              <tr>
+                <th>框架</th>
+                <th>主问题</th>
+                <th>核心特征</th>
+                <th>与 TradingAgents 的主要差异</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>TradingGPT</strong></td>
+                <td>交易决策与 layered memory</td>
+                <td>distinct characters，分层记忆，角色化推理</td>
+                <td>更强调“代理如何记忆”，而不是“组织如何交接”。TradingAgents 的中心是工作流分工与结构化交接协议。</td>
+              </tr>
+              <tr>
+                <td><strong>FinMem</strong></td>
+                <td>记忆增强型交易代理</td>
+                <td>layered memory，reflection，角色设计</td>
+                <td>更像增强单体交易员的大脑。TradingAgents 则更像一个多角色投研委员会。</td>
+              </tr>
+              <tr>
+                <td><strong>FinCon</strong></td>
+                <td>多代理金融决策与 verbal reinforcement</td>
+                <td>manager-analyst hierarchy，conceptual verbal reinforcement</td>
+                <td>两者都重视团队结构，但 FinCon 的学习闭环更强，TradingAgents 当前主干的经验更新仍较轻量，主要是决策日志与反思注入。</td>
+              </tr>
+              <tr>
+                <td><strong>FinAgent</strong></td>
+                <td>多模态通用金融代理</td>
+                <td>generalist agent，dual-level reflection，多样 memory retrieval</td>
+                <td>FinAgent 更像单体全能分析员，TradingAgents 则偏向多个 specialist 的组织模拟。</td>
+              </tr>
+              <tr>
+                <td><strong>QuantAgent</strong></td>
+                <td>alpha / signal 挖掘与自改进</td>
+                <td>inner-loop + outer-loop，自我改进研究循环</td>
+                <td>QuantAgent 更偏 alpha researcher，TradingAgents 更偏多源信息综合后的交易判断委员会。</td>
+              </tr>
+              <tr>
+                <td><strong>FinRobot</strong></td>
+                <td>金融 agent 平台化</td>
+                <td>平台结构，覆盖广泛金融任务</td>
+                <td>FinRobot 更像底座/平台，TradingAgents 更像专注交易研究流程的具体实例。</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="argument-box">
+            <strong>最重要的结论：</strong>
+            TradingAgents 最像的对手不是 Qlib 或 LEAN，而是 FinCon、TradingGPT、FinMem、FinAgent 这类同样在讨论“金融决策如何被 LLM / agent 组织起来”的框架。
+          </div>
+        </div>
+
+        <div class="tab-panel" data-tab-panel="quant-family">
+          <table class="comparison-table">
+            <thead>
+              <tr>
+                <th>框架</th>
+                <th>系统类型</th>
+                <th>强项</th>
+                <th>与 TradingAgents 的层级关系</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Qlib</strong></td>
+                <td>量化研究与组合决策平台</td>
+                <td>预测、回测、策略、执行器、成本与 benchmark 管线完整</td>
+                <td>TradingAgents 更像在它上面的“主观研究与语言决策层”。</td>
+              </tr>
+              <tr>
+                <td><strong>LEAN</strong></td>
+                <td>事件驱动回测与实盘执行引擎</td>
+                <td>本地回测、live trading、订单执行、数据接入</td>
+                <td>TradingAgents 本身不解决这些问题，若要落地生产，更适合作为 LEAN 上层的信号与研究引擎。</td>
+              </tr>
+              <tr>
+                <td><strong>Zipline</strong></td>
+                <td>经典 Python 回测引擎</td>
+                <td>研究回测流程清晰，事件驱动范式成熟</td>
+                <td>与 TradingAgents 几乎不在同一层，前者是回测基础设施，后者是多智能体决策逻辑。</td>
+              </tr>
+              <tr>
+                <td><strong>FinRL</strong></td>
+                <td>金融强化学习框架</td>
+                <td>环境、奖励、策略学习、训练闭环</td>
+                <td>FinRL 学的是 policy，TradingAgents 生成的是 rationale-driven judgment。</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="note-box">
+            <strong>换个方式说：</strong>
+            Qlib、LEAN、Zipline、FinRL 主要在解决“策略如何被训练、回测和执行”；TradingAgents 主要在解决“复杂异质信息如何被组织成一个交易意见”。它们不是同层竞争者，而是更接近上下层关系。
+          </div>
+        </div>
+
+        <div class="tab-panel" data-tab-panel="integration-family">
+          <p>
+            如果从系统工程角度看，TradingAgents 最合理的落点通常不是“替代量化底座”，而是“叠在量化底座之上”。一个更现实的分层方式如下：
+          </p>
+          <pre><code>数据供应 / 特征处理 / 回测执行 / 成本模型
+    -> Qlib / LEAN / 自研执行引擎
+
+多智能体研究与判断层
+    -> TradingAgents / FinCon / 类似 agent framework
+
+人工审批 / 风险门禁 / 合规日志
+    -> 组织流程与平台侧治理</code></pre>
+          <p>
+            在这个架构下，TradingAgents 负责把新闻、情绪、技术面、基本面等难结构化信号压缩成带解释的观点；
+            底层量化框架负责订单、撮合、成本、组合约束、回测和实盘接入；最上层再叠加人工审批、风控门禁和审计。
+            这样既不高估 TradingAgents 的执行能力，也不会浪费它在主观研究合成上的优势。
+          </p>
+        </div>
+      </section>
+
+      <section class="section-block">
+        <h2>七、从版本演进看，项目已经在修补哪些问题</h2>
+        <p>
+          一个项目值不值得认真看，不只看论文，也要看它后续修了什么。TradingAgents 的 <code>CHANGELOG</code> 很有信息量，因为它把许多早期研究原型常见的问题直接暴露了出来。
+        </p>
+
+        <h3>1. 情绪分析的“幻觉数据源”问题</h3>
+        <p>
+          后续版本明确承认旧的 social analyst 在只有有限工具时，可能在 prompt 压力下捏造 Reddit 或 StockTwits 内容，所以重构成 grounded
+          <code>Sentiment Analyst</code>，先抓真实新闻、StockTwits 和 Reddit，再让 LLM 总结。这说明项目团队自己也意识到：在金融语境下，“看起来像真的”比普通领域更危险。
+        </p>
+
+        <h3>2. 回测 look-ahead bias 问题</h3>
+        <p>
+          版本记录中还专门修复了 fetchers 在回测窗口中间可能泄漏未来数据的问题。这是一类会直接摧毁实验可信度的 bug。项目能把这一点写进变更记录，说明它已经从“只要能跑”转向“至少要把时序边界守住”。
+        </p>
+
+        <h3>3. 结构化输出与持久化 memory log</h3>
+        <p>
+          后续版本加入结构化输出、checkpoint resume、persistent decision log，这些都不是锦上添花，而是把研究原型向“可长期迭代的工程系统”推进的必要步骤。
+          其中尤其值得重视的是 memory log：它让过去的错误、成功和经验不再停留在会话上下文中，而是成为真正可追溯、可注入的历史记录。
+        </p>
+
+        <div class="argument-box">
+          <strong>一个很现实的判断：</strong>
+          如果一个多智能体交易项目的版本历史里没有长期修复数据泄漏、幻觉来源、结构化输出、恢复机制和持久化记忆这些问题，它大概率还停留在展示级 demo 阶段。TradingAgents 至少已经跨过了这一步。
+        </div>
+      </section>
+
+      <section class="section-block">
+        <h2>八、它的真正优势与真实短板</h2>
+
+        <h3>它的优势</h3>
+        <ul>
+          <li><strong>组织结构清晰。</strong> 角色分工与职责边界明确，解释性明显强于单一黑盒模型。</li>
+          <li><strong>适合异质文本信息场景。</strong> 新闻、情绪、宏观、基本面这些信号很难直接压成少量数值特征，它更适合做这类“半结构化研究判断”。</li>
+          <li><strong>工程骨架比很多金融 agent demo 更成熟。</strong> 状态建模、结构化输出、memory log、checkpoint resume 都是扎实的工程化加分项。</li>
+          <li><strong>更容易与人类工作流对齐。</strong> 投研团队、风险会、组合经理审批这些概念是现实组织天然能理解的。</li>
+        </ul>
+
+        <h3>它的短板</h3>
+        <ul>
+          <li><strong>组合与执行层弱。</strong> 没有把组合优化、滑点、成本、流动性和订单执行建成方法核心。</li>
+          <li><strong>风险管理偏论证，不偏测度。</strong> 三个风险角色更多是在争论风险偏好，不是在做严格风险模型。</li>
+          <li><strong>隐式权重难复现。</strong> 多源信息最终是靠 LLM 在语言层隐式加权整合，难以像传统因子模型那样做精确归因。</li>
+          <li><strong>实验窗口太短。</strong> 高收益和高 Sharpe 更像短样本期里的强表现，不足以自动推出长期稳定性结论。</li>
+        </ul>
+      </section>
+
+      <section class="section-block">
+        <h2>九、最后的判断：TradingAgents 更像研究型上层，而不是生产级底座</h2>
+        <p>
+          把所有信息合在一起看，TradingAgents 最合适的定位并不是“下一代量化交易系统本身”，而是“下一代量化交易系统里的多智能体研究与判断上层”。
+          它最值钱的地方不是替代回测、执行和组合引擎，而是把原本分散在研究员、分析师、风险讨论和投资委员会里的主观判断流程结构化。
+        </p>
+        <p>
+          如果你把它拿来和传统量化引擎硬碰硬，它会显得缺乏组合理论、执行模型和成本控制；如果你把它放在正确的位置，即作为复杂文本信息的上层整合器、
+          作为 human-in-the-loop 投研流程的自动化加速器、作为未来与 Qlib / LEAN / FinRL 等框架集成的语言决策模块，它就会显得非常有意义。
+        </p>
+        <p>
+          这也是为什么我更愿意把它理解成一种新的系统分层尝试：底层仍然由数值型量化基础设施守住执行和评估秩序，上层则由多智能体系统承接叙事、新闻、情绪、基本面这类更接近人类研究语言的复杂信号。
+          真正可能有前途的方向，不是让其中一方完全替代另一方，而是让二者在边界清晰的前提下协作。
+        </p>
+
+        <div class="argument-box">
+          <strong>一句收束全文的话：</strong>
+          TradingAgents 的价值，不在于它已经证明了 AI 可以稳定战胜市场，而在于它认真展示了一种可能的系统形态：未来的量化交易系统，也许不会只有模型和引擎，还会有一个可解释、可分工、可复盘的 AI 投研组织层。
+        </div>
+      </section>
+
+      <hr class="essay-divider">
+
+      <section class="section-block">
+        <h2>参考资料</h2>
+        <div class="ref-box">
+          <p><a href="https://github.com/TauricResearch/TradingAgents" target="_blank" rel="noopener noreferrer">[1]</a> Tauric Research. <em>TradingAgents GitHub Repository</em>.</p>
+          <p><a href="https://arxiv.org/abs/2412.20138" target="_blank" rel="noopener noreferrer">[2]</a> Xiao, Y., Sun, E., Luo, D., Wang, W. <em>TradingAgents: Multi-Agents LLM Financial Trading Framework</em>.</p>
+          <p><a href="https://arxiv.org/abs/2309.03736" target="_blank" rel="noopener noreferrer">[3]</a> Li, Y., et al. <em>TradingGPT: Multi-agent system with layered memory and distinct characters for enhanced financial trading performance</em>.</p>
+          <p><a href="https://arxiv.org/abs/2311.13743" target="_blank" rel="noopener noreferrer">[4]</a> Yu, Y., et al. <em>FinMem: A performance-enhanced LLM trading agent with layered memory and character design</em>.</p>
+          <p><a href="https://arxiv.org/abs/2407.06567" target="_blank" rel="noopener noreferrer">[5]</a> Yu, Y., et al. <em>FinCon: A synthesized LLM multi-agent system with conceptual verbal reinforcement for enhanced financial decision making</em>.</p>
+          <p><a href="https://arxiv.org/abs/2402.18485" target="_blank" rel="noopener noreferrer">[6]</a> Zhang, W., et al. <em>A Multimodal Foundation Agent for Financial Trading: Tool-augmented, Diversified, and Generalist</em>.</p>
+          <p><a href="https://arxiv.org/abs/2402.03755" target="_blank" rel="noopener noreferrer">[7]</a> Wang, S., Yuan, H., Ni, L. M., Guo, J. <em>QuantAgent: Seeking Holy Grail in Trading by Self-Improving Large Language Model</em>.</p>
+          <p><a href="https://arxiv.org/abs/2308.00016" target="_blank" rel="noopener noreferrer">[8]</a> Wang, S., et al. <em>Alpha-GPT: Human-AI Interactive Alpha Mining for Quantitative Investment</em>.</p>
+          <p><a href="https://arxiv.org/abs/2405.14767" target="_blank" rel="noopener noreferrer">[9]</a> Yang, H., et al. <em>FinRobot: An Open-Source AI Agent Platform for Financial Applications using Large Language Models</em>.</p>
+          <p><a href="https://github.com/microsoft/qlib" target="_blank" rel="noopener noreferrer">[10]</a> Microsoft. <em>Qlib</em>.</p>
+          <p><a href="https://github.com/microsoft/qlib/blob/main/docs/component/strategy.rst" target="_blank" rel="noopener noreferrer">[11]</a> Microsoft Qlib Documentation. <em>Portfolio Strategy</em>.</p>
+          <p><a href="https://github.com/QuantConnect/Lean" target="_blank" rel="noopener noreferrer">[12]</a> QuantConnect. <em>LEAN Algorithmic Trading Engine</em>.</p>
+          <p><a href="https://github.com/quantopian/zipline" target="_blank" rel="noopener noreferrer">[13]</a> Quantopian. <em>Zipline</em>.</p>
+          <p><a href="https://github.com/AI4Finance-Foundation/FinRL" target="_blank" rel="noopener noreferrer">[14]</a> AI4Finance Foundation. <em>FinRL</em>.</p>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const article = document.getElementById("tradingagents-survey");
+      const navButtons = Array.from(document.querySelectorAll("#framework-nav button"));
+      const panels = Array.from(document.querySelectorAll("[data-tab-panel]"));
+
+      function parseRgb(colorValue) {
+        const match = colorValue && colorValue.match(/\d+(\.\d+)?/g);
+        if (!match || match.length < 3) {
+          return null;
+        }
+        return match.slice(0, 3).map(Number);
+      }
+
+      function luminance(rgb) {
+        return (0.299 * rgb[0]) + (0.587 * rgb[1]) + (0.114 * rgb[2]);
+      }
+
+      function mixRgb(source, target, weight) {
+        return source.map(function (channel, index) {
+          return Math.round((channel * (1 - weight)) + (target[index] * weight));
+        });
+      }
+
+      function toRgbString(rgb) {
+        return "rgb(" + rgb.join(", ") + ")";
+      }
+
+      function toRgbaString(rgb, alpha) {
+        return "rgba(" + rgb.join(", ") + ", " + alpha + ")";
+      }
+
+      function applySurveyPalette(backgroundRgb) {
+        const isDark = luminance(backgroundRgb) < 156;
+        const oceanLight = [241, 248, 253];
+        const oceanDark = [15, 22, 28];
+        const textBase = isDark ? mixRgb(backgroundRgb, [237, 247, 255], 0.84) : mixRgb(backgroundRgb, [19, 28, 37], 0.94);
+        const textStrong = isDark ? mixRgb(backgroundRgb, [250, 253, 255], 0.92) : mixRgb(backgroundRgb, [10, 17, 24], 0.97);
+        const textMuted = isDark ? mixRgb(textBase, backgroundRgb, 0.22) : mixRgb(textBase, backgroundRgb, 0.3);
+        const kicker = isDark ? mixRgb(textBase, [146, 188, 214], 0.4) : mixRgb(textMuted, [78, 108, 133], 0.5);
+        const border = isDark ? toRgbaString(mixRgb(backgroundRgb, [232, 246, 255], 0.3), 0.34) : toRgbaString(mixRgb(backgroundRgb, [58, 95, 126], 0.82), 0.22);
+        const borderSoft = isDark ? toRgbaString(mixRgb(backgroundRgb, [232, 246, 255], 0.2), 0.24) : toRgbaString(mixRgb(backgroundRgb, [58, 95, 126], 0.58), 0.14);
+        const panelBg = isDark ? toRgbString(mixRgb(backgroundRgb, oceanLight, 0.1)) : toRgbString(mixRgb(backgroundRgb, oceanLight, 0.58));
+        const panelStrongBg = isDark ? toRgbString(mixRgb(backgroundRgb, oceanLight, 0.16)) : toRgbString(mixRgb(backgroundRgb, [228, 239, 247], 0.72));
+        const heroStart = isDark ? toRgbString(mixRgb(backgroundRgb, oceanLight, 0.08)) : toRgbString(mixRgb(backgroundRgb, [244, 250, 253], 0.74));
+        const heroEnd = isDark ? toRgbString(mixRgb(backgroundRgb, oceanDark, 0.2)) : toRgbString(mixRgb(backgroundRgb, [236, 244, 249], 0.7));
+        const heroGrid = isDark ? toRgbaString(mixRgb(backgroundRgb, oceanLight, 0.44), 0.08) : toRgbaString(mixRgb(backgroundRgb, [61, 93, 119], 0.66), 0.05);
+        const summaryBg = isDark ? toRgbaString(mixRgb(backgroundRgb, oceanLight, 0.14), 0.86) : toRgbaString(mixRgb(backgroundRgb, [255, 255, 255], 0.72), 0.92);
+        const buttonBg = isDark ? toRgbString(mixRgb(backgroundRgb, oceanLight, 0.12)) : toRgbString(mixRgb(backgroundRgb, [242, 247, 251], 0.66));
+        const buttonText = toRgbString(textStrong);
+        const buttonActiveBg = isDark ? toRgbString(mixRgb(backgroundRgb, oceanLight, 0.84)) : toRgbString(mixRgb(backgroundRgb, oceanDark, 0.92));
+        const buttonActiveText = isDark ? toRgbString(mixRgb(backgroundRgb, oceanDark, 0.94)) : toRgbString(mixRgb(backgroundRgb, [245, 251, 255], 0.96));
+        const codeBg = isDark ? toRgbString(mixRgb(backgroundRgb, [14, 22, 29], 0.42)) : toRgbString(mixRgb(backgroundRgb, [238, 244, 248], 0.76));
+        const codeInlineBg = isDark ? toRgbString(mixRgb(backgroundRgb, [55, 74, 89], 0.48)) : toRgbString(mixRgb(backgroundRgb, [230, 238, 244], 0.8));
+        const codeText = isDark ? toRgbString(mixRgb(backgroundRgb, [238, 248, 255], 0.92)) : toRgbString(mixRgb(backgroundRgb, [18, 31, 44], 0.94));
+        const outputBg = isDark ? toRgbString(mixRgb(backgroundRgb, [232, 245, 252], 0.86)) : toRgbString(mixRgb(backgroundRgb, [24, 37, 49], 0.92));
+        const outputText = isDark ? toRgbString(mixRgb(backgroundRgb, [12, 22, 30], 0.94)) : toRgbString(mixRgb(backgroundRgb, [239, 248, 255], 0.94));
+        const link = isDark ? toRgbString(mixRgb(backgroundRgb, [154, 222, 255], 0.9)) : toRgbString(mixRgb(backgroundRgb, [30, 95, 134], 0.94));
+        const linkBorder = isDark ? toRgbaString(mixRgb(backgroundRgb, [154, 222, 255], 0.84), 0.52) : toRgbaString(mixRgb(backgroundRgb, [30, 95, 134], 0.92), 0.34);
+        const linkBorderHover = isDark ? toRgbaString(mixRgb(backgroundRgb, [154, 222, 255], 0.96), 0.96) : toRgbaString(mixRgb(backgroundRgb, [30, 95, 134], 0.98), 0.84);
+        const accent = isDark ? toRgbString(mixRgb(backgroundRgb, [140, 201, 233], 0.82)) : toRgbString(mixRgb(backgroundRgb, [61, 122, 162], 0.9));
+
+        article.style.setProperty("--survey-text", toRgbString(textBase));
+        article.style.setProperty("--survey-text-strong", toRgbString(textStrong));
+        article.style.setProperty("--survey-text-muted", toRgbString(textMuted));
+        article.style.setProperty("--survey-kicker", toRgbString(kicker));
+        article.style.setProperty("--survey-border", border);
+        article.style.setProperty("--survey-border-soft", borderSoft);
+        article.style.setProperty("--survey-panel-bg", panelBg);
+        article.style.setProperty("--survey-panel-strong-bg", panelStrongBg);
+        article.style.setProperty("--survey-hero-bg-start", heroStart);
+        article.style.setProperty("--survey-hero-bg-end", heroEnd);
+        article.style.setProperty("--survey-hero-grid", heroGrid);
+        article.style.setProperty("--survey-summary-bg", summaryBg);
+        article.style.setProperty("--survey-button-bg", buttonBg);
+        article.style.setProperty("--survey-button-text", buttonText);
+        article.style.setProperty("--survey-button-active-bg", buttonActiveBg);
+        article.style.setProperty("--survey-button-active-text", buttonActiveText);
+        article.style.setProperty("--survey-code-bg", codeBg);
+        article.style.setProperty("--survey-code-inline-bg", codeInlineBg);
+        article.style.setProperty("--survey-code-text", codeText);
+        article.style.setProperty("--survey-output-bg", outputBg);
+        article.style.setProperty("--survey-output-text", outputText);
+        article.style.setProperty("--survey-link", link);
+        article.style.setProperty("--survey-link-border", linkBorder);
+        article.style.setProperty("--survey-link-border-hover", linkBorderHover);
+        article.style.setProperty("--survey-accent", accent);
+        article.dataset.tone = isDark ? "dark" : "light";
+      }
+
+      function resolveBackgroundColor(node) {
+        let current = node;
+        while (current) {
+          const style = window.getComputedStyle(current);
+          const rgb = parseRgb(style.backgroundColor);
+          if (rgb && style.backgroundColor !== "rgba(0, 0, 0, 0)" && style.backgroundColor !== "transparent") {
+            return rgb;
+          }
+          current = current.parentElement;
+        }
+        return [255, 255, 255];
+      }
+
+      function applySurveyTone() {
+        if (!article) {
+          return;
+        }
+        const rgb = resolveBackgroundColor(article.parentElement || document.body);
+        applySurveyPalette(rgb);
+      }
+
+      function activatePanel(name) {
+        navButtons.forEach(function (button) {
+          button.classList.toggle("is-active", button.dataset.tabTarget === name);
+        });
+        panels.forEach(function (panel) {
+          panel.classList.toggle("is-active", panel.dataset.tabPanel === name);
+        });
+      }
+
+      applySurveyTone();
+      window.addEventListener("load", applySurveyTone);
+      window.addEventListener("resize", applySurveyTone);
+
+      if (navButtons.length > 0) {
+        activatePanel("agent-family");
+        navButtons.forEach(function (button) {
+          button.addEventListener("click", function () {
+            activatePanel(button.dataset.tabTarget);
+          });
+        });
+      }
+    })();
+  </script>
+</article>
