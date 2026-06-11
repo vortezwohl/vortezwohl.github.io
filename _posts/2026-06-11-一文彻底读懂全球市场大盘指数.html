@@ -81,7 +81,8 @@ author:
     }
 
     #global-indexes-research .essay-shell {
-      width: min(1140px, calc(100vw - 32px));
+      width: 100%;
+      max-width: 1040px;
       margin: 0 auto;
       padding: 1.6rem 0 5.5rem;
     }
@@ -299,7 +300,7 @@ author:
     }
 
     @media (max-width: 720px) {
-      #global-indexes-research .essay-shell { width: min(100vw - 20px, 100%); padding: 1rem 0 4rem; }
+      #global-indexes-research .essay-shell { padding: 1rem 0 4rem; }
       #global-indexes-research .essay-hero,
       #global-indexes-research .essay-section { border-radius: 22px; }
       #global-indexes-research .essay-hero { padding: 1.7rem 1.1rem 1.35rem; }
@@ -308,11 +309,15 @@ author:
       #global-indexes-research .card { grid-column: span 12; }
       #global-indexes-research .metric-strip,
       #global-indexes-research .impact-grid { grid-template-columns: 1fr; }
-      #global-indexes-research .comparison-table { display: block; overflow-x: auto; white-space: nowrap; }
+      #global-indexes-research .comparison-table th,
+      #global-indexes-research .comparison-table td {
+        padding: 10px 10px;
+        font-size: 0.92rem;
+        white-space: normal;
+      }
       #global-indexes-research .essay-hero h1 { font-size: clamp(1.9rem, 8vw, 2.7rem); }
     }
   </style>
-
   <div class="essay-shell">
     <header class="essay-hero">
       <p class="essay-kicker">Global Index Research</p>
