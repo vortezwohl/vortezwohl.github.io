@@ -1,0 +1,526 @@
+---
+layout: post
+title: "一文彻底读懂全球市场大盘指数：定义、编制、被动资金、纳入效应与主流 ETF 全景图"
+toc: false
+math: false
+excerpt: >-
+  这不是一篇简单的指数名词表，而是一份把指数是什么、被动买入如何运作、指数公司如何编制和维护基准、指数如何影响市场与成分股，以及全球主流大盘指数与 ETF 如何对应起来的系统研究。正文尽量只使用政府监管、指数管理人、基金发行人和学术论文能够相互印证的高把握信息。
+categories: finance
+tags:
+  - 指数
+  - etf
+  - 被动投资
+  - 全球市场
+  - 资产配置
+author:
+  - vortezwohl
+  - 吴子豪
+  - Codex
+---
+
+<article id="global-indexes-research" lang="zh-CN">
+  <style>
+    #global-indexes-research {
+      --essay-text: #171b20;
+      --essay-text-strong: #10151a;
+      --essay-text-muted: #465564;
+      --essay-kicker: #6f6757;
+      --essay-border: #d8ddd8;
+      --essay-border-soft: #e5e9e5;
+      --essay-panel-bg: #fbfcf8;
+      --essay-panel-strong-bg: #f1f4ee;
+      --essay-hero-bg-start: #f6f2ea;
+      --essay-hero-bg-end: #edf4f1;
+      --essay-hero-grid: rgba(83, 95, 86, 0.06);
+      --essay-summary-bg: rgba(255, 255, 255, 0.84);
+      --essay-button-bg: #f4f1e8;
+      --essay-button-text: #18212a;
+      --essay-button-active-bg: #1f2b33;
+      --essay-button-active-text: #f7fbfd;
+      --essay-code-bg: #edf2ec;
+      --essay-code-inline-bg: #e6ece4;
+      --essay-code-text: #13212d;
+      --essay-link: #2c6f68;
+      --essay-link-border: rgba(44, 111, 104, 0.34);
+      --essay-link-border-hover: rgba(44, 111, 104, 0.84);
+      color: var(--essay-text);
+      font-family: "Georgia", "Times New Roman", "Noto Serif SC", serif;
+      line-height: 1.9;
+    }
+    #global-indexes-research[data-tone="dark"] {
+      --essay-text: #dce6eb;
+      --essay-text-strong: #f5fbff;
+      --essay-text-muted: #bfd1d9;
+      --essay-kicker: #d7c7a8;
+      --essay-border: rgba(226, 238, 243, 0.18);
+      --essay-border-soft: rgba(226, 238, 243, 0.12);
+      --essay-panel-bg: rgba(24, 31, 37, 0.92);
+      --essay-panel-strong-bg: rgba(35, 43, 51, 0.96);
+      --essay-hero-bg-start: rgba(31, 35, 40, 0.98);
+      --essay-hero-bg-end: rgba(16, 22, 28, 0.98);
+      --essay-hero-grid: rgba(227, 214, 184, 0.08);
+      --essay-summary-bg: rgba(38, 47, 55, 0.88);
+      --essay-button-bg: rgba(42, 51, 61, 0.94);
+      --essay-button-text: #eef8fc;
+      --essay-button-active-bg: #e7d8b4;
+      --essay-button-active-text: #172028;
+      --essay-code-bg: rgba(16, 22, 28, 0.98);
+      --essay-code-inline-bg: rgba(57, 72, 83, 0.78);
+      --essay-code-text: #eef8fc;
+      --essay-link: #9dd9d4;
+      --essay-link-border: rgba(157, 217, 212, 0.42);
+      --essay-link-border-hover: rgba(157, 217, 212, 0.95);
+    }
+    #global-indexes-research .essay-shell { width: min(1140px, calc(100vw - 32px)); margin: 0 auto; padding: 40px 0 88px; }
+    #global-indexes-research .essay-kicker { margin: 0 0 12px; color: var(--essay-kicker); font-size: 0.82rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; }
+    #global-indexes-research .essay-hero { position: relative; overflow: hidden; border: 1px solid var(--essay-border); border-radius: 28px; padding: 34px 28px 30px; background: linear-gradient(135deg, var(--essay-hero-grid) 0, var(--essay-hero-grid) 1px, transparent 1px, transparent 100%), linear-gradient(135deg, var(--essay-hero-bg-start), var(--essay-hero-bg-end)); background-size: 22px 22px, auto; box-shadow: 0 26px 70px rgba(28, 38, 35, 0.07); }
+    #global-indexes-research .essay-hero h1 { margin: 0; color: var(--essay-text-strong); font-size: clamp(2.2rem, 4vw, 4.1rem); line-height: 1.1; letter-spacing: -0.03em; }
+    #global-indexes-research .essay-lead { width: min(860px, 100%); margin: 18px 0 0; color: var(--essay-text-muted); font-size: 1.08rem; }
+    #global-indexes-research .essay-summary-grid, #global-indexes-research .essay-note-grid, #global-indexes-research .essay-card-grid { display: grid; gap: 16px; grid-template-columns: repeat(12, minmax(0, 1fr)); margin-top: 24px; }
+    #global-indexes-research .summary-card, #global-indexes-research .note-card, #global-indexes-research .card { border: 1px solid var(--essay-border-soft); border-radius: 20px; background: var(--essay-summary-bg); padding: 18px 18px 16px; backdrop-filter: blur(6px); }
+    #global-indexes-research .summary-card { grid-column: span 3; }
+    #global-indexes-research .note-card, #global-indexes-research .card { grid-column: span 4; background: var(--essay-panel-bg); }
+    #global-indexes-research .summary-card h3, #global-indexes-research .note-card h3, #global-indexes-research .card h3 { margin: 0 0 10px; color: var(--essay-text-strong); font-size: 1rem; }
+    #global-indexes-research .summary-card p, #global-indexes-research .note-card p, #global-indexes-research .card p { margin: 0; font-size: 0.97rem; color: var(--essay-text-muted); }
+    #global-indexes-research .essay-section { margin-top: 26px; border: 1px solid var(--essay-border); border-radius: 26px; padding: 28px 24px; background: var(--essay-panel-bg); box-shadow: 0 18px 48px rgba(20, 28, 25, 0.04); }
+    #global-indexes-research .essay-section h2 { margin: 0 0 16px; color: var(--essay-text-strong); font-size: clamp(1.45rem, 2vw, 2rem); letter-spacing: -0.02em; }
+    #global-indexes-research .essay-section h3 { margin: 24px 0 12px; color: var(--essay-text-strong); font-size: 1.14rem; }
+    #global-indexes-research .essay-section p { margin: 12px 0 0; }
+    #global-indexes-research .essay-section ul, #global-indexes-research .essay-section ol { margin: 14px 0 0 22px; padding: 0; }
+    #global-indexes-research .essay-section li + li { margin-top: 8px; }
+    #global-indexes-research .essay-section strong { color: var(--essay-text-strong); }
+    #global-indexes-research .essay-section a { color: var(--essay-link); text-decoration: none; border-bottom: 1px solid var(--essay-link-border); }
+    #global-indexes-research .essay-section a:hover { border-bottom-color: var(--essay-link-border-hover); }
+    #global-indexes-research .metric-strip { display: grid; gap: 14px; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 18px; }
+    #global-indexes-research .metric { border: 1px solid var(--essay-border-soft); border-radius: 18px; padding: 16px; background: var(--essay-panel-strong-bg); }
+    #global-indexes-research .metric .label { display: block; margin-bottom: 8px; font-size: 0.8rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--essay-kicker); font-weight: 700; }
+    #global-indexes-research .metric .value { display: block; color: var(--essay-text-strong); font-size: 1rem; font-weight: 700; }
+    #global-indexes-research .essay-code { margin-top: 16px; border-radius: 18px; padding: 16px 18px; background: var(--essay-code-bg); color: var(--essay-code-text); overflow-x: auto; font-family: "Consolas", "SFMono-Regular", monospace; font-size: 0.93rem; line-height: 1.75; white-space: pre-wrap; }
+    #global-indexes-research code { padding: 0.12em 0.42em; border-radius: 6px; background: var(--essay-code-inline-bg); color: var(--essay-code-text); font-family: "Consolas", "SFMono-Regular", monospace; font-size: 0.92em; }
+    #global-indexes-research .comparison-table { width: 100%; border-collapse: collapse; margin-top: 18px; font-size: 0.95rem; }
+    #global-indexes-research .comparison-table th, #global-indexes-research .comparison-table td { border: 1px solid var(--essay-border-soft); padding: 12px 12px; vertical-align: top; text-align: left; }
+    #global-indexes-research .comparison-table th { background: var(--essay-panel-strong-bg); color: var(--essay-text-strong); font-weight: 700; }
+    #global-indexes-research .scenario-nav { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+    #global-indexes-research .scenario-nav button { border: 1px solid var(--essay-border); border-radius: 999px; padding: 10px 16px; background: var(--essay-button-bg); color: var(--essay-button-text); cursor: pointer; font: inherit; transition: transform 0.18s ease, background 0.18s ease, color 0.18s ease, border-color 0.18s ease; }
+    #global-indexes-research .scenario-nav button:hover { transform: translateY(-1px); }
+    #global-indexes-research .scenario-nav button.is-active { background: var(--essay-button-active-bg); color: var(--essay-button-active-text); border-color: transparent; }
+    #global-indexes-research .scenario-panel { display: none; margin-top: 18px; }
+    #global-indexes-research .scenario-panel.is-active { display: block; }
+    #global-indexes-research .impact-grid { display: grid; gap: 16px; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 18px; }
+    #global-indexes-research .impact-card { border: 1px solid var(--essay-border-soft); border-radius: 20px; padding: 18px; background: var(--essay-panel-strong-bg); }
+    #global-indexes-research .impact-card h3 { margin-top: 0; }
+    #global-indexes-research .reference-list { margin-top: 18px; columns: 2; column-gap: 22px; }
+    #global-indexes-research .reference-item { break-inside: avoid; margin: 0 0 12px; padding: 0 0 0 18px; position: relative; }
+    #global-indexes-research .reference-item::before { content: ""; position: absolute; left: 0; top: 0.72em; width: 7px; height: 7px; border-radius: 50%; background: var(--essay-link); opacity: 0.75; }
+    #global-indexes-research .essay-disclaimer { margin-top: 18px; border-radius: 18px; padding: 16px 18px; background: var(--essay-panel-strong-bg); border: 1px solid var(--essay-border-soft); color: var(--essay-text-muted); font-size: 0.95rem; }
+    @media (max-width: 960px) { #global-indexes-research .summary-card, #global-indexes-research .note-card, #global-indexes-research .card { grid-column: span 6; } #global-indexes-research .metric-strip, #global-indexes-research .impact-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } #global-indexes-research .reference-list { columns: 1; } }
+    @media (max-width: 640px) { #global-indexes-research .essay-shell { width: min(100vw - 20px, 100%); padding: 18px 0 60px; } #global-indexes-research .essay-hero, #global-indexes-research .essay-section { border-radius: 22px; padding: 22px 18px; } #global-indexes-research .summary-card, #global-indexes-research .note-card, #global-indexes-research .card { grid-column: span 12; } #global-indexes-research .metric-strip, #global-indexes-research .impact-grid { grid-template-columns: 1fr; } #global-indexes-research .comparison-table { display: block; overflow-x: auto; white-space: nowrap; } }
+  </style>
+
+  <div class="essay-shell">
+    <header class="essay-hero">
+      <p class="essay-kicker">Global Index Research</p>
+      <h1>一文彻底读懂全球市场大盘指数</h1>
+      <p class="essay-lead">这篇文章试图把几个经常被混在一起的概念拆开讲透：<strong>指数是什么</strong>、<strong>被动买入到底在买什么</strong>、<strong>各大指数是谁在运营、按什么规则运营</strong>、<strong>指数为什么会反过来影响市场和个股</strong>，以及 <strong>全球主要大盘指数和可投资 ETF 之间的真实对应关系</strong>。正文尽量只使用监管机构、指数管理人、基金发行人和学术研究能相互印证的高把握信息。</p>
+      <div class="essay-summary-grid">
+        <section class="summary-card"><h3>核心结论 1</h3><p>指数不是一份静态股票名单，而是一套可授权、可复制、可再平衡、可被基金与衍生品调用的规则系统。</p></section>
+        <section class="summary-card"><h3>核心结论 2</h3><p>被动买入不等于永远不卖，而是以尽量小的跟踪误差去复制某个基准，因此会在调仓日、纳入剔除日和公司行动日集中交易。</p></section>
+        <section class="summary-card"><h3>核心结论 3</h3><p>指数公司真正控制的是四个关键旋钮：股票池、筛选规则、权重算法、再平衡节奏。只要这四个旋钮变化，资金流向就会随之改变。</p></section>
+        <section class="summary-card"><h3>核心结论 4</h3><p>指数纳入对个股的影响长期存在，但强度不是恒定的。经典指数效应在部分市场里已明显减弱，不过流动性、关注度与所有权结构效应仍然重要。</p></section>
+      </div>
+    </header>
+
+    <section class="essay-section">
+      <h2>研究边界与资料分层</h2>
+      <p>这篇研究优先使用四类资料：<strong>政府与监管解释</strong>、<strong>指数管理人的官方页面或方法论文档</strong>、<strong>ETF 官方产品页</strong>、<strong>学术论文</strong>。监管与政府资料用于定义术语，指数管理人资料用于确认运作方式，ETF 产品页用于确认指数到产品的映射，学术论文用于评估市场影响。</p>
+      <div class="essay-note-grid">
+        <section class="note-card"><h3>监管定义层</h3><p>美国 SEC 投资者教育网站 <a href="https://www.investor.gov/introduction-investing/investing-basics/glossary/index" target="_blank" rel="noreferrer">Investor.gov 对 index</a>、<a href="https://www.investor.gov/introduction-investing/investing-basics/glossary/index-fund" target="_blank" rel="noreferrer">index fund</a>、<a href="https://www.investor.gov/introduction-investing/investing-basics/glossary/passive-investing" target="_blank" rel="noreferrer">passive investing</a> 和 <a href="https://www.investor.gov/introduction-investing/investing-basics/glossary/exchange-traded-funds-etfs" target="_blank" rel="noreferrer">ETF</a> 给出了最基础、最稳妥的投资者口径。</p></section>
+        <section class="note-card"><h3>官方方法论层</h3><p>本文优先引用 MSCI、FTSE Russell、Nasdaq、STOXX、JPX 等可直接访问的官方页面。少数 S&amp;P DJI 页面会对自动抓取返回 403，因此文中关于该系列仅写高把握、广泛公开确认的规则，不把难以核实的细节写成确定事实。</p></section>
+        <section class="note-card"><h3>学术证据层</h3><p>价格压力、纳入效应、被动所有权与公司治理这几个问题，单看经验直觉很容易误判；因此正文使用 1986 到 2025 年之间的经典与更新文献做交叉验证。</p></section>
+      </div>
+      <div class="metric-strip">
+        <div class="metric"><span class="label">定义锚点</span><span class="value">SEC / Investor.gov</span></div>
+        <div class="metric"><span class="label">指数管理人</span><span class="value">MSCI / FTSE Russell / Nasdaq / STOXX / JPX</span></div>
+        <div class="metric"><span class="label">产品映射</span><span class="value">Vanguard / iShares / SPDR / Invesco</span></div>
+        <div class="metric"><span class="label">学术证据</span><span class="value">Journal of Finance / RFS / JFE</span></div>
+      </div>
+    </section>
+
+    <section class="essay-section">
+      <h2>一、先把最容易混淆的四个概念拆开</h2>
+      <h3>1. 指数是什么</h3>
+      <p>从投资者教育口径看，<strong>指数</strong>是用于衡量一组证券表现的方法。换句话说，指数不是市场天然存在的东西，而是人为定义出来的度量装置。欧盟《Benchmark Regulation》(Regulation (EU) 2016/1011) 进一步把 benchmark 描述为一种用于确定金融工具价值、支付金额或衡量基金业绩的指数或参考值。这意味着现代指数同时承担了三层角色：<strong>市场温度计</strong>、<strong>投资合同里的参照物</strong>、<strong>资金分配的交通指挥系统</strong>。</p>
+      <h3>2. 指数基金是什么</h3>
+      <p>Investor.gov 对 <strong>index fund</strong> 的定义非常关键：它可以是共同基金、ETF 或 UIT；其核心不是法律包装，而是采用 <strong>passive investment strategy</strong>，目标是在扣费前实现与某个指数大致相同的收益。也就是说，指数基金的本质是复制规则，而不是抄作业买热门股。</p>
+      <h3>3. 什么是被动投资 / 被动买入</h3>
+      <p>Investor.gov 对 <strong>passive investing</strong> 的解释是：一种买入并长期持有的策略，通常尝试复制某个基准指数的表现。这里最容易误解的地方有两个：第一，被动不等于不交易；第二，被动也不等于没有判断。被动投资真正固定下来的，是“我服从哪个规则”，而不是“我从此不再买卖”。当指数成分、权重、自由流通股、公司行为或再平衡窗口发生变化时，被动资金会被动地、但非常真实地交易。</p>
+      <h3>4. ETF 又是什么</h3>
+      <p>ETF 是一种在交易所上市交易的基金份额形式。它可以跟踪指数，也可以做主动管理、商品、债券甚至衍生品策略；因此 <strong>ETF 不是指数基金的同义词</strong>。不过在股票大盘指数世界里，ETF 是最重要的传导器，因为它把抽象的指数规则变成了能够被普通投资者、机构、做市商、期权和期货市场直接调用的交易工具。</p>
+      <div class="essay-code">指数 = 一套规则 + 一组证券 + 一种权重方法 + 一套再平衡机制
+指数基金 = 用基金载体复制指数规则
+被动买入 = 服从基准而买，不是永远不卖
+ETF = 一种基金交易形态；指数 ETF 只是 ETF 的重要子集</div>
+    </section>
+
+    <section class="essay-section">
+      <h2>二、指数究竟是如何运作的</h2>
+      <p>真正的指数工业链远比“编个股票名单”复杂。一个能被全球资金广泛使用的指数，通常要经过 <strong>编制、维护、发布、授权、复制、交易、结算</strong> 六道工序。</p>
+      <ol>
+        <li><strong>定义股票池</strong>：先定义国家、交易所、证券类型、自由流通要求、外资可投资性、流动性门槛和最小市值门槛。</li>
+        <li><strong>设定筛选逻辑</strong>：例如是否剔除金融股、是否要求盈利、是否需要委员会裁量、是否采用自由流通市值。</li>
+        <li><strong>决定权重算法</strong>：最常见的是自由流通市值加权，也有价格加权、等权、修正市值加权、分层 capped weighting 等。</li>
+        <li><strong>管理公司行动</strong>：拆股、并股、增发、分红、退市、并购、再融资、外资持股上限变化都会触发指数层面的处理。</li>
+        <li><strong>定期再平衡 / 重组</strong>：季度、半年度或年度统一检查资格与权重，把规则重新落到最新市场结构上。</li>
+        <li><strong>授权给基金与衍生品</strong>：基金公司要付授权费，产品文件里会写明跟踪哪个指数，做市商和授权参与人再把指数变成二级市场流动性。</li>
+      </ol>
+      <h3>指数管理人真正控制的四个旋钮</h3>
+      <div class="essay-card-grid">
+        <section class="card"><h3>股票池</h3><p>你先定义哪些股票有资格被看见，市场影响就已经开始了。国家分类、板块定义、外资限制都会改变资金覆盖范围。</p></section>
+        <section class="card"><h3>权重</h3><p>市值加权会把资金越来越多地压向头部公司；等权则更偏向再平衡式的价值回补；价格加权则带来完全不同的暴露结构。</p></section>
+        <section class="card"><h3>调仓节奏</h3><p>季度、半年度还是年度重组，会决定指数基金交易流量是平滑释放还是在某个窗口集中爆发。</p></section>
+        <section class="card"><h3>裁量权</h3><p>完全规则化的指数更可预测；委员会制指数则会把代表性和可投资性判断嵌进结果，S&amp;P 500 是典型例子。</p></section>
+        <section class="card"><h3>自由流通调整</h3><p>MSCI、FTSE、TOPIX 等广泛使用 free-float adjustment。它们关心的不是总股本，而是市场上真正可交易的那一部分股份。</p></section>
+        <section class="card"><h3>许可与生态</h3><p>指数一旦被大量 ETF、期货、期权、结构化产品和财富管理账户采用，它就从统计口径升级为基础设施。</p></section>
+      </div>
+      <h3>被动买入在交易层面到底怎么发生</h3>
+      <p>典型链条是这样的：投资者申购指数 ETF，授权参与人完成一级市场创建，基金经理根据基准权重买入对应证券；如果基金采用优化抽样，而不是完全复制，管理人会用更少的证券去逼近整体风险暴露。指数变更时，基金经理要在跟踪误差、市场冲击成本、税务和流动性之间做权衡。你看到的被动买盘，本质上是这些约束共同作用下的执行结果。</p>
+    </section>
+
+    <section class="essay-section">
+      <h2>三、全球主要指数家族分别是谁在运作</h2>
+      <p>全球大盘指数并不是由交易所统一提供，而是由一批专业指数管理人、交易所集团和本地市场机构共同构成。它们既生产市场叙事，也生产可授权的商业基准。</p>
+      <table class="comparison-table">
+        <thead><tr><th>指数家族 / 机构</th><th>代表指数</th><th>高把握运作特征</th><th>对投资者意味着什么</th></tr></thead>
+        <tbody>
+          <tr><td><strong>S&amp;P Dow Jones Indices</strong></td><td>S&amp;P 500、Dow Jones Industrial Average、S&amp;P/ASX 200</td><td>强势品牌、委员会色彩较重，部分旗舰指数兼具代表性与可投资性判断。</td><td>很多最常见的美国大盘叙事其实是 S&amp;P DJI 口径，而不是美国市场唯一客观真相。</td></tr>
+          <tr><td><strong>MSCI</strong></td><td>MSCI ACWI、MSCI World、MSCI EAFE、MSCI Emerging Markets</td><td>全球化最强的股票基准家族之一，强调国家分类、可投资性、自由流通股与分层市值覆盖。</td><td>国际股票配置里，MSCI 常被视作机构默认语言，尤其是 developed / emerging 的切分。</td></tr>
+          <tr><td><strong>FTSE Russell</strong></td><td>FTSE Global All Cap、FTSE All-World、FTSE Developed、FTSE Emerging、Russell 1000/2000</td><td>同时掌握全球股票基准与美国风格 / 市值分层基准，广泛使用自由流通市值与系统性重组。</td><td>如果你买的是 Vanguard 的很多国际股票 ETF，底层常常是 FTSE 体系，而不是 MSCI。</td></tr>
+          <tr><td><strong>Nasdaq</strong></td><td>Nasdaq-100</td><td>旗舰指数聚焦 Nasdaq 上市的合格大型非金融公司，采用修正市值加权，方法论文档可公开访问。</td><td>很多人以为自己买的是科技指数，其实买到的是一个带强平台经济和成长风格偏好的大盘指数。</td></tr>
+          <tr><td><strong>STOXX</strong></td><td>STOXX Europe 600、EURO STOXX 50</td><td>欧洲区域指数的核心供应商之一，兼顾广覆盖基准和欧元区蓝筹浓缩篮子。</td><td>欧洲配置里要先分清你要的是全欧洲，还是欧元区核心大盘。</td></tr>
+          <tr><td><strong>Japan Exchange Group / TSE</strong></td><td>TOPIX</td><td>JPX 官方页面明确将 TOPIX 作为东京证券交易所市场整体表现的重要指标，并采用自由流通调整。</td><td>研究日本大盘时，TOPIX 通常比价格加权的 Nikkei 225 更接近“全市场可投资大盘”的概念。</td></tr>
+          <tr><td><strong>Nikkei Inc.</strong></td><td>Nikkei 225</td><td>价格加权、媒体属性强、品牌影响力极高，是日本最具传播力的股市温度计之一。</td><td>它的媒体可见度远高于其市场覆盖完整性；投资者不能把它直接等同于日本整体股市。</td></tr>
+          <tr><td><strong>本地交易所 / 本地指数公司</strong></td><td>Nifty 50、Hang Seng、TAIEX、KOSPI 200、CSI 300</td><td>在本土市场承担价格发现和衍生品基准功能，国际基金则常用 MSCI / FTSE 对应国家或区域指数做跨境投资。</td><td>本地最有名的指数和全球资金最常用的可投资基准，经常不是同一个东西。</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="essay-section">
+      <h2>四、股票是如何被选进指数的</h2>
+      <p>任何指数纳入规则，本质上都在回答五个问题：<strong>股票来自哪里、够不够大、够不够能交易、权重怎么算、多久重检一次</strong>。下面把全球常见的大盘指数家族拆成规则框架，而不是神秘黑箱。</p>
+      <table class="comparison-table">
+        <thead><tr><th>指数家族</th><th>股票池 / 地域</th><th>主要筛选逻辑</th><th>权重方法</th><th>重组节奏</th></tr></thead>
+        <tbody>
+          <tr><td>S&amp;P 500</td><td>美国大型上市公司</td><td>委员会审议代表性、规模、流动性、公众持股与盈利能力等因素；不是纯公式榜单。</td><td>自由流通市值加权</td><td>按需调整，委员会决策为主</td></tr>
+          <tr><td>MSCI GIMI 体系</td><td>全球按国家分类划分的可投资股票池</td><td>强调市值分层、流动性、自由流通股、外资可投资性和外国持股限制。</td><td>自由流通市值加权</td><td>季度检视 + 半年度核心审查</td></tr>
+          <tr><td>FTSE GEIS</td><td>全球 developed / emerging 股票池</td><td>强调国家分类、规模门槛、流动性、自由流通比例、可投资性与定期审查。</td><td>自由流通市值加权</td><td>常规半年度审查，配合其他定期更新</td></tr>
+          <tr><td>Russell 1000 / 2000</td><td>美国可投资股票池</td><td>按照市值排序切分大盘与小盘，是美国风格与市值分层里最关键的年度排名日体系之一。</td><td>自由流通市值加权</td><td>年度重组为主</td></tr>
+          <tr><td>Nasdaq-100</td><td>Nasdaq 上市的合格大型非金融公司</td><td>官方方法论文档强调非金融限制、上市地与规模筛选，并通过修正权重控制过度集中。</td><td>修正市值加权</td><td>年度重组，并在需要时再平衡</td></tr>
+          <tr><td>STOXX Europe 600</td><td>欧洲主要发达市场股票</td><td>覆盖大中小盘，但常被投资者当作欧洲整体股市的重要温度计。</td><td>自由流通市值加权</td><td>定期审查</td></tr>
+          <tr><td>TOPIX</td><td>东京证券交易所内国普通股的广泛股票池</td><td>JPX 明确强调其市场整体性和自由流通调整处理。</td><td>自由流通调整市值加权</td><td>随公司行动和规则更新进行调整</td></tr>
+          <tr><td>Nikkei 225 / DJIA</td><td>精选蓝筹股票</td><td>并非按市值覆盖最大化，而是更强的代表性蓝筹篮子逻辑。</td><td>价格加权</td><td>定期审查</td></tr>
+        </tbody>
+      </table>
+      <h3>你真正应该看懂的，不是会不会入选，而是为什么是这种入选</h3>
+      <ul>
+        <li><strong>委员会制</strong>：例如 S&amp;P 500。好处是代表性与可投资性更强，坏处是可预测性弱一些。</li>
+        <li><strong>规则制</strong>：例如 MSCI、FTSE、Russell。好处是透明、可复盘，坏处是边界点会被大量资金前置博弈。</li>
+        <li><strong>价格加权</strong>：例如 DJIA、Nikkei 225。好处是历史延续性强，坏处是高股价公司会天然放大影响力。</li>
+        <li><strong>自由流通市值加权</strong>：当代大多数全球基准的默认方案，因为它更接近真实可投资市场容量。</li>
+      </ul>
+    </section>
+
+    <section class="essay-section">
+      <h2>五、被动资金会怎样影响市场本身</h2>
+      <p>指数的第一层影响是把市场描述方式标准化；第二层影响是把资金组织方式标准化；第三层影响则是把交易节奏同步化。一旦足够多的钱围绕同一套基准运作，指数就不再只是统计工具，而是市场结构的一部分。</p>
+      <div class="impact-grid">
+        <section class="impact-card"><h3>1. 资本会向头部公司自动集中</h3><p>在自由流通市值加权框架下，市值越大、涨得越多的公司，天然拿到更高权重。这会形成一种“成功者获得更多被动资金”的反馈机制。它不是阴谋，而是算法本身的属性。</p></section>
+        <section class="impact-card"><h3>2. 交易会在特定时点堆积</h3><p>再平衡日、指数重组日、MSCI / FTSE / Russell 年度与半年度审查窗口，往往会出现明显的成交放大、收盘竞价拥挤和短期价格扭曲。</p></section>
+        <section class="impact-card"><h3>3. 指数成为衍生品和风险管理底座</h3><p>股指期货、期权、结构化票据、资产配置模型和绩效考核都围绕指数工作。指数越主流，其价格信号越容易反向影响现货市场。</p></section>
+        <section class="impact-card"><h3>4. 所有权结构被重塑</h3><p>指数基金规模扩大后，BlackRock、Vanguard、State Street 等大型机构会在许多公司里形成稳定持股，这对公司治理、投票权和 stewardship 讨论产生长期影响。</p></section>
+      </div>
+      <h3>学术上如何看待指数化扭曲</h3>
+      <p>学术界的共识不是完全没影响，而是“影响真实存在，但强度、持续时间和机制会随时代变化”。1980 至 2000 年代大量研究支持<strong>需求曲线向下倾斜</strong>与<strong>价格压力</strong>解释；到近十多年，套利者、衍生品、ETF 做市和预期交易更成熟，最著名指数的纳入异常收益已有显著下降。</p>
+      <table class="comparison-table">
+        <thead><tr><th>文献</th><th>主要发现</th><th>对今天的意义</th></tr></thead>
+        <tbody>
+          <tr><td>Harris &amp; Gurel (1986), DOI: 10.1111/j.1540-6261.1986.tb04550.x</td><td>S&amp;P 500 调整会带来显著价格与成交量效应，支持短期价格压力存在。</td><td>说明指数名单变化本身就能产生可观察价格反应。</td></tr>
+          <tr><td>Shleifer (1986), DOI: 10.1111/j.1540-6261.1986.tb04518.x</td><td>新增纳入股票出现显著正异常收益，证据更偏向需求曲线而非简单认证效应。</td><td>这是经典指数效应文献锚点之一。</td></tr>
+          <tr><td>Kaul, Mehrotra &amp; Morck (2000), DOI: 10.1111/0022-1082.00230</td><td>TSX 权重上调带来约 2.3% 事件周超额收益，且无明显反转。</td><td>说明不只是入选 / 剔除，单纯权重变化也能影响价格。</td></tr>
+          <tr><td>Chang, Hong &amp; Liskovich (2015), DOI: 10.1093/rfs/hhu041</td><td>利用 Russell 指数边界做回归不连续设计，证明指数化会影响股票价格。</td><td>更强的识别策略提高了结论可信度。</td></tr>
+          <tr><td>Hwang, Rubesam &amp; Salmon 等 (2025), DOI: 10.1111/jofi.13410</td><td>S&amp;P 500 纳入效应从 1990 年代平均 7.4% 显著下降到过去十多年不到 1%。</td><td>指数效应没有消失，但“躺着等纳入暴涨”的时代大幅弱化了。</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="essay-section">
+      <h2>六、指数对成分股到底有什么影响</h2>
+      <h3>1. 纳入前：预期交易与博弈</h3>
+      <p>规则越清晰、重组日越固定、被动跟踪资金越大，越容易形成先买潜在入选股、先卖潜在剔除股的前置交易。Russell 体系尤其典型，因为年度排名和切分逻辑可预测性强。</p>
+      <h3>2. 纳入时：被动资金的机械需求真正落地</h3>
+      <p>一只股票被纳入后，跟踪该指数的基金必须在有限时间里把它买进组合。若跟踪资产规模很大、股票自由流通盘较小、收盘竞价流动性有限，短期价格冲击就会更明显。</p>
+      <h3>3. 纳入后：影响不只在价格</h3>
+      <ul>
+        <li><strong>流动性上升</strong>：成交量、借券活跃度、做市覆盖度通常改善。</li>
+        <li><strong>关注度上升</strong>：被更多研究系统、财富平台、机构看见，进入更标准化的投资池。</li>
+        <li><strong>所有权结构改变</strong>：被动资金成为稳定股东，换手率结构和投票结构随之变化。</li>
+        <li><strong>波动与相关性变化</strong>：股票与同一指数内部其他成分股的联动可能增强。</li>
+      </ul>
+      <h3>4. 剔除时：通常是相反方向，但并不完全镜像</h3>
+      <p>剔除会触发被动卖盘、关注度下降和一部分流动性回撤。但随着市场对事件的提前定价能力增强，删除效应也不再像早期文献时期那样极端。</p>
+      <h3>5. 公司治理层面的分歧：被动所有权究竟是好是坏</h3>
+      <p>这件事不能简单下结论。<strong>Appel, Gormley &amp; Keim (2016, DOI: 10.1016/j.jfineco.2016.03.003)</strong> 发现被动投资者并非完全被动，某些治理结果反而改善；但另一支文献，例如 <strong>Heath 等 (SSRN DOI: 10.2139/ssrn.3259433)</strong>，则强调被动机构在监控上并不一定积极。同时，<strong>Fichtner &amp; Heemskerk (2017, DOI: 10.2139/ssrn.2798653)</strong> 把大三家带来的所有权再集中问题推到前台。比较稳妥的理解是：<strong>被动所有权不会消灭治理，只会把治理方式从频繁买卖，转成长期持股下的 stewardship 与投票权管理</strong>。</p>
+    </section>
+
+    <section class="essay-section">
+      <h2>七、全球主要大盘指数地图</h2>
+      <p>下面这部分不再讲抽象原理，而是直接给你一个可用的市场地图：如果你研究全球股票市场，常见的大盘指数到底有哪些；它们主要覆盖什么；主流投资者通常用哪些 ETF 去接触这些暴露。</p>
+      <div class="scenario-nav" id="global-index-scenario-nav">
+        <button type="button" data-scenario-target="global">全球 / 跨区域</button>
+        <button type="button" data-scenario-target="us">美国</button>
+        <button type="button" data-scenario-target="europe">欧洲</button>
+        <button type="button" data-scenario-target="asia">亚太</button>
+        <button type="button" data-scenario-target="em">新兴市场</button>
+      </div>
+
+      <section class="scenario-panel" data-scenario-panel="global">
+        <h3>全球与跨区域宽基</h3>
+        <table class="comparison-table">
+          <thead><tr><th>指数</th><th>运营方</th><th>覆盖口径</th><th>代表 ETF / 代码</th></tr></thead>
+          <tbody>
+            <tr><td>MSCI ACWI</td><td>MSCI</td><td>发达市场 + 新兴市场，大中盘为主</td><td>iShares MSCI ACWI ETF，<strong>ACWI</strong></td></tr>
+            <tr><td>MSCI World</td><td>MSCI</td><td>仅发达市场，不含新兴市场</td><td>iShares MSCI World ETF，<strong>URTH</strong></td></tr>
+            <tr><td>MSCI EAFE</td><td>MSCI</td><td>美国和加拿大之外的发达市场</td><td>EFA、IEFA</td></tr>
+            <tr><td>MSCI Emerging Markets</td><td>MSCI</td><td>新兴市场宽基，大中盘是核心可投资层</td><td>IEMG 是更广覆盖的主流实现；历史上 EEM 也极具标志性</td></tr>
+            <tr><td>FTSE Developed Markets</td><td>FTSE Russell</td><td>发达市场宽基</td><td>VEA</td></tr>
+            <tr><td>FTSE Emerging Markets</td><td>FTSE Russell</td><td>新兴市场宽基</td><td>VWO</td></tr>
+            <tr><td>FTSE Global All Cap / Total World 常用口径</td><td>FTSE Russell</td><td>全球全市值层级，更接近 total world 口径</td><td>VT</td></tr>
+            <tr><td>Global ex-US 常用口径</td><td>FTSE Russell / CRSP 等</td><td>去美国后的全球股票暴露</td><td>VEU、VXUS</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="scenario-panel" data-scenario-panel="us">
+        <h3>美国大盘与风格分层</h3>
+        <table class="comparison-table">
+          <thead><tr><th>指数</th><th>运营方</th><th>口径</th><th>代表 ETF / 代码</th></tr></thead>
+          <tbody>
+            <tr><td>S&amp;P 500</td><td>S&amp;P DJI</td><td>美国大型蓝筹核心口径，全球最重要基准之一</td><td>SPY、IVV、VOO</td></tr>
+            <tr><td>Dow Jones Industrial Average</td><td>S&amp;P DJI</td><td>价格加权蓝筹指数，媒体影响力强</td><td>DIA</td></tr>
+            <tr><td>Nasdaq-100</td><td>Nasdaq</td><td>大型非金融成长股集中口径</td><td>QQQ、QQQM</td></tr>
+            <tr><td>Russell 2000</td><td>FTSE Russell</td><td>美国小盘代表口径</td><td>IWM</td></tr>
+            <tr><td>CRSP US Total Market</td><td>CRSP</td><td>美国全市场总股市口径</td><td>VTI</td></tr>
+            <tr><td>S&amp;P Total U.S. Stock Market</td><td>S&amp;P DJI</td><td>美国全市场口径的另一主流实现</td><td>ITOT</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="scenario-panel" data-scenario-panel="europe">
+        <h3>欧洲：头条指数与可投资宽基并不总是同一条线</h3>
+        <table class="comparison-table">
+          <thead><tr><th>指数</th><th>运营方</th><th>说明</th><th>投资者常见 ETF</th></tr></thead>
+          <tbody>
+            <tr><td>STOXX Europe 600</td><td>STOXX</td><td>欧洲最常见的全区域头条指数之一，覆盖大中小盘。</td><td>美国市场里更常见的是欧洲宽基代理，而不是完全精确复制，例如 <strong>VGK</strong>、<strong>SPEU</strong></td></tr>
+            <tr><td>EURO STOXX 50</td><td>STOXX</td><td>欧元区 50 只大型蓝筹，集中度高，常用于欧元区大盘表达。</td><td>FEZ</td></tr>
+            <tr><td>FTSE 100</td><td>FTSE Russell</td><td>英国大型蓝筹主指标，能源、金融、矿业权重感较强。</td><td>更多见于英国本地上市产品；美国投资者常用欧洲宽基 ETF 替代英国单独配置。</td></tr>
+            <tr><td>DAX</td><td>Deutsche Börse 体系</td><td>德国大盘龙头集中口径，制造业与出口周期敏感度高。</td><td>跨境配置时往往通过欧洲宽基或德国单国 ETF 间接触达。</td></tr>
+            <tr><td>CAC 40 / SMI</td><td>Euronext / SIX</td><td>法国与瑞士最具新闻传播力的大盘指数。</td><td>更多作为观察指标；真正配置时常被欧洲宽基 ETF 吸收。</td></tr>
+            <tr><td>欧洲宽基可投资替代</td><td>FTSE / S&amp;P 等</td><td>真正被全球资产配置账户大量使用的，往往是区域宽基而非单一媒体头条指数。</td><td>VGK、SPEU</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="scenario-panel" data-scenario-panel="asia">
+        <h3>亚太发达市场：日本最关键，澳洲更适合本地指数表达</h3>
+        <table class="comparison-table">
+          <thead><tr><th>指数</th><th>运营方</th><th>说明</th><th>代表 ETF / 备注</th></tr></thead>
+          <tbody>
+            <tr><td>Nikkei 225</td><td>Nikkei Inc.</td><td>日本媒体可见度最高的股市温度计，价格加权。</td><td>美国投资者更常买日本宽基 ETF，而不一定直接买 Nikkei 225 复制产品。</td></tr>
+            <tr><td>TOPIX</td><td>JPX</td><td>更接近日本整体可投资大盘口径，常被机构视作更完整的日本股票基准。</td><td>美国市场常见代理是 EWJ，但它跟踪的是 MSCI Japan，不是 TOPIX 本体。</td></tr>
+            <tr><td>S&amp;P/ASX 200</td><td>S&amp;P DJI / ASX</td><td>澳大利亚最重要的大盘基准之一。</td><td>STW</td></tr>
+            <tr><td>Hang Seng</td><td>Hang Seng Indexes</td><td>香港最具传播力的大盘指数之一。</td><td>跨境配置时，投资者更常直接用中国 / 香港区域 ETF，而不一定精确追踪恒生指数本体。</td></tr>
+            <tr><td>TAIEX / KOSPI 200</td><td>TWSE / KRX</td><td>台湾与韩国最关键的本地市场温度计，对半导体与出口周期敏感度高。</td><td>跨境产品更多见 MSCI Taiwan、MSCI Korea 等国家宽基口径的 ETF。</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="scenario-panel" data-scenario-panel="em">
+        <h3>新兴市场：跨国宽基比单国头条指数更重要</h3>
+        <table class="comparison-table">
+          <thead><tr><th>指数</th><th>运营方</th><th>说明</th><th>代表 ETF / 代码</th></tr></thead>
+          <tbody>
+            <tr><td>MSCI Emerging Markets</td><td>MSCI</td><td>全球最重要的新兴市场股票基准之一，很多主动 / 被动国际组合都把它作为默认比较基准。</td><td>IEMG 是更广覆盖的主流实现；历史上 EEM 也极具标志性。</td></tr>
+            <tr><td>FTSE Emerging Markets</td><td>FTSE Russell</td><td>Vanguard 国际股票体系中非常关键的新兴市场基准。</td><td>VWO</td></tr>
+            <tr><td>中国宽基（MSCI China / FTSE China / CSI 系）</td><td>MSCI / FTSE / 中证等</td><td>中国跨境指数体系最复杂，A 股、港股、红筹、中概 ADR 的纳入方式差异很大。</td><td>MCHI；更集中于大型国企口径的常见产品还有 FXI</td></tr>
+            <tr><td>巴西宽基</td><td>MSCI / 本地映射</td><td>巴西是拉美中最常被单独配置的新兴市场之一。</td><td>EWZ</td></tr>
+            <tr><td>印度、台湾、韩国等单国指数</td><td>本地交易所 + MSCI / FTSE 国家映射</td><td>在全球资产配置里，往往先作为新兴市场宽基的一部分被持有，单国配置通常属于更主动的战术配置。</td><td>单国 ETF 很多，但不宜把头条指数和 ETF 口径简单画等号。</td></tr>
+          </tbody>
+        </table>
+      </section>
+    </section>
+
+    <section class="essay-section">
+      <h2>八、为什么“某股票被纳入指数”会让市场如此关注</h2>
+      <p>因为这类事件同时改变三件事：<strong>被动需求</strong>、<strong>投资者注意力</strong>、<strong>公司在资本市场地图里的坐标</strong>。它不是纯粹的新闻，而是一个会触发真实资金流和真实再定价的制度事件。</p>
+      <div class="essay-card-grid">
+        <section class="card"><h3>对指数本身</h3><p>纳入新股能提高指数的代表性和可投资性，但也可能改变行业权重、风格暴露和头部集中度。</p></section>
+        <section class="card"><h3>对个股交易层</h3><p>短期内会迎来被动买盘、做市活动和事件驱动资金；若股票流通盘偏小，冲击成本更明显。</p></section>
+        <section class="card"><h3>对个股估值层</h3><p>估值提升未必长期稳定，但“更容易被看见、更容易被持有”的资格本身就有价值。</p></section>
+        <section class="card"><h3>对股东结构</h3><p>指数基金入场后，公司股东名单会更机构化、更长期化，也会把治理讨论从交易台转到 stewardship 团队。</p></section>
+        <section class="card"><h3>对融资能力</h3><p>流动性改善与市场覆盖提升，往往会反过来影响再融资条件和资本成本感知。</p></section>
+        <section class="card"><h3>对市场叙事</h3><p>一家公司一旦进入旗舰指数，媒体、卖方和资金端都会更频繁地把它当作该行业或该国家的代表样本。</p></section>
+      </div>
+      <h3>但为什么今天不能把指数纳入神话化</h3>
+      <p>因为现代市场对指数事件的预期能力比 1990 年代强得多。套利资本、ETF 做市、期货期权和提前布局潜在纳入股的策略，会在正式公告前后显著分流超额收益。这就是为什么最新研究会发现，最经典的 S&amp;P 500 纳入异象已经大幅下降。</p>
+    </section>
+
+    <section class="essay-section">
+      <h2>九、如何研究一个指数，才不会被名字骗</h2>
+      <p>很多初学者看到“全球”“全市场”“蓝筹”“核心”“大盘”这几个词，就以为自己已经看懂了指数。实际上，真正决定暴露结构的，是下面这十个问题。</p>
+      <ol>
+        <li>它覆盖的是哪个国家、交易所或区域？</li>
+        <li>它是只含发达市场，还是含新兴市场？</li>
+        <li>它只做 large / mid cap，还是包含 small cap？</li>
+        <li>它是总市值加权，还是自由流通市值加权，还是价格加权？</li>
+        <li>它有没有行业剔除、盈利筛选或委员会裁量？</li>
+        <li>再平衡和成分审查多久做一次？</li>
+        <li>对外资持股限制、停牌、退市和特殊股权结构怎么处理？</li>
+        <li>有多少资产真的在跟踪它？这是判断事件影响强度的核心变量之一。</li>
+        <li>你买到的 ETF 是精确复制这条指数，还是只是在买相邻口径的代理？</li>
+        <li>该指数对你是新闻观察工具，还是实际投资基准？这两者不能混用。</li>
+      </ol>
+      <div class="essay-code">研究指数时最危险的错误：
+1. 把新闻头条指数当成完整市场口径
+2. 把 ETF 名称当成底层指数规则
+3. 把被动资金理解成永远不卖
+4. 把纳入效应理解成永久暴涨保证
+5. 把“全球”误解为必然包含新兴市场与小盘股</div>
+    </section>
+
+    <section class="essay-section">
+      <h2>十、把全文压缩成一句可执行结论</h2>
+      <p>如果你只记住一句话，那就是：<strong>指数不是中性的名单，而是会塑造资金流、交易节奏、公司所有权结构与市场叙事的规则机器</strong>。研究指数时，不能只看名字和点位，必须同步看它的股票池、权重算法、成分调整机制、被跟踪规模和可投资产品生态。</p>
+      <p>对实际投资者而言，这意味着三个执行上的区别：</p>
+      <ul>
+        <li>买全球 ETF 前，先确认它到底含不含新兴市场、含不含小盘股。</li>
+        <li>看某只股票能否进指数时，不要只想短期拉升，还要看它是否会改变流动性、估值框架和持股结构。</li>
+        <li>看本地新闻里的头条指数时，先问一句：这条指数是媒体符号，还是我真正应该拿来做资产配置的基准？</li>
+      </ul>
+      <div class="essay-disclaimer">这篇文章追求的是高信息密度与高把握度，而不是把所有指数和 ETF 都无差别堆满。对少数受限于官方站点反爬而难以自动核实的条目，正文采用了更保守的写法：只写可交叉验证的稳定事实，不把模糊细节硬写成确定结论。</div>
+    </section>
+
+    <section class="essay-section">
+      <h2>参考资料与链接</h2>
+      <div class="reference-list">
+        <div class="reference-item">Investor.gov, <a href="https://www.investor.gov/introduction-investing/investing-basics/glossary/index" target="_blank" rel="noreferrer">Index</a>.</div>
+        <div class="reference-item">Investor.gov, <a href="https://www.investor.gov/introduction-investing/investing-basics/glossary/index-fund" target="_blank" rel="noreferrer">Index Fund</a>.</div>
+        <div class="reference-item">Investor.gov, <a href="https://www.investor.gov/introduction-investing/investing-basics/glossary/passive-investing" target="_blank" rel="noreferrer">Passive Investing</a>.</div>
+        <div class="reference-item">Investor.gov, <a href="https://www.investor.gov/introduction-investing/investing-basics/glossary/exchange-traded-funds-etfs" target="_blank" rel="noreferrer">Exchange-Traded Funds (ETFs)</a>.</div>
+        <div class="reference-item">EUR-Lex, <a href="https://eur-lex.europa.eu/eli/reg/2016/1011/oj/eng" target="_blank" rel="noreferrer">Regulation (EU) 2016/1011</a>.</div>
+        <div class="reference-item">MSCI, <a href="https://www.msci.com/indexes/index-resources/index-methodology" target="_blank" rel="noreferrer">Index Methodology Resources</a>.</div>
+        <div class="reference-item">LSEG / FTSE Russell, <a href="https://www.lseg.com/en/ftse-russell/indices/global-equity-index-series" target="_blank" rel="noreferrer">FTSE Global Equity Index Series</a>.</div>
+        <div class="reference-item">Nasdaq, <a href="https://indexes.nasdaqomx.com/Index/Overview/NDX" target="_blank" rel="noreferrer">Overview for NDX</a>.</div>
+        <div class="reference-item">Nasdaq, <a href="https://indexes.nasdaqomx.com/docs/Methodology_NDX.pdf" target="_blank" rel="noreferrer">Nasdaq-100 Methodology</a>.</div>
+        <div class="reference-item">STOXX, <a href="https://stoxx.com/index/sxxp/" target="_blank" rel="noreferrer">STOXX Europe 600</a>.</div>
+        <div class="reference-item">Japan Exchange Group, <a href="https://www.jpx.co.jp/english/markets/indices/topix/" target="_blank" rel="noreferrer">TOPIX (TPX)</a>.</div>
+        <div class="reference-item">iShares, <a href="https://www.ishares.com/us/products/239600/ishares-msci-acwi-etf" target="_blank" rel="noreferrer">ACWI</a>.</div>
+        <div class="reference-item">iShares, <a href="https://www.ishares.com/us/products/239696/ishares-msci-world-etf" target="_blank" rel="noreferrer">URTH</a>.</div>
+        <div class="reference-item">iShares, <a href="https://www.ishares.com/us/products/239623/ishares-msci-eafe-etf" target="_blank" rel="noreferrer">EFA</a>.</div>
+        <div class="reference-item">iShares, <a href="https://www.ishares.com/us/products/244049/ishares-core-msci-eafe-etf" target="_blank" rel="noreferrer">IEFA</a>.</div>
+        <div class="reference-item">iShares, <a href="https://www.ishares.com/us/products/244050/ishares-core-msci-emerging-markets-etf" target="_blank" rel="noreferrer">IEMG</a>.</div>
+        <div class="reference-item">Vanguard, <a href="https://investor.vanguard.com/investment-products/etfs/profile/vt" target="_blank" rel="noreferrer">VT</a>.</div>
+        <div class="reference-item">Vanguard, <a href="https://investor.vanguard.com/investment-products/etfs/profile/vea" target="_blank" rel="noreferrer">VEA</a>.</div>
+        <div class="reference-item">Vanguard, <a href="https://investor.vanguard.com/investment-products/etfs/profile/vwo" target="_blank" rel="noreferrer">VWO</a>.</div>
+        <div class="reference-item">Vanguard, <a href="https://investor.vanguard.com/investment-products/etfs/profile/veu" target="_blank" rel="noreferrer">VEU</a>.</div>
+        <div class="reference-item">Vanguard, <a href="https://investor.vanguard.com/investment-products/etfs/profile/vxus" target="_blank" rel="noreferrer">VXUS</a>.</div>
+        <div class="reference-item">Vanguard, <a href="https://investor.vanguard.com/investment-products/etfs/profile/voo" target="_blank" rel="noreferrer">VOO</a>.</div>
+        <div class="reference-item">Vanguard, <a href="https://investor.vanguard.com/investment-products/etfs/profile/vti" target="_blank" rel="noreferrer">VTI</a>.</div>
+        <div class="reference-item">Vanguard, <a href="https://investor.vanguard.com/investment-products/etfs/profile/vgk" target="_blank" rel="noreferrer">VGK</a>.</div>
+        <div class="reference-item">SPDR / State Street, <a href="https://www.ssga.com/us/en/intermediary/etfs/funds/spdr-sp-500-etf-trust-spy" target="_blank" rel="noreferrer">SPY</a>.</div>
+        <div class="reference-item">SPDR / State Street, <a href="https://www.ssga.com/us/en/intermediary/etfs/funds/spdr-dow-jones-industrial-average-etf-trust-dia" target="_blank" rel="noreferrer">DIA</a>.</div>
+        <div class="reference-item">SPDR / State Street, <a href="https://www.ssga.com/us/en/intermediary/etfs/funds/spdr-portfolio-europe-etf-speu" target="_blank" rel="noreferrer">SPEU</a>.</div>
+        <div class="reference-item">SPDR / State Street, <a href="https://www.ssga.com/us/en/intermediary/etfs/funds/spdr-euro-stoxx-50-etf-fez" target="_blank" rel="noreferrer">FEZ</a>.</div>
+        <div class="reference-item">SPDR / State Street, <a href="https://www.ssga.com/au/en_gb/intermediary/etfs/funds/spdr-sp-asx-200-fund-stw" target="_blank" rel="noreferrer">STW</a>.</div>
+        <div class="reference-item">Invesco, <a href="https://www.invesco.com/qqq-etf/en/home.html" target="_blank" rel="noreferrer">QQQ</a>.</div>
+        <div class="reference-item">Invesco, <a href="https://www.invesco.com/us/financial-products/etfs/product-detail?audienceType=Investor&ticker=QQQM" target="_blank" rel="noreferrer">QQQM</a>.</div>
+        <div class="reference-item">iShares, <a href="https://www.ishares.com/us/products/239726/ishares-core-sp-500-etf" target="_blank" rel="noreferrer">IVV</a>.</div>
+        <div class="reference-item">iShares, <a href="https://www.ishares.com/us/products/239710/ishares-russell-2000-etf" target="_blank" rel="noreferrer">IWM</a>.</div>
+        <div class="reference-item">iShares, <a href="https://www.ishares.com/us/products/239724/ishares-core-sp-total-us-stock-market-etf" target="_blank" rel="noreferrer">ITOT</a>.</div>
+        <div class="reference-item">iShares, <a href="https://www.ishares.com/us/products/239665/ishares-msci-japan-etf" target="_blank" rel="noreferrer">EWJ</a>.</div>
+        <div class="reference-item">iShares, <a href="https://www.ishares.com/us/products/239619/ishares-msci-china-etf" target="_blank" rel="noreferrer">MCHI</a>.</div>
+        <div class="reference-item">iShares, <a href="https://www.ishares.com/us/products/239612/ishares-msci-brazil-etf" target="_blank" rel="noreferrer">EWZ</a>.</div>
+        <div class="reference-item">Shleifer, A. (1986). <em>Do Demand Curves for Stocks Slope Down?</em> DOI: 10.1111/j.1540-6261.1986.tb04518.x.</div>
+        <div class="reference-item">Harris, L. &amp; Gurel, E. (1986). <em>Price and Volume Effects Associated with Changes in the S&amp;P 500 List</em>. DOI: 10.1111/j.1540-6261.1986.tb04550.x.</div>
+        <div class="reference-item">Kaul, A., Mehrotra, V., &amp; Morck, R. (2000). <em>Demand Curves for Stocks Do Slope Down</em>. DOI: 10.1111/0022-1082.00230.</div>
+        <div class="reference-item">Chang, Y.-C., Hong, H., &amp; Liskovich, I. (2015). <em>Regression Discontinuity and the Price Effects of Stock Market Indexing</em>. DOI: 10.1093/rfs/hhu041.</div>
+        <div class="reference-item">Hwang, B.-H. et al. (2025). <em>The Disappearing Index Effect</em>. DOI: 10.1111/jofi.13410.</div>
+        <div class="reference-item">Appel, I. R., Gormley, T. A., &amp; Keim, D. B. (2016). <em>Passive Investors, Not Passive Owners</em>. DOI: 10.1016/j.jfineco.2016.03.003.</div>
+        <div class="reference-item">Heath, D. et al. <em>Passive Investors are Passive Monitors</em>. SSRN DOI: 10.2139/ssrn.3259433.</div>
+        <div class="reference-item">Fichtner, J., &amp; Heemskerk, E. M. (2017). <em>Hidden Power of the Big Three?</em> SSRN DOI: 10.2139/ssrn.2798653.</div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      const article = document.getElementById("global-indexes-research");
+      const navButtons = Array.from(document.querySelectorAll("#global-index-scenario-nav button"));
+      const panels = Array.from(document.querySelectorAll("#global-indexes-research [data-scenario-panel]"));
+      function parseRgb(colorValue) { const match = colorValue && colorValue.match(/\d+(\.\d+)?/g); if (!match || match.length < 3) { return null; } return match.slice(0, 3).map(Number); }
+      function luminance(rgb) { return (0.299 * rgb[0]) + (0.587 * rgb[1]) + (0.114 * rgb[2]); }
+      function mixRgb(source, target, weight) { return source.map(function (channel, index) { return Math.round((channel * (1 - weight)) + (target[index] * weight)); }); }
+      function toRgbString(rgb) { return "rgb(" + rgb.join(", ") + ")"; }
+      function toRgbaString(rgb, alpha) { return "rgba(" + rgb.join(", ") + ", " + alpha + ")"; }
+      function applyEssayPalette(backgroundRgb) {
+        const isDark = luminance(backgroundRgb) < 156;
+        const oceanLight = [241, 248, 253];
+        const oceanDark = [15, 22, 28];
+        const textBase = isDark ? mixRgb(backgroundRgb, [237, 247, 255], 0.84) : mixRgb(backgroundRgb, [19, 28, 37], 0.94);
+        const textStrong = isDark ? mixRgb(backgroundRgb, [250, 253, 255], 0.92) : mixRgb(backgroundRgb, [10, 17, 24], 0.97);
+        const textMuted = isDark ? mixRgb(textBase, backgroundRgb, 0.22) : mixRgb(textBase, backgroundRgb, 0.3);
+        const kicker = isDark ? mixRgb(textBase, [214, 194, 157], 0.46) : mixRgb(textMuted, [124, 108, 78], 0.52);
+        const border = isDark ? toRgbaString(mixRgb(backgroundRgb, [232, 246, 255], 0.3), 0.34) : toRgbaString(mixRgb(backgroundRgb, [67, 91, 80], 0.82), 0.22);
+        const borderSoft = isDark ? toRgbaString(mixRgb(backgroundRgb, [232, 246, 255], 0.2), 0.24) : toRgbaString(mixRgb(backgroundRgb, [67, 91, 80], 0.58), 0.14);
+        const panelBg = isDark ? toRgbString(mixRgb(backgroundRgb, oceanLight, 0.1)) : toRgbString(mixRgb(backgroundRgb, [252, 252, 248], 0.72));
+        const panelStrongBg = isDark ? toRgbString(mixRgb(backgroundRgb, oceanLight, 0.16)) : toRgbString(mixRgb(backgroundRgb, [239, 243, 236], 0.76));
+        const heroStart = isDark ? toRgbString(mixRgb(backgroundRgb, oceanLight, 0.08)) : toRgbString(mixRgb(backgroundRgb, [247, 242, 233], 0.82));
+        const heroEnd = isDark ? toRgbString(mixRgb(backgroundRgb, oceanDark, 0.2)) : toRgbString(mixRgb(backgroundRgb, [236, 244, 241], 0.78));
+        const heroGrid = isDark ? toRgbaString(mixRgb(backgroundRgb, oceanLight, 0.44), 0.08) : toRgbaString(mixRgb(backgroundRgb, [83, 95, 86], 0.66), 0.05);
+        const summaryBg = isDark ? toRgbaString(mixRgb(backgroundRgb, oceanLight, 0.14), 0.86) : toRgbaString(mixRgb(backgroundRgb, [255, 255, 255], 0.72), 0.92);
+        const buttonBg = isDark ? toRgbString(mixRgb(backgroundRgb, oceanLight, 0.12)) : toRgbString(mixRgb(backgroundRgb, [244, 241, 232], 0.78));
+        const buttonText = toRgbString(textStrong);
+        const buttonActiveBg = isDark ? toRgbString(mixRgb(backgroundRgb, [231, 216, 180], 0.84)) : toRgbString(mixRgb(backgroundRgb, oceanDark, 0.92));
+        const buttonActiveText = isDark ? toRgbString(mixRgb(backgroundRgb, oceanDark, 0.94)) : toRgbString(mixRgb(backgroundRgb, [245, 251, 255], 0.96));
+        article.style.setProperty("--essay-text", toRgbString(textBase));
+        article.style.setProperty("--essay-text-strong", toRgbString(textStrong));
+        article.style.setProperty("--essay-text-muted", toRgbString(textMuted));
+        article.style.setProperty("--essay-kicker", toRgbString(kicker));
+        article.style.setProperty("--essay-border", border);
+        article.style.setProperty("--essay-border-soft", borderSoft);
+        article.style.setProperty("--essay-panel-bg", panelBg);
+        article.style.setProperty("--essay-panel-strong-bg", panelStrongBg);
+        article.style.setProperty("--essay-hero-bg-start", heroStart);
+        article.style.setProperty("--essay-hero-bg-end", heroEnd);
+        article.style.setProperty("--essay-hero-grid", heroGrid);
+        article.style.setProperty("--essay-summary-bg", summaryBg);
+        article.style.setProperty("--essay-button-bg", buttonBg);
+        article.style.setProperty("--essay-button-text", buttonText);
+        article.style.setProperty("--essay-button-active-bg", buttonActiveBg);
+        article.style.setProperty("--essay-button-active-text", buttonActiveText);
+        article.dataset.tone = isDark ? "dark" : "light";
+      }
+      function resolveBackgroundColor(node) { let current = node; while (current) { const style = window.getComputedStyle(current); const rgb = parseRgb(style.backgroundColor); if (rgb && style.backgroundColor !== "rgba(0, 0, 0, 0)" && style.backgroundColor !== "transparent") { return rgb; } current = current.parentElement; } return [255, 255, 255]; }
+      function applyEssayTone() { if (!article) { return; } const rgb = resolveBackgroundColor(article.parentElement || document.body); applyEssayPalette(rgb); }
+      function activateScenario(name) {
+        navButtons.forEach(function (button) { button.classList.toggle("is-active", button.dataset.scenarioTarget === name); });
+        panels.forEach(function (panel) { panel.classList.toggle("is-active", panel.dataset.scenarioPanel === name); });
+      }
+      applyEssayTone();
+      window.addEventListener("load", applyEssayTone);
+      window.addEventListener("resize", applyEssayTone);
+      if (navButtons.length > 0) {
+        activateScenario("global");
+        navButtons.forEach(function (button) { button.addEventListener("click", function () { activateScenario(button.dataset.scenarioTarget); }); });
+      }
+    })();
+  </script>
+</article>
