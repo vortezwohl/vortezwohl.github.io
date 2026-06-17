@@ -4,7 +4,7 @@ title: "深入拆解 World of ClaudeCraft —— 为人类与 AI 代理构建的
 toc: false
 math: false
 excerpt: >-
-  本文对 levy-street/world-of-claudecraft 进行端到端技术拆解。
+  World of ClaudeCraft（WoCC）是一个开源的经典 MMO 风味微 MMO，全部使用 TypeScript 编写。它在浏览器中呈现实时 3D 多人游戏——包含 9 个职业、130+ 技能、怪物 AI、地下城、团本、竞技场、交易系统，以及完整的经典风格 UI——全部由单一权威 Node.js 服务器和 PostgreSQL 数据库支撑。它最厉害的设计在于：同一套确定性仿真核心同时驱动三种截然不同的运行上下文——在线多人（WebSocket 连接共享服务器）、离线模式（整个世界在浏览器内运行，无需服务器）、无头 RL 训练（仿真暴露为 Gym 风格环境，供 Python 训练强化学习代理）。
 categories: [deep-dive, game-dev, web, ai]
 tags:
   - mmo
@@ -151,7 +151,7 @@ author:
     <section class="essay-section">
       <h2>一、项目概述</h2>
       <p><strong><a href="https://github.com/levy-street/world-of-claudecraft" target="_blank" rel="noopener">World of ClaudeCraft</a></strong>（WoCC）是一个开源的经典 MMO 风味微 MMO，全部使用 TypeScript 编写。它在浏览器中呈现实时 3D 多人游戏——包含 9 个职业、130+ 技能、怪物 AI、地下城、团本、竞技场、交易系统，以及完整的经典风格 UI——全部由单一权威 Node.js 服务器和 PostgreSQL 数据库支撑。</p>
-      <p>它最非凡的设计在于：<strong>同一套确定性仿真核心同时驱动三种截然不同的运行上下文</strong>——在线多人（WebSocket 连接共享服务器）、离线模式（整个世界在浏览器内运行，无需服务器）、无头 RL 训练（仿真暴露为 Gym 风格环境，供 Python 训练强化学习代理）。</p>
+      <p>它最厉害的设计在于：<strong>同一套确定性仿真核心同时驱动三种截然不同的运行上下文</strong>——在线多人（WebSocket 连接共享服务器）、离线模式（整个世界在浏览器内运行，无需服务器）、无头 RL 训练（仿真暴露为 Gym 风格环境，供 Python 训练强化学习代理）。</p>
     </section>
     <section class="essay-section">
       <h2>二、完整项目结构</h2>
