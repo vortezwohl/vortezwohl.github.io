@@ -137,7 +137,7 @@ author:
   <div class="essay-shell">
     <header class="essay-hero">
       <div class="essay-kicker">Deep-Dive Technical Dissection</div>
-      <h1>深入拆解 World of ClaudeCraft</h1>
+      <h1><a href="https://github.com/levy-street/world-of-claudecraft" target="_blank" rel="noopener">深入拆解 World of ClaudeCraft</a></h1>
       <p class="essay-lead">一个纯 TypeScript 写成的微 MMO，以同一套确定性仿真核心同时驱动在线多人、离线单机和 Gym 风格强化学习训练三种截然不同的运行上下文。本文从架构、渲染管线、网络协议、AI 集成到过程化生成，层层拆解其设计哲学与实现细节。</p>
     </header>
 
@@ -150,7 +150,7 @@ author:
 
     <section class="essay-section">
       <h2>一、项目概述</h2>
-      <p><strong>World of ClaudeCraft</strong>（WoCC）是一个开源的经典 MMO 风味微 MMO，全部使用 TypeScript 编写。它在浏览器中呈现实时 3D 多人游戏——包含 9 个职业、130+ 技能、怪物 AI、地下城、团本、竞技场、交易系统，以及完整的经典风格 UI——全部由单一权威 Node.js 服务器和 PostgreSQL 数据库支撑。</p>
+      <p><strong><a href="https://github.com/levy-street/world-of-claudecraft" target="_blank" rel="noopener">World of ClaudeCraft</a></strong>（WoCC）是一个开源的经典 MMO 风味微 MMO，全部使用 TypeScript 编写。它在浏览器中呈现实时 3D 多人游戏——包含 9 个职业、130+ 技能、怪物 AI、地下城、团本、竞技场、交易系统，以及完整的经典风格 UI——全部由单一权威 Node.js 服务器和 PostgreSQL 数据库支撑。</p>
       <p>它最非凡的设计在于：<strong>同一套确定性仿真核心同时驱动三种截然不同的运行上下文</strong>——在线多人（WebSocket 连接共享服务器）、离线模式（整个世界在浏览器内运行，无需服务器）、无头 RL 训练（仿真暴露为 Gym 风格环境，供 Python 训练强化学习代理）。</p>
     </section>
     <section class="essay-section">
@@ -765,7 +765,7 @@ reward = (
         <thead><tr><th>层级</th><th>工具</th><th>覆盖范围</th><th>文件数</th></tr></thead>
         <tbody>
           <tr><td><strong>单元测试</strong></td><td>Vitest 4.1.8</td><td>战斗公式、仇恨表、寻路、碰撞、RNG</td><td>123 个 test 文件</td></tr>
-          <tr><td><strong>集成测试</strong></td><td>Vitest</td><td>多 tick 场景、地城流程、交易流程</td><td>包含在 123 个文件中</td></tr>
+          <tr><td><strong>集成测试</strong></td><td><a href="https://vitest.dev/" target="_blank" rel="noopener">Vitest</a></td><td>多 tick 场景、地城流程、交易流程</td><td>包含在 123 个文件中</td></tr>
           <tr><td><strong>E2E 测试</strong></td><td>Puppeteer 25.1</td><td>完整用户路径（登录→移动→战斗→拾取）</td><td>51 个自动化脚本</td></tr>
           <tr><td><strong>RL 环境测试</strong></td><td>PyTest</td><td>观察/动作空间一致性、奖励函数正确性</td><td>python/tests/ 目录</td></tr>
         </tbody>
@@ -802,22 +802,22 @@ reward = (
       <table class="comparison-table">
         <thead><tr><th>技术</th><th>版本</th><th>用途</th></tr></thead>
         <tbody>
-          <tr><td>TypeScript</td><td>5.5</td><td>整个代码库语言</td></tr>
-          <tr><td>Vite</td><td>8.0</td><td>开发服务器, HMR, 生产打包</td></tr>
-          <tr><td>Three.js</td><td>r165</td><td>3D 渲染引擎</td></tr>
-          <tr><td>n8ao</td><td>1.10.1</td><td>GPU SSAO (环境光遮蔽)</td></tr>
-          <tr><td>postprocessing</td><td>6.36.0</td><td>Bloom, 色调映射, 后处理特效</td></tr>
-          <tr><td>ws</td><td>8.21.0</td><td>WebSocket 服务器 + 客户端</td></tr>
+          <tr><td><a href="https://www.typescriptlang.org/" target="_blank" rel="noopener">TypeScript</a></td><td>5.5</td><td>整个代码库语言</td></tr>
+          <tr><td><a href="https://vitejs.dev/" target="_blank" rel="noopener">Vite</a></td><td>8.0</td><td>开发服务器, HMR, 生产打包</td></tr>
+          <tr><td><a href="https://threejs.org/" target="_blank" rel="noopener">Three.js</a></td><td>r165</td><td>3D 渲染引擎</td></tr>
+          <tr><td><a href="https://github.com/N8python/n8ao" target="_blank" rel="noopener">n8ao</a></td><td>1.10.1</td><td>GPU SSAO (环境光遮蔽)</td></tr>
+          <tr><td><a href="https://github.com/pmndrs/postprocessing" target="_blank" rel="noopener">postprocessing</a></td><td>6.36.0</td><td>Bloom, 色调映射, 后处理特效</td></tr>
+          <tr><td><a href="https://github.com/websockets/ws" target="_blank" rel="noopener">ws</a></td><td>8.21.0</td><td>WebSocket 服务器 + 客户端</td></tr>
           <tr><td>pg</td><td>8.21.0</td><td>PostgreSQL 客户端</td></tr>
-          <tr><td>esbuild</td><td>0.28.1</td><td>服务器打包器</td></tr>
+          <tr><td><a href="https://esbuild.github.io/" target="_blank" rel="noopener">esbuild</a></td><td>0.28.1</td><td>服务器打包器</td></tr>
           <tr><td>obscenity</td><td>0.4.6</td><td>用户名 + 聊天脏话过滤器</td></tr>
           <tr><td>Vitest</td><td>4.1.8</td><td>单元 + 集成测试</td></tr>
-          <tr><td>Puppeteer</td><td>25.1</td><td>浏览器 E2E 测试</td></tr>
-          <tr><td>PostgreSQL</td><td>16-alpine</td><td>游戏数据库</td></tr>
+          <tr><td><a href="https://pptr.dev/" target="_blank" rel="noopener">Puppeteer</a></td><td>25.1</td><td>浏览器 E2E 测试</td></tr>
+          <tr><td><a href="https://www.postgresql.org/" target="_blank" rel="noopener">PostgreSQL</a></td><td>16-alpine</td><td>游戏数据库</td></tr>
           <tr><td>MariaDB</td><td>11</td><td>Wiki 数据库</td></tr>
           <tr><td>Node.js</td><td>ESM</td><td>服务器运行时</td></tr>
-          <tr><td>@gltf-transform/cli</td><td>4.4.0</td><td>3D 模型优化</td></tr>
-          <tr><td>强化学习</td><td>PyTorch</td><td>Python RL 训练 (PPO/DQN)</td></tr>
+          <tr><td><a href="https://gltf-transform.dev/" target="_blank" rel="noopener">@gltf-transform/cli</a></td><td>4.4.0</td><td>3D 模型优化</td></tr>
+          <tr><td><a href="https://pytorch.org/" target="_blank" rel="noopener">强化学习</a></td><td>PyTorch</td><td>Python RL 训练 (PPO/DQN)</td></tr>
         </tbody>
       </table>
     </section>
@@ -825,7 +825,7 @@ reward = (
     <section class="essay-section">
       <h2>十三、为什么这个项目重要</h2>
       <ol>
-        <li><strong>它是一个真实的、可玩的 MMO</strong>——884 stars, 248 forks, 活跃的 Discord 社区，具有真正的多人持久化和游戏机制。</li>
+        <li><strong>它是一个真实的、可玩的 MMO</strong>——<a href="https://github.com/levy-street/world-of-claudecraft" target="_blank" rel="noopener">884 stars, 248 forks</a>, 活跃的 Discord 社区，具有真正的多人持久化和游戏机制。</li>
         <li><strong>一套代码，三种截然不同的执行上下文</strong>——浏览器游戏、权威服务器和 RL 训练环境共享同一确定性核心，零代码修改。</li>
         <li><strong>过程化生成的完整展示</strong>——纹理、图标、音效、建筑、地形和世界布局全部由代码生成。唯一非代码资源是 CC0 3D 模型。</li>
         <li><strong>真实还原经典 WoW 机制</strong>——命中表、仇恨数学、怒气公式、经验曲线、GCD 机制、地下城布局、竞技场 Elo——全部正确实现。</li>
