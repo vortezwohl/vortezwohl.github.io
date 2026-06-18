@@ -1,0 +1,647 @@
+---
+layout: post
+title: "Blender 入门学习：下载、免费、建模、导出与 Python API"
+toc: false
+math: false
+excerpt: >-
+  Blender 是免费开源的 3D 创作软件。本文基于官方站点与官方文档，系统整理 Blender 的下载方式、版本选择、基础建模流程、常见导出格式，以及 Blender Python API 的核心结构与学习路径。
+categories: [research, blender, graphics]
+tags:
+  - blender
+  - 3d
+  - modeling
+  - python
+  - glb
+  - fbx
+author:
+  - vortezwohl
+  - 吴子豪
+  - Codex
+---
+
+<article id="blender-beginner-research" lang="zh-CN">
+  <style>
+    #blender-beginner-research {
+      --essay-text: #171d24;
+      --essay-text-strong: #0f141a;
+      --essay-text-muted: #42505c;
+      --essay-kicker: #5b6976;
+      --essay-border: #d5dde5;
+      --essay-border-soft: #e2e8ef;
+      --essay-panel-bg: #f8fbfd;
+      --essay-panel-strong-bg: #eef4f8;
+      --essay-hero-bg-start: #f3f8fb;
+      --essay-hero-bg-end: #edf4f8;
+      --essay-hero-grid: rgba(61, 93, 119, 0.05);
+      --essay-summary-bg: rgba(255, 255, 255, 0.84);
+      --essay-button-bg: #f3f7fa;
+      --essay-button-text: #16202a;
+      --essay-button-active-bg: #182531;
+      --essay-button-active-text: #f6fbff;
+      --essay-code-bg: #eef4f8;
+      --essay-code-inline-bg: #e7eff4;
+      --essay-code-text: #12202d;
+      --essay-output-bg: #182531;
+      --essay-output-text: #edf7ff;
+      --essay-link: #205f86;
+      --essay-link-border: rgba(32, 95, 134, 0.34);
+      --essay-link-border-hover: rgba(32, 95, 134, 0.82);
+      --essay-accent: #3f7aa2;
+      color: var(--essay-text);
+      font-family: "Iowan Old Style", "Palatino Linotype", "Ubuntu", "Noto Sans SC", "Source Han Sans SC", sans-serif;
+      line-height: 1.88;
+      word-break: break-word;
+    }
+    #blender-beginner-research[data-tone="dark"] {
+      --essay-text: #d8e4ec;
+      --essay-text-strong: #f5fbff;
+      --essay-text-muted: #b9cad7;
+      --essay-kicker: #92adc1;
+      --essay-border: rgba(228, 240, 248, 0.18);
+      --essay-border-soft: rgba(228, 240, 248, 0.12);
+      --essay-panel-bg: rgba(24, 32, 40, 0.92);
+      --essay-panel-strong-bg: rgba(34, 45, 56, 0.96);
+      --essay-hero-bg-start: rgba(24, 33, 41, 0.98);
+      --essay-hero-bg-end: rgba(16, 22, 28, 0.98);
+      --essay-hero-grid: rgba(197, 223, 241, 0.08);
+      --essay-summary-bg: rgba(39, 50, 62, 0.86);
+      --essay-button-bg: rgba(39, 50, 61, 0.94);
+      --essay-button-text: #e9f5fc;
+      --essay-button-active-bg: #dbeefa;
+      --essay-button-active-text: #142330;
+      --essay-code-bg: rgba(18, 26, 34, 0.98);
+      --essay-code-inline-bg: rgba(56, 74, 90, 0.78);
+      --essay-code-text: #edf8ff;
+      --essay-output-bg: #e7f4fb;
+      --essay-output-text: #10202d;
+      --essay-link: #9bdcff;
+      --essay-link-border: rgba(155, 220, 255, 0.42);
+      --essay-link-border-hover: rgba(155, 220, 255, 0.95);
+      --essay-accent: #8bc7e7;
+    }
+    #blender-beginner-research .essay-shell { width: 100%; max-width: 1040px; margin: 0 auto; padding: 1.6rem 0 5.5rem; }
+    #blender-beginner-research .essay-kicker { position: relative; margin: 0 0 12px; color: var(--essay-kicker); font-size: 0.82rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; }
+    #blender-beginner-research .essay-hero { position: relative; overflow: hidden; border: 1px solid var(--essay-border); border-radius: 28px; padding: 2.5rem 2rem 2rem; background: linear-gradient(180deg, var(--essay-hero-bg-start) 0%, var(--essay-hero-bg-end) 100%); box-shadow: 0 26px 70px rgba(24, 37, 49, 0.07); }
+    #blender-beginner-research .essay-hero::before { content: ""; position: absolute; inset: 0; background-image: linear-gradient(var(--essay-hero-grid) 1px, transparent 1px), linear-gradient(90deg, var(--essay-hero-grid) 1px, transparent 1px); background-size: 100% 1.75rem, 1.75rem 100%; pointer-events: none; }
+    #blender-beginner-research .essay-hero::after { content: ""; position: absolute; width: 20rem; height: 20rem; right: -4rem; top: -6rem; background: radial-gradient(circle, rgba(107, 163, 197, 0.18) 0%, rgba(107, 163, 197, 0) 72%); pointer-events: none; }
+    #blender-beginner-research .essay-hero h1 { position: relative; margin: 0; color: var(--essay-text-strong); font-size: clamp(2.2rem, 4vw, 4rem); line-height: 1.08; letter-spacing: -0.03em; }
+    #blender-beginner-research .essay-lead { position: relative; width: min(880px, 100%); margin: 18px 0 0; color: var(--essay-text-muted); font-size: 1.08rem; }
+    #blender-beginner-research .essay-summary-grid, #blender-beginner-research .essay-card-grid, #blender-beginner-research .essay-note-grid { display: grid; gap: 16px; grid-template-columns: repeat(12, minmax(0, 1fr)); margin-top: 24px; }
+    #blender-beginner-research .summary-card, #blender-beginner-research .card, #blender-beginner-research .note-card { border: 1px solid var(--essay-border-soft); border-radius: 20px; background: var(--essay-summary-bg); padding: 18px 18px 16px; backdrop-filter: blur(6px); box-shadow: 0 16px 38px rgba(20, 34, 46, 0.05); animation: essay-fade-up 0.76s ease both; }
+    #blender-beginner-research .summary-card { grid-column: span 3; }
+    #blender-beginner-research .note-card { grid-column: span 4; }
+    #blender-beginner-research .card { grid-column: span 6; }
+    #blender-beginner-research .summary-card h3, #blender-beginner-research .note-card h3, #blender-beginner-research .card h3 { margin: 0 0 8px; color: var(--essay-text-strong); font-size: 1.04rem; }
+    #blender-beginner-research .summary-card p, #blender-beginner-research .note-card p, #blender-beginner-research .card p { margin: 0; color: var(--essay-text-muted); font-size: 0.94rem; }
+    #blender-beginner-research .essay-section { position: relative; margin-top: 2.7rem; border: 1px solid var(--essay-border-soft); border-radius: 28px; padding: 2rem 1.8rem 1.8rem; background: var(--essay-panel-bg); box-shadow: 0 16px 44px rgba(20, 34, 46, 0.04); animation: essay-fade-up 0.8s ease both; }
+    #blender-beginner-research .essay-section h2 { margin: 0 0 16px; color: var(--essay-text-strong); font-size: clamp(1.45rem, 2vw, 1.96rem); letter-spacing: -0.02em; }
+    #blender-beginner-research .essay-section h3 { margin: 24px 0 10px; color: var(--essay-text-strong); font-size: 1.16rem; }
+    #blender-beginner-research .essay-section h4 { margin: 18px 0 8px; color: var(--essay-text-strong); font-size: 1.02rem; }
+    #blender-beginner-research .essay-section p { margin: 12px 0 0; }
+    #blender-beginner-research .essay-section ul, #blender-beginner-research .essay-section ol { margin: 14px 0 0 22px; padding: 0; }
+    #blender-beginner-research .essay-section li + li { margin-top: 8px; }
+    #blender-beginner-research strong { color: var(--essay-text-strong); }
+    #blender-beginner-research a { color: var(--essay-link); text-decoration: none; border-bottom: 1px solid var(--essay-link-border); transition: border-bottom-color 0.18s ease; }
+    #blender-beginner-research a:hover { border-bottom-color: var(--essay-link-border-hover); }
+    #blender-beginner-research .essay-code { margin-top: 16px; border-radius: 18px; padding: 16px 18px; background: var(--essay-code-bg); color: var(--essay-code-text); overflow-x: auto; font-family: "Consolas", "SFMono-Regular", monospace; font-size: 0.93rem; line-height: 1.75; white-space: pre-wrap; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08); }
+    #blender-beginner-research code { padding: 0.12em 0.42em; border-radius: 6px; background: var(--essay-code-inline-bg); color: var(--essay-code-text); font-family: "Consolas", "SFMono-Regular", monospace; font-size: 0.92em; }
+    #blender-beginner-research .comparison-table { width: 100%; border-collapse: collapse; margin-top: 18px; font-size: 0.95rem; }
+    #blender-beginner-research .comparison-table th, #blender-beginner-research .comparison-table td { border: 1px solid var(--essay-border-soft); padding: 12px; vertical-align: top; text-align: left; }
+    #blender-beginner-research .comparison-table th { background: var(--essay-panel-strong-bg); color: var(--essay-text-strong); font-weight: 700; }
+    #blender-beginner-research .metric-strip { display: grid; gap: 14px; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 24px; }
+    #blender-beginner-research .metric { border: 1px solid var(--essay-border-soft); border-radius: 16px; padding: 14px 14px 10px; background: var(--essay-panel-strong-bg); text-align: center; }
+    #blender-beginner-research .metric-value { display: block; color: var(--essay-text-strong); font-size: 1.24rem; font-weight: 700; }
+    #blender-beginner-research .metric-label { display: block; margin-top: 4px; color: var(--essay-text-muted); font-size: 0.82rem; }
+    #blender-beginner-research .arch-diagram { margin: 20px 0 0; border-radius: 20px; padding: 22px 24px; background: var(--essay-panel-strong-bg); border: 1px solid var(--essay-border-soft); overflow-x: auto; }
+    #blender-beginner-research .arch-diagram pre { margin: 0; font-family: "Consolas", "SFMono-Regular", monospace; font-size: 0.9rem; line-height: 1.7; color: var(--essay-code-text); white-space: pre-wrap; }
+    #blender-beginner-research .highlight-box { border-left: 4px solid var(--essay-accent); padding: 14px 18px; margin: 18px 0 0; background: var(--essay-panel-strong-bg); border-radius: 0 14px 14px 0; }
+    #blender-beginner-research .impact-grid { display: grid; gap: 16px; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 18px; }
+    #blender-beginner-research .impact-card { border: 1px solid var(--essay-border-soft); border-radius: 20px; padding: 18px; background: var(--essay-panel-strong-bg); box-shadow: 0 12px 28px rgba(20, 34, 46, 0.04); animation: essay-fade-up 0.76s ease both; }
+    #blender-beginner-research .impact-card h3 { margin-top: 0; }
+    #blender-beginner-research .reference-list { margin-top: 18px; columns: 2; column-gap: 22px; }
+    #blender-beginner-research .reference-item { break-inside: avoid; margin: 0 0 12px; padding: 0 0 0 18px; position: relative; }
+    #blender-beginner-research .reference-item::before { content: ""; position: absolute; left: 0; top: 0.72em; width: 7px; height: 7px; border-radius: 50%; background: var(--essay-link); opacity: 0.75; }
+    #blender-beginner-research .essay-disclaimer { margin-top: 18px; border-radius: 18px; padding: 16px 18px; background: var(--essay-panel-strong-bg); border: 1px solid var(--essay-border-soft); color: var(--essay-text-muted); font-size: 0.95rem; box-shadow: 0 10px 24px rgba(20, 34, 46, 0.035); }
+    @keyframes essay-fade-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    @media (max-width: 960px) {
+      #blender-beginner-research .summary-card { grid-column: span 6; }
+      #blender-beginner-research .note-card { grid-column: span 6; }
+      #blender-beginner-research .card { grid-column: span 12; }
+      #blender-beginner-research .metric-strip, #blender-beginner-research .impact-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      #blender-beginner-research .reference-list { columns: 1; }
+    }
+    @media (max-width: 720px) {
+      #blender-beginner-research .essay-shell { padding: 1rem 0 4rem; }
+      #blender-beginner-research .essay-hero, #blender-beginner-research .essay-section { border-radius: 22px; }
+      #blender-beginner-research .essay-hero { padding: 1.7rem 1.1rem 1.35rem; }
+      #blender-beginner-research .summary-card, #blender-beginner-research .note-card, #blender-beginner-research .card { grid-column: span 12; }
+      #blender-beginner-research .metric-strip, #blender-beginner-research .impact-grid { grid-template-columns: 1fr; }
+      #blender-beginner-research .essay-hero h1 { font-size: clamp(1.9rem, 8vw, 2.7rem); }
+    }
+  
+  </style>
+
+  <div class="essay-shell">
+    <header class="essay-hero">
+      <div class="essay-kicker">Blender / Beginner Research</div>
+      <h1>Blender 入门学习</h1>
+      <p class="essay-lead">这篇文章把 Blender 新手最常遇到的几个问题放在一条线里回答：<strong>怎么下载、是否免费、该怎么开始建模、模型导出应该选什么格式，以及 Blender 的 Python API 该从哪里入手</strong>。正文以官方站点和官方文档为主，覆盖基础上手与自动化两个方向。</p>
+      <div class="essay-summary-grid">
+        <section class="summary-card"><h3>核心结论 1</h3><p><strong>Blender 本体免费且开源</strong>，个人学习和商业项目都可以使用。</p></section>
+        <section class="summary-card"><h3>核心结论 2</h3><p>新手直接从官方稳定版开始；长期项目优先看 <strong>LTS</strong>?</p></section>
+        <section class="summary-card"><h3>核心结论 3</h3><p>建模不要一开始追细节，先用基础体搭大形，再做结构和修形。</p></section>
+        <section class="summary-card"><h3>核心结论 4</h3><p>网页优先 <strong>GLB</strong>，Unity / Unreal 常用 <strong>FBX</strong>，3D 打印优先 <strong>STL</strong>?</p></section>
+      </div>
+      <div class="metric-strip">
+        <div class="metric"><span class="metric-value">免费</span><span class="metric-label">GNU GPL，可商用</span></div>
+        <div class="metric"><span class="metric-value">5.1.2</span><span class="metric-label">截至 2026-06-18 官方下载页显示稳定版</span></div>
+        <div class="metric"><span class="metric-value">4.5 LTS</span><span class="metric-label">长期项目优先考虑的稳定分支</span></div>
+        <div class="metric"><span class="metric-value">bpy</span><span class="metric-label">Python 自动化与插件开发核心入口</span></div>
+      </div>
+    </header>
+
+    <section class="essay-section">
+      <h2>一、先看结论</h2>
+      <div class="essay-note-grid">
+        <section class="note-card"><h3>适合谁</h3><p>适合准备系统学习 3D 基础的人，也适合要给游戏引擎、网页 3D 项目或渲染流程生产资产的人。</p></section>
+        <section class="note-card"><h3>最小闭环</h3><p>安装 Blender，做一个简单模型，导出成目标格式，再去目标环境里验证比例、朝向和材质。</p></section>
+        <section class="note-card"><h3>Python 切入点</h3><p>先分清 <code>bpy.data</code>、<code>bpy.ops</code>、<code>bpy.context</code>，再进入 <code>bmesh</code> 和 Add-on 结构。</p></section>
+      </div>
+      <div class="highlight-box">如果你现在的目标只是“先做出第一个能导出的模型”，不要一开始跳进复杂角色、骨骼和雕刻流程。</div>
+    </section>
+    <section class="essay-section">
+      <h2>1. Blender 是什么</h2>
+      <p>Blender 是一套免费、开源的 3D 创作软件，覆盖建模、雕刻、动画、渲染、合成和视频剪辑等流程。它不仅能做静态模型，也能做角色、场景、材质和动画资产。</p>
+      <p>从实际用途看，Blender 适合三类场景：</p>
+      <ul>
+        <li>学习 3D 基础与建模流程；</li>
+        <li>制作可交付给游戏引擎或网页项目的资产；</li>
+        <li>完整的内容创作流程，包括动画和渲染。</li>
+      </ul>
+    </section>
+    <section class="essay-section">
+      <h2>2. 是否免费</h2>
+      <p>结论很明确：Blender 本体是免费的，而且是开源软件。</p>
+      <ul>
+        <li>官方许可页说明 Blender 可以用于商业项目；</li>
+        <li>它不是试用版，也不是订阅制；</li>
+        <li>个人学习、独立制作、工作室商业项目都可以使用。</li>
+      </ul>
+      <p>需要注意的是，免费指的是软件授权本身，不等于所有附带资源都自动免费。你在制作中使用的贴图、模型、字体、HDRI、音乐等素材，仍然要分别确认授权。</p>
+      <p><strong>参考：</strong></p>
+      <ul>
+        <li><a href="https://www.blender.org/about/license/" target="_blank" rel="noopener">https://www.blender.org/about/license/</a></li>
+      </ul>
+    </section>
+    <section class="essay-section">
+      <h2>3. 如何下载</h2>
+      <p>最稳妥的方式只有一个：从 Blender 官方网站下载。</p>
+      <h3>下载入口</h3>
+      <ul>
+        <li>官方下载页：<a href="https://www.blender.org/download/" target="_blank" rel="noopener">https://www.blender.org/download/</a></li>
+        <li>LTS 版本页：<a href="https://www.blender.org/download/lts/" target="_blank" rel="noopener">https://www.blender.org/download/lts/</a></li>
+        <li>历史版本页：<a href="https://www.blender.org/download/previous-versions/" target="_blank" rel="noopener">https://www.blender.org/download/previous-versions/</a></li>
+      </ul>
+      <h3>下载建议</h3>
+      <ul>
+        <li>如果你是新手，直接下载官方稳定版即可；</li>
+        <li>如果你要做长期项目，优先选 LTS；</li>
+        <li>如果你只是想尝试新功能，可以看实验版，但不建议拿来做稳定交付。</li>
+      </ul>
+      <h3>本次调研时看到的版本信息</h3>
+      <ul>
+        <li>官方下载页当前显示稳定版为 Blender 5.1.2；</li>
+        <li>LTS 分支是 Blender 4.5 LTS；</li>
+        <li>官方对 LTS 的定位是给长期项目使用的稳定版本，并提供官方支持。</li>
+      </ul>
+      <h3>常见安装建议</h3>
+      <ul>
+        <li>Windows：下载对应安装包，按默认流程安装；</li>
+        <li>macOS：下载 DMG，拖入 Applications；</li>
+        <li>Linux：优先用官方发布包或发行版仓库提供的版本。</li>
+      </ul>
+    </section>
+    <section class="essay-section">
+      <h2>4. 如何建模</h2>
+      <p>Blender 的建模可以理解成：先搭大形，再加结构，再加细节。</p>
+      <h3>新手最推荐的建模路线</h3>
+      <ol>
+        <li>添加一个基础体，例如 Cube、Cylinder 或 Sphere；</li>
+        <li>进入 Edit Mode；</li>
+        <li>用挤出、环切、缩放、移动做出大轮廓；</li>
+        <li>用倒角和细分修形；</li>
+        <li>最后再处理材质、UV 和导出。</li>
+      </ol>
+      <h3>最常用的操作</h3>
+      <ul>
+        <li><code>G</code>：移动；</li>
+        <li><code>R</code>：旋转；</li>
+        <li><code>S</code>：缩放；</li>
+        <li><code>E</code>：挤出；</li>
+        <li><code>Ctrl + R</code>：环切；</li>
+        <li><code>Ctrl + B</code>：倒角；</li>
+        <li><code>I</code>：内插。</li>
+      </ul>
+      <h3>实际建模思路</h3>
+      <ul>
+        <li>做杯子、桌子、箱子这类简单物体，最适合练基础；</li>
+        <li>做角色时，优先做低模和大形，不要一开始就追细节；</li>
+        <li>对称物体建议优先使用 Mirror 修饰器；</li>
+        <li>想要更平滑的效果，可以配合 Subdivision Surface。</li>
+      </ul>
+      <h3>适合新手的练习顺序</h3>
+      <ul>
+        <li>第 1 个模型：杯子；</li>
+        <li>第 2 个模型：桌子；</li>
+        <li>第 3 个模型：简单箱体道具；</li>
+        <li>第 4 个模型：低模角色头部；</li>
+        <li>第 5 个模型：带骨骼的完整角色。</li>
+      </ul>
+    </section>
+    <section class="essay-section">
+      <h2>5. 如何导出模型</h2>
+      <p>Blender 支持很多导出格式，官方手册明确提到常见格式包括 ABC、USD、OBJ、FBX、PLY、STL 等。</p>
+      <p><strong>参考：</strong></p>
+      <ul>
+        <li><a href="https://docs.blender.org/manual/en/latest/files/import_export/index.html" target="_blank" rel="noopener">https://docs.blender.org/manual/en/latest/files/import_export/index.html</a></li>
+      </ul>
+      <h3>5.1 glTF / GLB</h3>
+      <p>适合：网页展示、实时渲染、Three.js、部分游戏流程。</p>
+      <p>优点：</p>
+      <ul>
+        <li>对材质和动画支持较好；</li>
+        <li>适合现代实时渲染管线；</li>
+        <li>GLB 是二进制打包格式，便于分发。</li>
+      </ul>
+      <p>建议：</p>
+      <ul>
+        <li>如果你的目标是网页或在线 3D 展示，优先用 GLB；</li>
+        <li>如果要保留动画，优先检查导出设置里与动画相关的选项；</li>
+        <li>导出前最好只选中需要的对象。</li>
+      </ul>
+      <p><strong>参考：</strong></p>
+      <ul>
+        <li><a href="https://docs.blender.org/manual/en/latest/addons/import_export/scene_gltf2.html" target="_blank" rel="noopener">https://docs.blender.org/manual/en/latest/addons/import_export/scene_gltf2.html</a></li>
+        <li><a href="https://threejs.org/docs/pages/GLTFLoader.html" target="_blank" rel="noopener">https://threejs.org/docs/pages/GLTFLoader.html</a></li>
+      </ul>
+      <h3>5.2 FBX</h3>
+      <p>适合：Unity、Unreal、DCC 软件之间交换角色、骨骼、复杂场景数据。</p>
+      <p>优点：</p>
+      <ul>
+        <li>对游戏管线很常见；</li>
+        <li>适合静态模型和带骨骼的角色；</li>
+        <li>兼容性在引擎工作流里比较成熟。</li>
+      </ul>
+      <p>建议：</p>
+      <ul>
+        <li>导出前应用缩放和旋转；</li>
+        <li>骨骼角色要注意层级干净、根骨明确；</li>
+        <li>导出后到目标引擎里再核对比例和朝向。</li>
+      </ul>
+      <p><strong>参考：</strong></p>
+      <ul>
+        <li><a href="https://docs.blender.org/manual/en/latest/addons/import_export/scene_fbx.html" target="_blank" rel="noopener">https://docs.blender.org/manual/en/latest/addons/import_export/scene_fbx.html</a></li>
+        <li><a href="https://docs.unity3d.com/6000.4/Documentation/Manual/FBXImporter-Model.html" target="_blank" rel="noopener">https://docs.unity3d.com/6000.4/Documentation/Manual/FBXImporter-Model.html</a></li>
+        <li><a href="https://dev.epicgames.com/documentation/unreal-engine/fbx-import-options-reference-in-unreal-engine" target="_blank" rel="noopener">https://dev.epicgames.com/documentation/unreal-engine/fbx-import-options-reference-in-unreal-engine</a></li>
+      </ul>
+      <h3>5.3 OBJ</h3>
+      <p>适合：静态模型交换。</p>
+      <p>限制：</p>
+      <ul>
+        <li>不适合骨骼和动画；</li>
+        <li>相机、灯光等信息也不适合依赖 OBJ 传递；</li>
+        <li>更像是一个“够简单但功能有限”的通用几何格式。</li>
+      </ul>
+      <p><strong>参考：</strong></p>
+      <ul>
+        <li><a href="https://docs.blender.org/manual/en/latest/files/import_export/obj.html" target="_blank" rel="noopener">https://docs.blender.org/manual/en/latest/files/import_export/obj.html</a></li>
+      </ul>
+      <h3>5.4 STL</h3>
+      <p>适合：3D 打印和 CAD 交换。</p>
+      <p>特点：</p>
+      <ul>
+        <li>结构简单；</li>
+        <li>通常只关注几何；</li>
+        <li>对 3D 打印流程很实用。</li>
+      </ul>
+      <p><strong>参考：</strong></p>
+      <ul>
+        <li><a href="https://docs.blender.org/manual/en/latest/files/import_export/stl.html" target="_blank" rel="noopener">https://docs.blender.org/manual/en/latest/files/import_export/stl.html</a></li>
+      </ul>
+    </section>
+    <section class="essay-section">
+      <h2>6. 不同目标平台怎么选</h2>
+      <h3>Three.js / 网页</h3>
+      <ul>
+        <li>首选：GLB / glTF；</li>
+        <li>原因：Three.js 官方就提供了 GLTFLoader；</li>
+        <li>如果只是静态展示，GLB 通常最省心。</li>
+      </ul>
+      <h3>Unity</h3>
+      <ul>
+        <li>首选：FBX；</li>
+        <li>适合静态道具、角色和动画资产；</li>
+        <li>导入后重点检查尺度、朝向和材质映射。</li>
+      </ul>
+      <h3>Unreal</h3>
+      <ul>
+        <li>首选：FBX；</li>
+        <li>Unreal 的单位体系是厘米，导入时要特别注意比例转换；</li>
+        <li>角色和静态网格都可以走 FBX 管线。</li>
+      </ul>
+      <h3>3D 打印</h3>
+      <ul>
+        <li>首选：STL；</li>
+        <li>目标是保证几何能被打印软件正确识别。</li>
+      </ul>
+    </section>
+    <section class="essay-section">
+      <h2>7. 一个最短实践路径</h2>
+      <p>如果你现在想立刻上手，建议按这个顺序来：</p>
+      <ol>
+        <li>安装 Blender；</li>
+        <li>熟悉视图和快捷键；</li>
+        <li>做一个杯子；</li>
+        <li>做一个桌子；</li>
+        <li>导出成 GLB 或 FBX；</li>
+        <li>在目标软件里验证模型是否正常；</li>
+        <li>再开始做更复杂的角色或场景。</li>
+      </ol>
+    </section>
+    <section class="essay-section">
+      <h2>8. 本次调研结论</h2>
+      <ul>
+        <li>Blender 是免费的、开源的 3D 创作软件；</li>
+        <li>官方下载是最可靠的获取方式；</li>
+        <li>新手建模应从基础体和网格编辑开始；</li>
+        <li>导出时最常见的选择是 GLB、FBX、OBJ、STL；</li>
+        <li>给 Three.js 优先用 GLB；</li>
+        <li>给 Unity 和 Unreal 优先用 FBX；</li>
+        <li>给 3D 打印优先用 STL。</li>
+      </ul>
+    </section>
+    <section class="essay-section">
+      <h2>9. 参考来源</h2>
+      <ul>
+        <li>Blender 下载页：<a href="https://www.blender.org/download/" target="_blank" rel="noopener">https://www.blender.org/download/</a></li>
+        <li>Blender LTS：<a href="https://www.blender.org/download/lts/" target="_blank" rel="noopener">https://www.blender.org/download/lts/</a></li>
+        <li>Blender 许可证：<a href="https://www.blender.org/about/license/" target="_blank" rel="noopener">https://www.blender.org/about/license/</a></li>
+        <li>Blender 导入导出总览：<a href="https://docs.blender.org/manual/en/latest/files/import_export/index.html" target="_blank" rel="noopener">https://docs.blender.org/manual/en/latest/files/import_export/index.html</a></li>
+        <li>Blender glTF 导出：<a href="https://docs.blender.org/manual/en/latest/addons/import_export/scene_gltf2.html" target="_blank" rel="noopener">https://docs.blender.org/manual/en/latest/addons/import_export/scene_gltf2.html</a></li>
+        <li>Blender FBX 导出：<a href="https://docs.blender.org/manual/en/latest/addons/import_export/scene_fbx.html" target="_blank" rel="noopener">https://docs.blender.org/manual/en/latest/addons/import_export/scene_fbx.html</a></li>
+        <li>Blender OBJ 导出：<a href="https://docs.blender.org/manual/en/latest/files/import_export/obj.html" target="_blank" rel="noopener">https://docs.blender.org/manual/en/latest/files/import_export/obj.html</a></li>
+        <li>Blender STL 导出：<a href="https://docs.blender.org/manual/en/latest/files/import_export/stl.html" target="_blank" rel="noopener">https://docs.blender.org/manual/en/latest/files/import_export/stl.html</a></li>
+        <li>Blender 挤出：<a href="https://docs.blender.org/manual/en/latest/modeling/meshes/editing/mesh/extrude.html" target="_blank" rel="noopener">https://docs.blender.org/manual/en/latest/modeling/meshes/editing/mesh/extrude.html</a></li>
+        <li>Blender 环切：<a href="https://docs.blender.org/manual/en/latest/modeling/meshes/editing/edge/loopcut_slide.html" target="_blank" rel="noopener">https://docs.blender.org/manual/en/latest/modeling/meshes/editing/edge/loopcut_slide.html</a></li>
+        <li>Three.js GLTFLoader：<a href="https://threejs.org/docs/pages/GLTFLoader.html" target="_blank" rel="noopener">https://threejs.org/docs/pages/GLTFLoader.html</a></li>
+        <li>Unity FBX 导入：<a href="https://docs.unity3d.com/6000.4/Documentation/Manual/FBXImporter-Model.html" target="_blank" rel="noopener">https://docs.unity3d.com/6000.4/Documentation/Manual/FBXImporter-Model.html</a></li>
+        <li>Unreal FBX 导入：<a href="https://dev.epicgames.com/documentation/unreal-engine/fbx-import-options-reference-in-unreal-engine" target="_blank" rel="noopener">https://dev.epicgames.com/documentation/unreal-engine/fbx-import-options-reference-in-unreal-engine</a></li>
+      </ul>
+    </section>
+    <section class="essay-section">
+      <h2>10. Blender Python API 调研</h2>
+      <p>Blender 的 Python 支持核心是 <code>bpy</code>，它把 Blender 的数据结构、上下文、操作器、网格编辑和插件系统都暴露给 Python。对于自动化、插件和程序化建模，这一层能力非常关键。</p>
+      <h3>10.1 API 分层</h3>
+      <p>可以把 API 理解成三层：</p>
+      <ul>
+        <li><code>bpy.data</code>：直接读写对象、网格、材质、场景等数据块；</li>
+        <li><code>bpy.ops</code>：调用 Blender 内置操作器，行为更像在界面里点按钮；</li>
+        <li><code>bpy.context</code>：读取当前上下文，例如活动对象、选中项和当前场景。</li>
+      </ul>
+      <p>其中最重要的分界是：<code>bpy.data</code> 更稳定，<code>bpy.ops</code> 更依赖上下文。</p>
+      <p><strong>参考：</strong></p>
+      <ul>
+        <li><a href="https://docs.blender.org/api/current/index.html" target="_blank" rel="noopener">https://docs.blender.org/api/current/index.html</a></li>
+        <li><a href="https://docs.blender.org/api/current/info_overview.html" target="_blank" rel="noopener">https://docs.blender.org/api/current/info_overview.html</a></li>
+      </ul>
+      <h3>10.2 bpy.data</h3>
+      <p><code>bpy.data</code> 适合批量处理和精确修改。</p>
+      <div class="essay-code">import bpy
+
+for obj in bpy.data.objects:
+    print(obj.name)</div>
+      <p><strong>参考：</strong></p>
+      <ul>
+        <li><a href="https://docs.blender.org/api/current/bpy.data.html" target="_blank" rel="noopener">https://docs.blender.org/api/current/bpy.data.html</a></li>
+      </ul>
+      <h3>10.3 bpy.ops</h3>
+      <p><code>bpy.ops</code> 适合执行“像按钮一样”的流程型动作，例如添加基础体、渲染或导出。</p>
+      <div class="essay-code">import bpy
+
+bpy.ops.mesh.primitive_cube_add(location=(0, 0, 0))</div>
+      <p>但它对模式、选择状态和活动对象有要求。</p>
+      <p><strong>参考：</strong></p>
+      <ul>
+        <li><a href="https://docs.blender.org/api/current/bpy.ops.html" target="_blank" rel="noopener">https://docs.blender.org/api/current/bpy.ops.html</a></li>
+      </ul>
+      <h3>10.4 bpy.context</h3>
+      <p><code>bpy.context</code> 是只读上下文，内容会随着 UI 区域变化。很多 operator 失败，本质上是上下文不满足要求。</p>
+      <p><strong>参考：</strong></p>
+      <ul>
+        <li><a href="https://docs.blender.org/api/current/bpy.context.html" target="_blank" rel="noopener">https://docs.blender.org/api/current/bpy.context.html</a></li>
+      </ul>
+      <h3>10.5 bmesh</h3>
+      <p>做程序化建模或网格拓扑处理时，<code>bmesh</code> 往往比 <code>bpy.ops</code> 更合适。</p>
+      <div class="essay-code">import bpy
+import bmesh
+
+obj = bpy.context.active_object
+mesh = obj.data
+bm = bmesh.new()
+bm.from_mesh(mesh)
+
+for v in bm.verts:
+    v.co.z += 1.0
+
+bm.to_mesh(mesh)
+bm.free()</div>
+      <p><strong>参考：</strong></p>
+      <ul>
+        <li><a href="https://docs.blender.org/api/current/bmesh.html" target="_blank" rel="noopener">https://docs.blender.org/api/current/bmesh.html</a></li>
+        <li><a href="https://docs.blender.org/api/current/bmesh.ops.html" target="_blank" rel="noopener">https://docs.blender.org/api/current/bmesh.ops.html</a></li>
+      </ul>
+      <h3>10.6 mathutils</h3>
+      <p><code>mathutils</code> 提供 <code>Vector</code>、<code>Matrix</code>、<code>Euler</code>、<code>Quaternion</code> 等数学类型，适合坐标变换、旋转、射线检测和空间计算。</p>
+      <p><strong>参考：</strong></p>
+      <ul>
+        <li><a href="https://docs.blender.org/api/current/mathutils.html" target="_blank" rel="noopener">https://docs.blender.org/api/current/mathutils.html</a></li>
+      </ul>
+      <h3>10.7 插件骨架</h3>
+      <p>做 Add-on 时，核心结构通常是：</p>
+      <ul>
+        <li><code>Operator</code>：执行动作；</li>
+        <li><code>Panel</code>：提供按钮和界面；</li>
+        <li><code>PropertyGroup</code> + <code>bpy.props</code>：定义自定义属性；</li>
+        <li><code>register()</code> / <code>unregister()</code>：注册和注销类。</li>
+      </ul>
+      <p><strong>参考：</strong></p>
+      <ul>
+        <li><a href="https://docs.blender.org/api/current/bpy.types.Operator.html" target="_blank" rel="noopener">https://docs.blender.org/api/current/bpy.types.Operator.html</a></li>
+        <li><a href="https://docs.blender.org/api/current/bpy.types.Panel.html" target="_blank" rel="noopener">https://docs.blender.org/api/current/bpy.types.Panel.html</a></li>
+        <li><a href="https://docs.blender.org/api/current/bpy.props.html" target="_blank" rel="noopener">https://docs.blender.org/api/current/bpy.props.html</a></li>
+        <li><a href="https://docs.blender.org/manual/en/latest/advanced/scripting/addon_tutorial.html" target="_blank" rel="noopener">https://docs.blender.org/manual/en/latest/advanced/scripting/addon_tutorial.html</a></li>
+      </ul>
+      <h3>10.8 handlers / timers</h3>
+      <p>如果脚本要在特定时机自动运行，可以看：</p>
+      <ul>
+        <li><code>bpy.app.handlers</code>：事件回调；</li>
+        <li><code>bpy.app.timers</code>：定时回调。</li>
+      </ul>
+      <p><strong>参考：</strong></p>
+      <ul>
+        <li><a href="https://docs.blender.org/api/current/bpy.app.handlers.html" target="_blank" rel="noopener">https://docs.blender.org/api/current/bpy.app.handlers.html</a></li>
+        <li><a href="https://docs.blender.org/api/current/bpy.app.timers.html" target="_blank" rel="noopener">https://docs.blender.org/api/current/bpy.app.timers.html</a></li>
+      </ul>
+      <h3>10.9 学习顺序</h3>
+      <p>建议顺序是：</p>
+      <ol>
+        <li><code>bpy.data</code> 和 <code>bpy.context</code>；</li>
+        <li><code>bpy.ops</code> 的上下文依赖；</li>
+        <li><code>bpy.types.Operator</code>、<code>bpy.types.Panel</code>、<code>bpy.props</code>；</li>
+        <li><code>bmesh</code>；</li>
+        <li><code>mathutils</code>；</li>
+        <li><code>handlers</code> 和 <code>timers</code>。</li>
+      </ol>
+      <h3>10.10 结论</h3>
+      <ul>
+        <li>Blender 的 Python API 很适合自动化、插件和程序化建模；</li>
+        <li>新手先分清 <code>bpy.data</code>、<code>bpy.ops</code> 和 <code>bpy.context</code>；</li>
+        <li>几何处理优先学 <code>bmesh</code>；</li>
+        <li>数学和空间计算优先学 <code>mathutils</code>；</li>
+        <li>插件开发的核心骨架是 <code>Operator</code> + <code>Panel</code> + <code>props</code>。</li>
+      </ul>
+      <h3>10.11 参考来源</h3>
+      <ul>
+        <li>Blender Python API：<a href="https://docs.blender.org/api/current/index.html" target="_blank" rel="noopener">https://docs.blender.org/api/current/index.html</a></li>
+        <li>API Overview：<a href="https://docs.blender.org/api/current/info_overview.html" target="_blank" rel="noopener">https://docs.blender.org/api/current/info_overview.html</a></li>
+        <li>bpy.data：<a href="https://docs.blender.org/api/current/bpy.data.html" target="_blank" rel="noopener">https://docs.blender.org/api/current/bpy.data.html</a></li>
+        <li>bpy.ops：<a href="https://docs.blender.org/api/current/bpy.ops.html" target="_blank" rel="noopener">https://docs.blender.org/api/current/bpy.ops.html</a></li>
+        <li>bpy.context：<a href="https://docs.blender.org/api/current/bpy.context.html" target="_blank" rel="noopener">https://docs.blender.org/api/current/bpy.context.html</a></li>
+        <li>BMesh：<a href="https://docs.blender.org/api/current/bmesh.html" target="_blank" rel="noopener">https://docs.blender.org/api/current/bmesh.html</a></li>
+        <li>mathutils：<a href="https://docs.blender.org/api/current/mathutils.html" target="_blank" rel="noopener">https://docs.blender.org/api/current/mathutils.html</a></li>
+        <li>Operator：<a href="https://docs.blender.org/api/current/bpy.types.Operator.html" target="_blank" rel="noopener">https://docs.blender.org/api/current/bpy.types.Operator.html</a></li>
+        <li>Panel：<a href="https://docs.blender.org/api/current/bpy.types.Panel.html" target="_blank" rel="noopener">https://docs.blender.org/api/current/bpy.types.Panel.html</a></li>
+        <li>Property Definitions：<a href="https://docs.blender.org/api/current/bpy.props.html" target="_blank" rel="noopener">https://docs.blender.org/api/current/bpy.props.html</a></li>
+        <li>Application Handlers：<a href="https://docs.blender.org/api/current/bpy.app.handlers.html" target="_blank" rel="noopener">https://docs.blender.org/api/current/bpy.app.handlers.html</a></li>
+        <li>Application Timers：<a href="https://docs.blender.org/api/current/bpy.app.timers.html" target="_blank" rel="noopener">https://docs.blender.org/api/current/bpy.app.timers.html</a></li>
+        <li>Add-on Tutorial：<a href="https://docs.blender.org/manual/en/latest/advanced/scripting/addon_tutorial.html" target="_blank" rel="noopener">https://docs.blender.org/manual/en/latest/advanced/scripting/addon_tutorial.html</a></li>
+      </ul>
+    </section>
+    <section class="essay-section">
+      <h2>十一、页面说明</h2>
+      <p>本文页面配色方案和动态取色逻辑参考同目录下的 Web 图形引擎概览文章，复用了其响应式版式、明暗背景适配和动态主题脚本。</p>
+    </section>
+  </div>
+</article>
+
+<script>
+(function () {
+  const article = document.getElementById("blender-beginner-research");
+  if (!article) return;
+
+  function parseRgb(colorValue) {
+    const match = colorValue && colorValue.match(/\d+(\.\d+)?/g);
+    if (!match || match.length < 3) return null;
+    return match.slice(0, 3).map(Number);
+  }
+
+  function luminance(rgb) {
+    return (0.299 * rgb[0]) + (0.587 * rgb[1]) + (0.114 * rgb[2]);
+  }
+
+  function mixRgb(source, target, weight) {
+    return source.map(function (channel, index) {
+      return Math.round((channel * (1 - weight)) + (target[index] * weight));
+    });
+  }
+
+  function toRgbString(rgb) {
+    return "rgb(" + rgb.join(", ") + ")";
+  }
+
+  function toRgbaString(rgb, alpha) {
+    return "rgba(" + rgb.join(", ") + ", " + alpha + ")";
+  }
+
+  function applyEssayPalette(backgroundRgb) {
+    const isDark = luminance(backgroundRgb) < 156;
+    const oceanLight = [241, 248, 253];
+    const oceanDark = [15, 22, 28];
+    const textBase = isDark ? mixRgb(backgroundRgb, [237, 247, 255], 0.84) : mixRgb(backgroundRgb, [19, 28, 37], 0.94);
+    const textStrong = isDark ? mixRgb(backgroundRgb, [250, 253, 255], 0.92) : mixRgb(backgroundRgb, [10, 17, 24], 0.97);
+    const textMuted = isDark ? mixRgb(textBase, backgroundRgb, 0.22) : mixRgb(textBase, backgroundRgb, 0.3);
+    const kicker = isDark ? mixRgb(textBase, [146, 188, 214], 0.4) : mixRgb(textMuted, [78, 108, 133], 0.5);
+    const border = isDark ? toRgbaString(mixRgb(backgroundRgb, [232, 246, 255], 0.3), 0.34) : toRgbaString(mixRgb(backgroundRgb, [58, 95, 126], 0.82), 0.22);
+    const borderSoft = isDark ? toRgbaString(mixRgb(backgroundRgb, [232, 246, 255], 0.2), 0.24) : toRgbaString(mixRgb(backgroundRgb, [58, 95, 126], 0.58), 0.14);
+    const panelBg = isDark ? toRgbString(mixRgb(backgroundRgb, oceanLight, 0.1)) : toRgbString(mixRgb(backgroundRgb, oceanLight, 0.58));
+    const panelStrongBg = isDark ? toRgbString(mixRgb(backgroundRgb, oceanLight, 0.16)) : toRgbString(mixRgb(backgroundRgb, [228, 239, 247], 0.72));
+    const heroStart = isDark ? toRgbString(mixRgb(backgroundRgb, oceanLight, 0.08)) : toRgbString(mixRgb(backgroundRgb, [244, 250, 253], 0.74));
+    const heroEnd = isDark ? toRgbString(mixRgb(backgroundRgb, oceanDark, 0.2)) : toRgbString(mixRgb(backgroundRgb, [236, 244, 249], 0.7));
+    const heroGrid = isDark ? toRgbaString(mixRgb(backgroundRgb, oceanLight, 0.44), 0.08) : toRgbaString(mixRgb(backgroundRgb, [61, 93, 119], 0.66), 0.05);
+    const summaryBg = isDark ? toRgbaString(mixRgb(backgroundRgb, oceanLight, 0.14), 0.86) : toRgbaString(mixRgb(backgroundRgb, [255, 255, 255], 0.72), 0.92);
+    const buttonBg = isDark ? toRgbString(mixRgb(backgroundRgb, oceanLight, 0.12)) : toRgbString(mixRgb(backgroundRgb, [242, 247, 251], 0.66));
+    const buttonText = toRgbString(textStrong);
+    const buttonActiveBg = isDark ? toRgbString(mixRgb(backgroundRgb, oceanLight, 0.84)) : toRgbString(mixRgb(backgroundRgb, oceanDark, 0.92));
+    const buttonActiveText = isDark ? toRgbString(mixRgb(backgroundRgb, oceanDark, 0.94)) : toRgbString(mixRgb(backgroundRgb, [245, 251, 255], 0.96));
+    const codeBg = isDark ? toRgbString(mixRgb(backgroundRgb, [14, 22, 29], 0.42)) : toRgbString(mixRgb(backgroundRgb, [238, 244, 248], 0.76));
+    const codeInlineBg = isDark ? toRgbString(mixRgb(backgroundRgb, [55, 74, 89], 0.48)) : toRgbString(mixRgb(backgroundRgb, [230, 238, 244], 0.8));
+    const codeText = isDark ? toRgbString(mixRgb(backgroundRgb, [238, 248, 255], 0.92)) : toRgbString(mixRgb(backgroundRgb, [18, 31, 44], 0.94));
+    const outputBg = isDark ? toRgbString(mixRgb(backgroundRgb, [232, 245, 252], 0.86)) : toRgbString(mixRgb(backgroundRgb, [24, 37, 49], 0.92));
+    const outputText = isDark ? toRgbString(mixRgb(backgroundRgb, [12, 22, 30], 0.94)) : toRgbString(mixRgb(backgroundRgb, [239, 248, 255], 0.94));
+    const link = isDark ? toRgbString(mixRgb(backgroundRgb, [154, 222, 255], 0.9)) : toRgbString(mixRgb(backgroundRgb, [30, 95, 134], 0.94));
+    const linkBorder = isDark ? toRgbaString(mixRgb(backgroundRgb, [154, 222, 255], 0.84), 0.52) : toRgbaString(mixRgb(backgroundRgb, [30, 95, 134], 0.92), 0.34);
+    const linkBorderHover = isDark ? toRgbaString(mixRgb(backgroundRgb, [154, 222, 255], 0.96), 0.96) : toRgbaString(mixRgb(backgroundRgb, [30, 95, 134], 0.98), 0.84);
+    const accent = isDark ? toRgbString(mixRgb(backgroundRgb, [140, 201, 233], 0.82)) : toRgbString(mixRgb(backgroundRgb, [61, 122, 162], 0.9));
+
+    article.style.setProperty("--essay-text", toRgbString(textBase));
+    article.style.setProperty("--essay-text-strong", toRgbString(textStrong));
+    article.style.setProperty("--essay-text-muted", toRgbString(textMuted));
+    article.style.setProperty("--essay-kicker", toRgbString(kicker));
+    article.style.setProperty("--essay-border", border);
+    article.style.setProperty("--essay-border-soft", borderSoft);
+    article.style.setProperty("--essay-panel-bg", panelBg);
+    article.style.setProperty("--essay-panel-strong-bg", panelStrongBg);
+    article.style.setProperty("--essay-hero-bg-start", heroStart);
+    article.style.setProperty("--essay-hero-bg-end", heroEnd);
+    article.style.setProperty("--essay-hero-grid", heroGrid);
+    article.style.setProperty("--essay-summary-bg", summaryBg);
+    article.style.setProperty("--essay-button-bg", buttonBg);
+    article.style.setProperty("--essay-button-text", buttonText);
+    article.style.setProperty("--essay-button-active-bg", buttonActiveBg);
+    article.style.setProperty("--essay-button-active-text", buttonActiveText);
+    article.style.setProperty("--essay-code-bg", codeBg);
+    article.style.setProperty("--essay-code-inline-bg", codeInlineBg);
+    article.style.setProperty("--essay-code-text", codeText);
+    article.style.setProperty("--essay-output-bg", outputBg);
+    article.style.setProperty("--essay-output-text", outputText);
+    article.style.setProperty("--essay-link", link);
+    article.style.setProperty("--essay-link-border", linkBorder);
+    article.style.setProperty("--essay-link-border-hover", linkBorderHover);
+    article.style.setProperty("--essay-accent", accent);
+    article.dataset.tone = isDark ? "dark" : "light";
+  }
+
+  function resolveBackgroundColor(node) {
+    let current = node;
+    while (current) {
+      const style = window.getComputedStyle(current);
+      const rgb = parseRgb(style.backgroundColor);
+      if (rgb && style.backgroundColor !== "rgba(0, 0, 0, 0)" && style.backgroundColor !== "transparent") {
+        return rgb;
+      }
+      current = current.parentElement;
+    }
+    return [255, 255, 255];
+  }
+
+  function applyEssayTone() {
+    const rgb = resolveBackgroundColor(article.parentElement || document.body);
+    applyEssayPalette(rgb);
+  }
+
+  applyEssayTone();
+  window.addEventListener("load", applyEssayTone);
+  window.addEventListener("resize", applyEssayTone);
+})();
+
+</script>
