@@ -404,7 +404,7 @@ main()
   const article = document.getElementById("postercraft-research");
   if (!article) return;
   function parseRgb(colorValue) {
-    const match = colorValue && colorValue.match(/d+(.d+)?/g);
+    const match = colorValue && colorValue.match(/\d+(\.\d+)?/g);
     if (!match || match.length < 3) return null;
     return match.slice(0, 3).map(Number);
   }
