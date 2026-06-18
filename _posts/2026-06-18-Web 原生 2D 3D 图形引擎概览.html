@@ -1,0 +1,540 @@
+---
+layout: post
+title: "Web 原生 2D / 3D 图形引擎概览：Canvas、Phaser、three.js 与 three.js 生态"
+toc: false
+math: false
+excerpt: >-
+  Web 原生图形开发并不存在一个“万能引擎”。Canvas 2D 是最底层、最稳定的 2D 绘图能力；Phaser 是建立在 Canvas / WebGL 之上的 2D 游戏框架；three.js 是面向 3D 场景和渲染的 JavaScript 库，而不是完整游戏引擎。本文基于官方文档、规范与项目主页，系统梳理三者的定位、原理、实践方式、社区生态、典型案例，以及 three.js 周边可作为 3D 游戏引擎或框架的代表性项目。
+categories: [research, web, graphics]
+tags:
+  - canvas
+  - phaser
+  - threejs
+  - webgl
+  - 2d
+  - 3d
+  - game-engine
+author:
+  - vortezwohl
+  - 吴子豪
+  - Codex
+---
+
+<article id="web-graphics-engine-research" lang="zh-CN">
+  <style>
+    #web-graphics-engine-research {
+      --essay-text: #171d24;
+      --essay-text-strong: #0f141a;
+      --essay-text-muted: #42505c;
+      --essay-kicker: #5b6976;
+      --essay-border: #d5dde5;
+      --essay-border-soft: #e2e8ef;
+      --essay-panel-bg: #f8fbfd;
+      --essay-panel-strong-bg: #eef4f8;
+      --essay-hero-bg-start: #f3f8fb;
+      --essay-hero-bg-end: #edf4f8;
+      --essay-hero-grid: rgba(61, 93, 119, 0.05);
+      --essay-summary-bg: rgba(255, 255, 255, 0.84);
+      --essay-button-bg: #f3f7fa;
+      --essay-button-text: #16202a;
+      --essay-button-active-bg: #182531;
+      --essay-button-active-text: #f6fbff;
+      --essay-code-bg: #eef4f8;
+      --essay-code-inline-bg: #e7eff4;
+      --essay-code-text: #12202d;
+      --essay-output-bg: #182531;
+      --essay-output-text: #edf7ff;
+      --essay-link: #205f86;
+      --essay-link-border: rgba(32, 95, 134, 0.34);
+      --essay-link-border-hover: rgba(32, 95, 134, 0.82);
+      --essay-accent: #3f7aa2;
+      color: var(--essay-text);
+      font-family: "Iowan Old Style", "Palatino Linotype", "Ubuntu", "Noto Sans SC", "Source Han Sans SC", sans-serif;
+      line-height: 1.88;
+      word-break: break-word;
+    }
+    #web-graphics-engine-research[data-tone="dark"] {
+      --essay-text: #d8e4ec;
+      --essay-text-strong: #f5fbff;
+      --essay-text-muted: #b9cad7;
+      --essay-kicker: #92adc1;
+      --essay-border: rgba(228, 240, 248, 0.18);
+      --essay-border-soft: rgba(228, 240, 248, 0.12);
+      --essay-panel-bg: rgba(24, 32, 40, 0.92);
+      --essay-panel-strong-bg: rgba(34, 45, 56, 0.96);
+      --essay-hero-bg-start: rgba(24, 33, 41, 0.98);
+      --essay-hero-bg-end: rgba(16, 22, 28, 0.98);
+      --essay-hero-grid: rgba(197, 223, 241, 0.08);
+      --essay-summary-bg: rgba(39, 50, 62, 0.86);
+      --essay-button-bg: rgba(39, 50, 61, 0.94);
+      --essay-button-text: #e9f5fc;
+      --essay-button-active-bg: #dbeefa;
+      --essay-button-active-text: #142330;
+      --essay-code-bg: rgba(18, 26, 34, 0.98);
+      --essay-code-inline-bg: rgba(56, 74, 90, 0.78);
+      --essay-code-text: #edf8ff;
+      --essay-output-bg: #e7f4fb;
+      --essay-output-text: #10202d;
+      --essay-link: #9bdcff;
+      --essay-link-border: rgba(155, 220, 255, 0.42);
+      --essay-link-border-hover: rgba(155, 220, 255, 0.95);
+      --essay-accent: #8bc7e7;
+    }
+    #web-graphics-engine-research .essay-shell { width: 100%; max-width: 1040px; margin: 0 auto; padding: 1.6rem 0 5.5rem; }
+    #web-graphics-engine-research .essay-kicker { position: relative; margin: 0 0 12px; color: var(--essay-kicker); font-size: 0.82rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; }
+    #web-graphics-engine-research .essay-hero { position: relative; overflow: hidden; border: 1px solid var(--essay-border); border-radius: 28px; padding: 2.5rem 2rem 2rem; background: linear-gradient(180deg, var(--essay-hero-bg-start) 0%, var(--essay-hero-bg-end) 100%); box-shadow: 0 26px 70px rgba(24, 37, 49, 0.07); }
+    #web-graphics-engine-research .essay-hero::before { content: ""; position: absolute; inset: 0; background-image: linear-gradient(var(--essay-hero-grid) 1px, transparent 1px), linear-gradient(90deg, var(--essay-hero-grid) 1px, transparent 1px); background-size: 100% 1.75rem, 1.75rem 100%; pointer-events: none; }
+    #web-graphics-engine-research .essay-hero::after { content: ""; position: absolute; width: 20rem; height: 20rem; right: -4rem; top: -6rem; background: radial-gradient(circle, rgba(107, 163, 197, 0.18) 0%, rgba(107, 163, 197, 0) 72%); pointer-events: none; }
+    #web-graphics-engine-research .essay-hero h1 { position: relative; margin: 0; color: var(--essay-text-strong); font-size: clamp(2.2rem, 4vw, 4rem); line-height: 1.08; letter-spacing: -0.03em; }
+    #web-graphics-engine-research .essay-lead { position: relative; width: min(880px, 100%); margin: 18px 0 0; color: var(--essay-text-muted); font-size: 1.08rem; }
+    #web-graphics-engine-research .essay-summary-grid, #web-graphics-engine-research .essay-card-grid, #web-graphics-engine-research .essay-note-grid { display: grid; gap: 16px; grid-template-columns: repeat(12, minmax(0, 1fr)); margin-top: 24px; }
+    #web-graphics-engine-research .summary-card, #web-graphics-engine-research .card, #web-graphics-engine-research .note-card { border: 1px solid var(--essay-border-soft); border-radius: 20px; background: var(--essay-summary-bg); padding: 18px 18px 16px; backdrop-filter: blur(6px); box-shadow: 0 16px 38px rgba(20, 34, 46, 0.05); animation: essay-fade-up 0.76s ease both; }
+    #web-graphics-engine-research .summary-card { grid-column: span 3; }
+    #web-graphics-engine-research .note-card { grid-column: span 4; }
+    #web-graphics-engine-research .card { grid-column: span 6; }
+    #web-graphics-engine-research .summary-card h3, #web-graphics-engine-research .note-card h3, #web-graphics-engine-research .card h3 { margin: 0 0 8px; color: var(--essay-text-strong); font-size: 1.04rem; }
+    #web-graphics-engine-research .summary-card p, #web-graphics-engine-research .note-card p, #web-graphics-engine-research .card p { margin: 0; color: var(--essay-text-muted); font-size: 0.94rem; }
+    #web-graphics-engine-research .essay-section { position: relative; margin-top: 2.7rem; border: 1px solid var(--essay-border-soft); border-radius: 28px; padding: 2rem 1.8rem 1.8rem; background: var(--essay-panel-bg); box-shadow: 0 16px 44px rgba(20, 34, 46, 0.04); animation: essay-fade-up 0.8s ease both; }
+    #web-graphics-engine-research .essay-section h2 { margin: 0 0 16px; color: var(--essay-text-strong); font-size: clamp(1.45rem, 2vw, 1.96rem); letter-spacing: -0.02em; }
+    #web-graphics-engine-research .essay-section h3 { margin: 24px 0 10px; color: var(--essay-text-strong); font-size: 1.16rem; }
+    #web-graphics-engine-research .essay-section h4 { margin: 18px 0 8px; color: var(--essay-text-strong); font-size: 1.02rem; }
+    #web-graphics-engine-research .essay-section p { margin: 12px 0 0; }
+    #web-graphics-engine-research .essay-section ul, #web-graphics-engine-research .essay-section ol { margin: 14px 0 0 22px; padding: 0; }
+    #web-graphics-engine-research .essay-section li + li { margin-top: 8px; }
+    #web-graphics-engine-research strong { color: var(--essay-text-strong); }
+    #web-graphics-engine-research a { color: var(--essay-link); text-decoration: none; border-bottom: 1px solid var(--essay-link-border); transition: border-bottom-color 0.18s ease; }
+    #web-graphics-engine-research a:hover { border-bottom-color: var(--essay-link-border-hover); }
+    #web-graphics-engine-research .essay-code { margin-top: 16px; border-radius: 18px; padding: 16px 18px; background: var(--essay-code-bg); color: var(--essay-code-text); overflow-x: auto; font-family: "Consolas", "SFMono-Regular", monospace; font-size: 0.93rem; line-height: 1.75; white-space: pre-wrap; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08); }
+    #web-graphics-engine-research code { padding: 0.12em 0.42em; border-radius: 6px; background: var(--essay-code-inline-bg); color: var(--essay-code-text); font-family: "Consolas", "SFMono-Regular", monospace; font-size: 0.92em; }
+    #web-graphics-engine-research .comparison-table { width: 100%; border-collapse: collapse; margin-top: 18px; font-size: 0.95rem; }
+    #web-graphics-engine-research .comparison-table th, #web-graphics-engine-research .comparison-table td { border: 1px solid var(--essay-border-soft); padding: 12px; vertical-align: top; text-align: left; }
+    #web-graphics-engine-research .comparison-table th { background: var(--essay-panel-strong-bg); color: var(--essay-text-strong); font-weight: 700; }
+    #web-graphics-engine-research .metric-strip { display: grid; gap: 14px; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 24px; }
+    #web-graphics-engine-research .metric { border: 1px solid var(--essay-border-soft); border-radius: 16px; padding: 14px 14px 10px; background: var(--essay-panel-strong-bg); text-align: center; }
+    #web-graphics-engine-research .metric-value { display: block; color: var(--essay-text-strong); font-size: 1.24rem; font-weight: 700; }
+    #web-graphics-engine-research .metric-label { display: block; margin-top: 4px; color: var(--essay-text-muted); font-size: 0.82rem; }
+    #web-graphics-engine-research .arch-diagram { margin: 20px 0 0; border-radius: 20px; padding: 22px 24px; background: var(--essay-panel-strong-bg); border: 1px solid var(--essay-border-soft); overflow-x: auto; }
+    #web-graphics-engine-research .arch-diagram pre { margin: 0; font-family: "Consolas", "SFMono-Regular", monospace; font-size: 0.9rem; line-height: 1.7; color: var(--essay-code-text); white-space: pre-wrap; }
+    #web-graphics-engine-research .highlight-box { border-left: 4px solid var(--essay-accent); padding: 14px 18px; margin: 18px 0 0; background: var(--essay-panel-strong-bg); border-radius: 0 14px 14px 0; }
+    #web-graphics-engine-research .impact-grid { display: grid; gap: 16px; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 18px; }
+    #web-graphics-engine-research .impact-card { border: 1px solid var(--essay-border-soft); border-radius: 20px; padding: 18px; background: var(--essay-panel-strong-bg); box-shadow: 0 12px 28px rgba(20, 34, 46, 0.04); animation: essay-fade-up 0.76s ease both; }
+    #web-graphics-engine-research .impact-card h3 { margin-top: 0; }
+    #web-graphics-engine-research .reference-list { margin-top: 18px; columns: 2; column-gap: 22px; }
+    #web-graphics-engine-research .reference-item { break-inside: avoid; margin: 0 0 12px; padding: 0 0 0 18px; position: relative; }
+    #web-graphics-engine-research .reference-item::before { content: ""; position: absolute; left: 0; top: 0.72em; width: 7px; height: 7px; border-radius: 50%; background: var(--essay-link); opacity: 0.75; }
+    #web-graphics-engine-research .essay-disclaimer { margin-top: 18px; border-radius: 18px; padding: 16px 18px; background: var(--essay-panel-strong-bg); border: 1px solid var(--essay-border-soft); color: var(--essay-text-muted); font-size: 0.95rem; box-shadow: 0 10px 24px rgba(20, 34, 46, 0.035); }
+    @keyframes essay-fade-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    @media (max-width: 960px) {
+      #web-graphics-engine-research .summary-card { grid-column: span 6; }
+      #web-graphics-engine-research .note-card { grid-column: span 6; }
+      #web-graphics-engine-research .card { grid-column: span 12; }
+      #web-graphics-engine-research .metric-strip, #web-graphics-engine-research .impact-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      #web-graphics-engine-research .reference-list { columns: 1; }
+    }
+    @media (max-width: 720px) {
+      #web-graphics-engine-research .essay-shell { padding: 1rem 0 4rem; }
+      #web-graphics-engine-research .essay-hero, #web-graphics-engine-research .essay-section { border-radius: 22px; }
+      #web-graphics-engine-research .essay-hero { padding: 1.7rem 1.1rem 1.35rem; }
+      #web-graphics-engine-research .summary-card, #web-graphics-engine-research .note-card, #web-graphics-engine-research .card { grid-column: span 12; }
+      #web-graphics-engine-research .metric-strip, #web-graphics-engine-research .impact-grid { grid-template-columns: 1fr; }
+      #web-graphics-engine-research .essay-hero h1 { font-size: clamp(1.9rem, 8vw, 2.7rem); }
+    }
+  </style>
+
+  <div class="essay-shell">
+    <header class="essay-hero">
+      <div class="essay-kicker">Web Graphics / Engine Research</div>
+      <h1>Web 原生 2D / 3D 图形引擎概览</h1>
+      <p class="essay-lead">这篇文章解决一个经常被混淆的问题：<strong>Canvas、Phaser、three.js 到底各自是什么、彼此是什么关系、做游戏时该怎么选</strong>。正文以官方规范、官方文档和项目主页为主线，先拆底层图形能力，再拆 2D 游戏框架与 3D 渲染库，最后补齐 three.js 周边可用于 3D 游戏或交互式 3D 产品的代表性框架与引擎方案。</p>
+      <div class="essay-summary-grid">
+        <section class="summary-card"><h3>核心结论 1</h3><p><strong>Canvas 2D</strong> 是浏览器原生绘图 API，不是游戏引擎，更像图形底座。</p></section>
+        <section class="summary-card"><h3>核心结论 2</h3><p><strong>Phaser</strong> 是建在 Canvas / WebGL 之上的 2D 游戏框架，帮你组织场景、资源、输入、物理和渲染。</p></section>
+        <section class="summary-card"><h3>核心结论 3</h3><p><strong>three.js</strong> 是 3D 库，不是完整游戏引擎。它解决 3D 场景与渲染，不自动解决游戏全栈问题。</p></section>
+        <section class="summary-card"><h3>核心结论 4</h3><p>如果你坚持走 three.js 生态，真正更接近“3D 游戏引擎”的是 <strong>Rogue Engine</strong> 和 <strong>enable3d</strong>。</p></section>
+      </div>
+      <div class="metric-strip">
+        <div class="metric"><span class="metric-value">2D</span><span class="metric-label">Canvas 与 Phaser 的主战场</span></div>
+        <div class="metric"><span class="metric-value">3D</span><span class="metric-label">three.js 的核心能力域</span></div>
+        <div class="metric"><span class="metric-value">v4.1.0</span><span class="metric-label">截至 2026-06-18 Phaser 最新发布版</span></div>
+        <div class="metric"><span class="metric-value">4 类</span><span class="metric-label">three.js 周边主流框架路线</span></div>
+      </div>
+    </header>
+
+    <section class="essay-section">
+      <h2>一、研究边界与一张总图</h2>
+      <p>这次调研只关注 <strong>Web 原生运行时</strong>，也就是浏览器里直接可用的图形与游戏技术栈，不讨论 Unity、Unreal、Godot 的 Web 导出路线。问题的关键不在“谁最强”，而在于先把层级分清：底层图形 API、上层 2D 游戏框架、3D 场景库、以及再上一层的编辑器或游戏引擎壳，根本不是同一类东西。</p>
+      <div class="arch-diagram"><pre>浏览器图形 / 游戏栈的大致层级
+
+应用 / 游戏逻辑层
+  ├─ 你的关卡、玩法、UI、数据与状态
+  ├─ 2D 游戏框架：Phaser
+  └─ 3D 交互 / 3D 游戏框架：Rogue Engine / enable3d / A-Frame / R3F / Threlte
+
+图形抽象层
+  ├─ 2D 绘图 API：Canvas 2D
+  ├─ 3D 渲染库：three.js
+  └─ 低层 GPU 通道：WebGL / WebGPU
+
+平台层
+  └─ 浏览器、输入系统、音频、网络、DOM、Worker、存储</pre></div>
+      <div class="essay-note-grid">
+        <section class="note-card"><h3>Canvas 是什么</h3><p>浏览器原生 2D 绘图接口，提供像素、路径、文本、图像绘制等基础能力。</p></section>
+        <section class="note-card"><h3>Phaser 是什么</h3><p>面向 2D 游戏的组织层，把资源加载、场景管理、输入、相机、动画和物理串起来。</p></section>
+        <section class="note-card"><h3>three.js 是什么</h3><p>JavaScript 3D 库，提供场景图、相机、几何体、材质、灯光、动画与渲染器。</p></section>
+      </div>
+      <div class="highlight-box">最容易犯的错误，就是把“图形 API”“场景库”“游戏框架”“可视化编辑器”混成同一个问题。选型失真，通常就从这里开始。</div>
+    </section>
+
+    <section class="essay-section">
+      <h2>二、Canvas：Web 2D 图形的基础地板</h2>
+      <p><strong>Canvas API</strong> 是 HTML 平台内建的绘图能力。你通过 <code>&lt;canvas&gt;</code> 元素和 <code>CanvasRenderingContext2D</code> 获取一个可写像素表面，然后用 JavaScript 发出绘图命令。它不是引擎，也不保留“对象场景树”；它更像一块画布和一支极快的笔。</p>
+      <h3>1. 工作原理</h3>
+      <p>Canvas 2D 采用的是<strong>即时模式（immediate-mode）</strong>渲染：绘图命令直接修改底层像素缓冲，不会自动记录“这个圆是谁”“那个精灵属于哪个层”。因此，复杂场景想要更新时，通常需要你自己管理状态并在下一帧重绘。</p>
+      <div class="essay-code">const canvas = document.getElementById("app");
+const ctx = canvas.getContext("2d");
+
+ctx.fillStyle = "#205f86";
+ctx.fillRect(20, 20, 120, 60);
+ctx.fillStyle = "#ffffff";
+ctx.font = "24px sans-serif";
+ctx.fillText("Canvas", 30, 58);</div>
+      <h3>2. 它擅长什么</h3>
+      <ul>
+        <li>像素级绘制、滤镜、视频帧处理、签名板、简单白板和图像处理。</li>
+        <li>自己掌控渲染循环的 2D 动画、小游戏、粒子系统、可视化面板。</li>
+        <li>作为更高层框架的渲染后端或中间缓冲层。</li>
+      </ul>
+      <h3>3. 它不擅长什么</h3>
+      <ul>
+        <li>大规模复杂对象的保留式交互。对象拾取、命中检测、层级关系要自己管理。</li>
+        <li>复杂游戏工程组织。资源系统、关卡系统、相机、动画时间线、物理、UI 一般都要自己搭。</li>
+        <li>原生 3D 场景。3D 不是 Canvas 2D 的职责边界。</li>
+      </ul>
+      <table class="comparison-table">
+        <thead><tr><th>维度</th><th>Canvas 2D 的表现</th><th>工程含义</th></tr></thead>
+        <tbody>
+          <tr><td>抽象层级</td><td>低</td><td>自由度高，但组织成本也高</td></tr>
+          <tr><td>渲染模型</td><td>即时模式</td><td>每帧通常自己重绘</td></tr>
+          <tr><td>交互系统</td><td>原生没有对象层事件</td><td>命中检测需要自己做</td></tr>
+          <tr><td>游戏能力</td><td>无内建玩法框架</td><td>适合自研，不适合直接当“现成引擎”</td></tr>
+          <tr><td>学习成本</td><td>中等偏低</td><td>入门快，但做大项目很快会撞上工程组织问题</td></tr>
+        </tbody>
+      </table>
+      <p>因此，Canvas 更适合被理解成 <strong>图形底座</strong>。很多人说“我用 Canvas 做游戏”，本质上往往是在说“我基于 Canvas 自己搭了一套游戏循环和对象系统”。</p>
+    </section>
+
+    <section class="essay-section">
+      <h2>三、Phaser：建在 Canvas / WebGL 之上的 2D 游戏框架</h2>
+      <p><a href="https://phaser.io/" target="_blank" rel="noopener">Phaser</a> 的官方定位一直非常清晰：它是一个面向浏览器的 HTML5 游戏框架，重点是<strong>2D 游戏开发</strong>。截至 <strong>2026-06-18</strong>，其 GitHub Releases 页面显示最新正式发布版本为 <strong>v4.1.0</strong>，但官方示例、教程与大量生态资料依然大量围绕 Phaser 3 展开，因此学习和工程落地时通常要同时参考 v3 文档与 v4 发布状态。</p>
+      <h3>1. Phaser 的核心原理</h3>
+      <p>Phaser 的价值不在于“帮你画图”，而在于它把做 2D 游戏反复会遇到的能力统一组织起来。它有自己的 <code>Game</code> 生命周期、<code>Scene</code> 场景模型、资源加载器、输入系统、动画系统、相机、音频和物理模块，底层则根据配置与设备能力选择 <strong>WebGL、Canvas 或 Headless</strong> 渲染路径。</p>
+      <div class="arch-diagram"><pre>Phaser 典型运行模型
+
+Game Config
+  -> 选择渲染器 (AUTO / WEBGL / CANVAS)
+  -> 注册 Scene
+  -> 初始化输入、纹理、动画、缓存、声音
+
+Scene 生命周期
+  preload()  -> 加载图片、图集、音频、数据
+  create()   -> 创建精灵、文本、按钮、相机、物理体
+  update()   -> 每帧推进角色状态、碰撞、动画和逻辑
+
+Game Objects
+  -> sprite / image / text / tilemap / container / particles ...
+  -> 可选接入 input / physics / tween / camera</pre></div>
+      <h3>2. Scene 是 Phaser 的主心骨</h3>
+      <p>Phaser 的核心组织单元是 <code>Scene</code>。每个 Scene 可以拥有自己的显示列表、输入管理、相机和更新循环，并且多个 Scene 可以并行运行，比如“主游戏场景 + HUD 场景 + 暂停菜单场景”。这比直接在 Canvas 上写一堆全局状态更像真正的游戏工程结构。</p>
+      <h3>3. 输入系统与交互模型</h3>
+      <p>Phaser 会把鼠标、触摸、键盘、手柄等输入统一接进自己的输入层，但一个 Game Object 默认并不会自动接收点击或悬停事件，通常要显式调用 <code>setInteractive()</code>。这意味着 Phaser 提供了对象级交互抽象，而不是让你自己在 Canvas 坐标系里手搓命中测试。</p>
+      <h3>4. 物理系统</h3>
+      <p>Phaser 官方长期维护两套主要物理路线：</p>
+      <ul>
+        <li><strong>Arcade Physics</strong>：轻量、易懂、适合平台跳跃、俯视角动作、简单碰撞和休闲玩法。</li>
+        <li><strong>Matter.js</strong>：更完整的刚体物理，支持复杂碰撞体、约束和复合体，适合更重的物理交互。</li>
+      </ul>
+      <p>这两套系统的取舍，体现了 Phaser 的工程哲学：<strong>多数小游戏先用轻量方案闭环，真的需要刚体世界再升级</strong>，而不是把所有项目都拖进重物理。</p>
+      <h3>5. Text、动画和渲染细节</h3>
+      <p>Phaser 文档对一个细节交代得很直接：<code>Text</code> 对象底层会先在隐藏 Canvas 上绘制，再上传成纹理。因此，Phaser 虽然是游戏框架，但仍然会把浏览器原生图形能力吸收进自己的渲染链路中。这正说明它和 Canvas 不是替代关系，而是<strong>上层框架复用下层能力</strong>的关系。</p>
+      <div class="essay-note-grid">
+        <section class="note-card"><h3>资源加载</h3><p>通过 Loader 统一接管图片、纹理图集、音频、JSON、tilemap 等资源，减少手写资源生命周期管理。</p></section>
+        <section class="note-card"><h3>对象模型</h3><p>Sprite、Image、Text、Tilemap、Container、Particles 等 Game Object 已经是现成游戏构件，而不是裸绘图指令。</p></section>
+        <section class="note-card"><h3>渲染后端</h3><p>Phaser 不是只能跑 Canvas。它会根据配置走 WebGL 或 Canvas；Canvas 只是它可用的底层通道之一。</p></section>
+      </div>
+    </section>
+
+    <section class="essay-section">
+      <h2>四、Phaser 的实践、社区与典型案例</h2>
+      <h3>1. 实践层面最适合什么项目</h3>
+      <p>Phaser 最擅长的是 <strong>2D 游戏</strong>，尤其是这些场景：</p>
+      <ul>
+        <li>平台跳跃、跑酷、俯视角射击、弹幕、生存类小游戏。</li>
+        <li>Roguelike、解谜、卡牌、回合制、塔防、叙事驱动的 2D 作品。</li>
+        <li>品牌活动、社交平台内嵌游戏、Discord Activity、教育类小游戏。</li>
+      </ul>
+      <p>官方教程、示例和书籍也主要围绕这些方向展开。下载页明确强调了 <strong>2000+</strong> 官方示例与大量教程，说明 Phaser 的学习资源不是零散社区文章，而是体系化的官方材料。</p>
+      <h3>2. 社区生态</h3>
+      <p>Phaser 主站公开提供了 <strong>Discord、Forum、Reddit、Newsletter</strong> 等社区入口。工程上，这比“有 GitHub 仓库”更重要，因为它意味着你在踩坑时能找到长期维护的问答、示例和讨论，而不是只能依赖旧博客。</p>
+      <h3>3. 工具链</h3>
+      <p>官方还提供 <a href="https://phaser.io/editor" target="_blank" rel="noopener">Phaser Editor</a> 与下载页的工具入口。对纯代码型开发者，这不是必须；但对想把关卡、资源、动画和可视化编辑工作提前收束的人来说，这能显著降低工程摩擦。</p>
+      <h3>4. 典型案例判断</h3>
+      <table class="comparison-table">
+        <thead><tr><th>场景</th><th>Phaser 是否适合</th><th>原因</th></tr></thead>
+        <tbody>
+          <tr><td>2D 小游戏合集</td><td>非常适合</td><td>有现成场景、输入、动画、粒子和轻物理支持</td></tr>
+          <tr><td>HTML5 活动页互动游戏</td><td>非常适合</td><td>浏览器部署轻、跨桌面与移动端容易</td></tr>
+          <tr><td>复杂 UI 驱动的运营小游戏</td><td>适合</td><td>游戏层和 UI 层可分 Scene 或与 DOM 混合</td></tr>
+          <tr><td>3D 世界探索</td><td>不适合</td><td>Phaser 的主定位是 2D，不是完整 3D 引擎</td></tr>
+          <tr><td>写实 3D 游戏</td><td>不适合</td><td>需求已经超出 Phaser 的设计边界</td></tr>
+        </tbody>
+      </table>
+      <div class="highlight-box">如果你的主玩法是 2D，并且你不想自己从 Canvas 起手搭完整游戏框架，那么 Phaser 往往是比“裸 Canvas 自研”更合理的第一选择。</div>
+    </section>
+
+    <section class="essay-section">
+      <h2>五、three.js：3D 场景库，不是完整游戏引擎</h2>
+      <p><a href="https://threejs.org/" target="_blank" rel="noopener">three.js</a> 官方首页的定位非常直接：它是一个 <strong>JavaScript 3D Library</strong>。这句话很重要，因为它把 three.js 的职责边界说得足够清楚了。three.js 解决的是 <strong>3D 场景、相机、几何体、材质、灯光、动画与渲染器</strong>，而不是替你把游戏全栈打包好。</p>
+      <h3>1. 它真正提供了什么</h3>
+      <ul>
+        <li>场景图模型：<code>Scene</code>、<code>Object3D</code>、层级变换。</li>
+        <li>相机系统：透视、正交、轨道控制等。</li>
+        <li>几何体与材质系统：网格、线段、点云、PBR 材质、纹理。</li>
+        <li>光照与阴影：环境光、方向光、点光源、阴影贴图。</li>
+        <li>动画与加载器：GLTF、FBX、贴图、骨骼动画等。</li>
+        <li>WebGL 渲染器，以及持续演进的 WebGPU 路线。</li>
+      </ul>
+      <h3>2. 它没有默认提供什么</h3>
+      <ul>
+        <li>完整的 3D 游戏规则层、任务系统、关卡系统和游戏状态编排。</li>
+        <li>开箱即用的物理世界。刚体、车辆、角色控制、射线碰撞通常要接 Cannon、Rapier、Ammo 等外部方案。</li>
+        <li>Unity/Godot 那种一体化编辑器、资源导入工作流和项目管理能力。</li>
+        <li>完整 UI、音频、存档、联网和工具链抽象。</li>
+      </ul>
+      <p>所以如果你说“我用 three.js 做游戏”，更准确的说法通常是：<strong>我基于 three.js 搭了一套 3D 应用或游戏框架</strong>。three.js 是 3D 渲染和场景组织的核心件，但不是整台机器。</p>
+      <h3>3. three.js 最适合的实践方向</h3>
+      <div class="impact-grid">
+        <div class="impact-card"><h3>3D 交互产品</h3><p>商品展示、数字展厅、建筑预览、数据空间、3D 可视化和创意网站，这些是 three.js 最成熟的落地方向。</p></div>
+        <div class="impact-card"><h3>轻量 3D 游戏与原型</h3><p>第三人称原型、第一人称探索、解谜展示、低复杂度物理互动，都可以在 three.js 上逐步搭起来。</p></div>
+      </div>
+      <p>一旦项目需求开始触碰角色控制器、关卡编辑器、多人同步、重物理和内容生产工作流，three.js 自身就不再够用，你需要更上一层的框架或引擎壳。</p>
+    </section>
+
+    <section class="essay-section">
+      <h2>六、基于 three.js 的 3D 游戏引擎 / 框架生态</h2>
+      <p>用户经常问“有没有基于 three.js 的 3D 游戏引擎”。答案是：<strong>有，但多数不是 Unity 那种全栈重引擎，而是框架、编辑器或增强层</strong>。真正接近“引擎”这一说法的，只有少数几个项目。</p>
+      <table class="comparison-table">
+        <thead><tr><th>项目</th><th>定位</th><th>更像什么</th><th>强项</th><th>限制</th></tr></thead>
+        <tbody>
+          <tr><td><a href="https://rogueengine.io/" target="_blank" rel="noopener">Rogue Engine</a></td><td>官方直接称自己是 three.js game engine</td><td>编辑器驱动的 Web 3D 游戏引擎</td><td>最接近 Unity 式工作流；有场景编辑、脚本与案例</td><td>生态规模与通用性仍小于主流独立引擎</td></tr>
+          <tr><td><a href="https://enable3d.io/" target="_blank" rel="noopener">enable3d</a></td><td>three.js 的 3D / 物理框架</td><td>程序员导向的游戏增强层</td><td>补齐物理和常见 3D 游戏能力；也支持 Phaser 扩展路线</td><td>编辑器工作流不如真正引擎完整</td></tr>
+          <tr><td><a href="https://aframe.io/" target="_blank" rel="noopener">A-Frame</a></td><td>建立在 three.js 之上的 WebXR 框架</td><td>3D / VR / AR 场景框架</td><td>实体组件模型清晰，XR 场景开发门槛低</td><td>不以传统游戏引擎为主定位</td></tr>
+          <tr><td><a href="https://r3f.docs.pmnd.rs/" target="_blank" rel="noopener">React Three Fiber</a></td><td>three.js 的 React 渲染器</td><td>3D 应用开发框架</td><td>与 React 生态深度整合，适合产品型 3D 交互</td><td>不是完整游戏引擎，很多系统要自己搭</td></tr>
+          <tr><td><a href="https://threlte.xyz/" target="_blank" rel="noopener">Threlte</a></td><td>three.js 的 Svelte 3D 框架</td><td>Svelte 技术栈下的 3D 应用框架</td><td>声明式、响应式、适合 Svelte 项目</td><td>同样不是开箱即用游戏引擎</td></tr>
+        </tbody>
+      </table>
+      <h3>1. 谁最像“真正的游戏引擎”</h3>
+      <p>如果只在 three.js 生态内部挑，<strong>Rogue Engine</strong> 是最接近“引擎”这个词的。它不是只给你一个渲染 API，而是试图给出更完整的编辑器、场景和工作流。</p>
+      <h3>2. 谁更适合程序员自己掌控</h3>
+      <p><strong>enable3d</strong> 更像技术型开发者的路线。它的思路不是替你完全包起来，而是在 three.js 上把 3D 游戏常见的物理和框架能力补上，让你仍能保留足够高的代码控制权。</p>
+      <h3>3. 哪些其实不该硬叫“游戏引擎”</h3>
+      <p>A-Frame、React Three Fiber、Threlte 都很有价值，但更准确的表述应分别是 <strong>XR 框架</strong>、<strong>React 3D 渲染器</strong>、<strong>Svelte 3D 框架</strong>。它们能做游戏，但主卖点不在“完整游戏引擎”。</p>
+      <div class="highlight-box">如果你的目标是“在 three.js 生态里尽量省事地做 3D 游戏”，先看 Rogue Engine；如果你的目标是“保留代码掌控力并补齐物理”，先看 enable3d。</div>
+    </section>
+
+    <section class="essay-section">
+      <h2>七、Phaser、Canvas、three.js 的关系到底是什么</h2>
+      <p>这三个名字经常被放在一张表里比较，但它们其实分属不同层：</p>
+      <table class="comparison-table">
+        <thead><tr><th>维度</th><th>Canvas 2D</th><th>Phaser</th><th>three.js</th></tr></thead>
+        <tbody>
+          <tr><td>本质</td><td>浏览器原生绘图 API</td><td>2D 游戏框架</td><td>3D 场景与渲染库</td></tr>
+          <tr><td>主要目标</td><td>把像素画出来</td><td>把 2D 游戏做出来</td><td>把 3D 场景渲染与组织起来</td></tr>
+          <tr><td>场景维度</td><td>2D</td><td>2D</td><td>3D</td></tr>
+          <tr><td>是否内建游戏系统</td><td>否</td><td>是，较完整</td><td>否，需要自己组装</td></tr>
+          <tr><td>与底层 GPU 的关系</td><td>浏览器实现</td><td>内部可走 Canvas 或 WebGL</td><td>主要依赖 WebGL，逐步支持 WebGPU</td></tr>
+          <tr><td>最合适的问题</td><td>低层绘图与轻量交互</td><td>2D 小游戏与网页游戏</td><td>3D 交互与 3D 应用</td></tr>
+        </tbody>
+      </table>
+      <h3>1. Phaser 和 Canvas 的关系</h3>
+      <p>不是替代关系，而是<strong>框架与底层能力</strong>的关系。Canvas 负责提供绘图表面，Phaser 负责提供游戏结构。你可以不用 Phaser 直接写 Canvas，但那意味着你要自己补齐很多 Phaser 已经替你处理好的工程问题。</p>
+      <h3>2. Phaser 和 three.js 的关系</h3>
+      <p>也不是直接竞争关系。Phaser 的主战场是 2D 游戏，three.js 的主战场是 3D 场景。只有在“我要做游戏”这个大前提下它们才会被放到一个选型问题里，但它们处理的问题根本不同。</p>
+      <h3>3. Canvas 和 three.js 的关系</h3>
+      <p>Canvas 2D 是 2D 绘图 API；three.js 则建立在 WebGL 之上做 3D 场景组织。两者并不处于同一抽象层，也不是简单的一高一低关系。</p>
+    </section>
+
+    <section class="essay-section">
+      <h2>八、典型案例与真实选型逻辑</h2>
+      <h3>1. 什么时候应该选 Canvas</h3>
+      <ul>
+        <li>你要做的是图表、白板、签名板、粒子背景、视频特效、图像处理，而不是完整游戏工程。</li>
+        <li>你需要的是底层可控性，而不是框架抽象。</li>
+        <li>项目规模小，或者本来就准备自己搭渲染循环和对象系统。</li>
+      </ul>
+      <h3>2. 什么时候应该选 Phaser</h3>
+      <ul>
+        <li>目标明确是 2D 网页游戏。</li>
+        <li>你希望尽快拿到资源加载、场景管理、相机、动画、碰撞和输入系统。</li>
+        <li>你不想自己从 Canvas 或裸 WebGL 重新造一个 2D 游戏框架。</li>
+      </ul>
+      <h3>3. 什么时候应该选 three.js</h3>
+      <ul>
+        <li>核心问题是 3D 场景、模型、材质、镜头和空间交互。</li>
+        <li>你在做的是 3D 产品展示、数字空间、数据空间、交互艺术或 3D 游戏原型。</li>
+        <li>你接受“需要自己再组装一层游戏系统或产品框架”的现实。</li>
+      </ul>
+      <h3>4. 什么时候应该选 three.js 生态上的引擎或框架</h3>
+      <ul>
+        <li>已经确定是 three.js 路线，但不想纯手工拼所有 3D 能力。</li>
+        <li>希望有编辑器、脚本组件、物理层或更工程化的组织方式。</li>
+        <li>团队技术栈已经偏 React / Svelte / XR，需要把 3D 融入现有产品架构。</li>
+      </ul>
+      <div class="impact-grid">
+        <div class="impact-card"><h3>最低成本路线</h3><p>简单 2D 绘图选 Canvas；明确的 2D 游戏选 Phaser；明确的 3D 交互选 three.js。</p></div>
+        <div class="impact-card"><h3>更工程化路线</h3><p>如果坚持走 three.js 做 3D 游戏，优先评估 Rogue Engine 与 enable3d，而不是从裸 three.js 直接把整套玩法框架全补出来。</p></div>
+      </div>
+    </section>
+
+    <section class="essay-section">
+      <h2>九、最终结论</h2>
+      <p>Web 原生图形栈没有“万能主角”。<strong>Canvas</strong> 是地板，<strong>Phaser</strong> 是 2D 游戏框架，<strong>three.js</strong> 是 3D 场景库。把这三者放在一起比较，真正有意义的不是“谁更高级”，而是<strong>你的问题属于哪一层</strong>。</p>
+      <p>如果你的目标是做 2D 游戏，Phaser 通常比裸 Canvas 更合理；如果你的目标是做 3D 交互或 3D 游戏原型，three.js 是核心底座；如果你在 three.js 生态里继续追求更完整的 3D 游戏工作流，那么 Rogue Engine 和 enable3d 是最值得优先调研的两条路线。工程判断的关键从来不是“技术名词是否流行”，而是 <strong>抽象层是否对得上你的真实问题</strong>。</p>
+    </section>
+
+    <section class="essay-section">
+      <h2>十、参考资料</h2>
+      <div class="reference-list">
+        <div class="reference-item"><a href="https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API" target="_blank" rel="noopener">MDN Canvas API</a></div>
+        <div class="reference-item"><a href="https://html.spec.whatwg.org/multipage/canvas.html" target="_blank" rel="noopener">WHATWG HTML Living Standard: Canvas</a></div>
+        <div class="reference-item"><a href="https://phaser.io/" target="_blank" rel="noopener">Phaser 官网</a></div>
+        <div class="reference-item"><a href="https://docs.phaser.io/" target="_blank" rel="noopener">Phaser 官方文档</a></div>
+        <div class="reference-item"><a href="https://phaser.io/download" target="_blank" rel="noopener">Phaser 下载与示例入口</a></div>
+        <div class="reference-item"><a href="https://phaser.io/community" target="_blank" rel="noopener">Phaser Community</a></div>
+        <div class="reference-item"><a href="https://phaser.io/games" target="_blank" rel="noopener">Phaser Games Showcase</a></div>
+        <div class="reference-item"><a href="https://github.com/phaserjs/phaser/releases" target="_blank" rel="noopener">Phaser GitHub Releases</a></div>
+        <div class="reference-item"><a href="https://threejs.org/" target="_blank" rel="noopener">three.js 官网</a></div>
+        <div class="reference-item"><a href="https://threejs.org/docs/" target="_blank" rel="noopener">three.js 官方文档</a></div>
+        <div class="reference-item"><a href="https://rogueengine.io/" target="_blank" rel="noopener">Rogue Engine</a></div>
+        <div class="reference-item"><a href="https://rogueengine.io/examples" target="_blank" rel="noopener">Rogue Engine Examples</a></div>
+        <div class="reference-item"><a href="https://enable3d.io/" target="_blank" rel="noopener">enable3d</a></div>
+        <div class="reference-item"><a href="https://enable3d.io/docs.html" target="_blank" rel="noopener">enable3d Docs</a></div>
+        <div class="reference-item"><a href="https://aframe.io/" target="_blank" rel="noopener">A-Frame</a></div>
+        <div class="reference-item"><a href="https://aframe.io/docs/" target="_blank" rel="noopener">A-Frame Docs</a></div>
+        <div class="reference-item"><a href="https://r3f.docs.pmnd.rs/" target="_blank" rel="noopener">React Three Fiber Docs</a></div>
+        <div class="reference-item"><a href="https://threlte.xyz/" target="_blank" rel="noopener">Threlte</a></div>
+      </div>
+      <div class="essay-disclaimer"><strong>说明：</strong> 本文基于 <strong>2026-06-18</strong> 可访问的官方规范、官方文档、项目主页与发布页撰写。文中的定位判断优先遵循项目官方自述；涉及“更适合什么场景”的部分属于基于官方能力边界和工程实践的归纳，不等同于这些项目唯一允许的使用方式。</div>
+    </section>
+  </div>
+</article>
+
+<script>
+(function () {
+  const article = document.getElementById("web-graphics-engine-research");
+  if (!article) return;
+
+  function parseRgb(colorValue) {
+    const match = colorValue && colorValue.match(/\d+(\.\d+)?/g);
+    if (!match || match.length < 3) return null;
+    return match.slice(0, 3).map(Number);
+  }
+
+  function luminance(rgb) {
+    return (0.299 * rgb[0]) + (0.587 * rgb[1]) + (0.114 * rgb[2]);
+  }
+
+  function mixRgb(source, target, weight) {
+    return source.map(function (channel, index) {
+      return Math.round((channel * (1 - weight)) + (target[index] * weight));
+    });
+  }
+
+  function toRgbString(rgb) {
+    return "rgb(" + rgb.join(", ") + ")";
+  }
+
+  function toRgbaString(rgb, alpha) {
+    return "rgba(" + rgb.join(", ") + ", " + alpha + ")";
+  }
+
+  function applyEssayPalette(backgroundRgb) {
+    const isDark = luminance(backgroundRgb) < 156;
+    const oceanLight = [241, 248, 253];
+    const oceanDark = [15, 22, 28];
+    const textBase = isDark ? mixRgb(backgroundRgb, [237, 247, 255], 0.84) : mixRgb(backgroundRgb, [19, 28, 37], 0.94);
+    const textStrong = isDark ? mixRgb(backgroundRgb, [250, 253, 255], 0.92) : mixRgb(backgroundRgb, [10, 17, 24], 0.97);
+    const textMuted = isDark ? mixRgb(textBase, backgroundRgb, 0.22) : mixRgb(textBase, backgroundRgb, 0.3);
+    const kicker = isDark ? mixRgb(textBase, [146, 188, 214], 0.4) : mixRgb(textMuted, [78, 108, 133], 0.5);
+    const border = isDark ? toRgbaString(mixRgb(backgroundRgb, [232, 246, 255], 0.3), 0.34) : toRgbaString(mixRgb(backgroundRgb, [58, 95, 126], 0.82), 0.22);
+    const borderSoft = isDark ? toRgbaString(mixRgb(backgroundRgb, [232, 246, 255], 0.2), 0.24) : toRgbaString(mixRgb(backgroundRgb, [58, 95, 126], 0.58), 0.14);
+    const panelBg = isDark ? toRgbString(mixRgb(backgroundRgb, oceanLight, 0.1)) : toRgbString(mixRgb(backgroundRgb, oceanLight, 0.58));
+    const panelStrongBg = isDark ? toRgbString(mixRgb(backgroundRgb, oceanLight, 0.16)) : toRgbString(mixRgb(backgroundRgb, [228, 239, 247], 0.72));
+    const heroStart = isDark ? toRgbString(mixRgb(backgroundRgb, oceanLight, 0.08)) : toRgbString(mixRgb(backgroundRgb, [244, 250, 253], 0.74));
+    const heroEnd = isDark ? toRgbString(mixRgb(backgroundRgb, oceanDark, 0.2)) : toRgbString(mixRgb(backgroundRgb, [236, 244, 249], 0.7));
+    const heroGrid = isDark ? toRgbaString(mixRgb(backgroundRgb, oceanLight, 0.44), 0.08) : toRgbaString(mixRgb(backgroundRgb, [61, 93, 119], 0.66), 0.05);
+    const summaryBg = isDark ? toRgbaString(mixRgb(backgroundRgb, oceanLight, 0.14), 0.86) : toRgbaString(mixRgb(backgroundRgb, [255, 255, 255], 0.72), 0.92);
+    const buttonBg = isDark ? toRgbString(mixRgb(backgroundRgb, oceanLight, 0.12)) : toRgbString(mixRgb(backgroundRgb, [242, 247, 251], 0.66));
+    const buttonText = toRgbString(textStrong);
+    const buttonActiveBg = isDark ? toRgbString(mixRgb(backgroundRgb, oceanLight, 0.84)) : toRgbString(mixRgb(backgroundRgb, oceanDark, 0.92));
+    const buttonActiveText = isDark ? toRgbString(mixRgb(backgroundRgb, oceanDark, 0.94)) : toRgbString(mixRgb(backgroundRgb, [245, 251, 255], 0.96));
+    const codeBg = isDark ? toRgbString(mixRgb(backgroundRgb, [14, 22, 29], 0.42)) : toRgbString(mixRgb(backgroundRgb, [238, 244, 248], 0.76));
+    const codeInlineBg = isDark ? toRgbString(mixRgb(backgroundRgb, [55, 74, 89], 0.48)) : toRgbString(mixRgb(backgroundRgb, [230, 238, 244], 0.8));
+    const codeText = isDark ? toRgbString(mixRgb(backgroundRgb, [238, 248, 255], 0.92)) : toRgbString(mixRgb(backgroundRgb, [18, 31, 44], 0.94));
+    const outputBg = isDark ? toRgbString(mixRgb(backgroundRgb, [232, 245, 252], 0.86)) : toRgbString(mixRgb(backgroundRgb, [24, 37, 49], 0.92));
+    const outputText = isDark ? toRgbString(mixRgb(backgroundRgb, [12, 22, 30], 0.94)) : toRgbString(mixRgb(backgroundRgb, [239, 248, 255], 0.94));
+    const link = isDark ? toRgbString(mixRgb(backgroundRgb, [154, 222, 255], 0.9)) : toRgbString(mixRgb(backgroundRgb, [30, 95, 134], 0.94));
+    const linkBorder = isDark ? toRgbaString(mixRgb(backgroundRgb, [154, 222, 255], 0.84), 0.52) : toRgbaString(mixRgb(backgroundRgb, [30, 95, 134], 0.92), 0.34);
+    const linkBorderHover = isDark ? toRgbaString(mixRgb(backgroundRgb, [154, 222, 255], 0.96), 0.96) : toRgbaString(mixRgb(backgroundRgb, [30, 95, 134], 0.98), 0.84);
+    const accent = isDark ? toRgbString(mixRgb(backgroundRgb, [140, 201, 233], 0.82)) : toRgbString(mixRgb(backgroundRgb, [61, 122, 162], 0.9));
+
+    article.style.setProperty("--essay-text", toRgbString(textBase));
+    article.style.setProperty("--essay-text-strong", toRgbString(textStrong));
+    article.style.setProperty("--essay-text-muted", toRgbString(textMuted));
+    article.style.setProperty("--essay-kicker", toRgbString(kicker));
+    article.style.setProperty("--essay-border", border);
+    article.style.setProperty("--essay-border-soft", borderSoft);
+    article.style.setProperty("--essay-panel-bg", panelBg);
+    article.style.setProperty("--essay-panel-strong-bg", panelStrongBg);
+    article.style.setProperty("--essay-hero-bg-start", heroStart);
+    article.style.setProperty("--essay-hero-bg-end", heroEnd);
+    article.style.setProperty("--essay-hero-grid", heroGrid);
+    article.style.setProperty("--essay-summary-bg", summaryBg);
+    article.style.setProperty("--essay-button-bg", buttonBg);
+    article.style.setProperty("--essay-button-text", buttonText);
+    article.style.setProperty("--essay-button-active-bg", buttonActiveBg);
+    article.style.setProperty("--essay-button-active-text", buttonActiveText);
+    article.style.setProperty("--essay-code-bg", codeBg);
+    article.style.setProperty("--essay-code-inline-bg", codeInlineBg);
+    article.style.setProperty("--essay-code-text", codeText);
+    article.style.setProperty("--essay-output-bg", outputBg);
+    article.style.setProperty("--essay-output-text", outputText);
+    article.style.setProperty("--essay-link", link);
+    article.style.setProperty("--essay-link-border", linkBorder);
+    article.style.setProperty("--essay-link-border-hover", linkBorderHover);
+    article.style.setProperty("--essay-accent", accent);
+    article.dataset.tone = isDark ? "dark" : "light";
+  }
+
+  function resolveBackgroundColor(node) {
+    let current = node;
+    while (current) {
+      const style = window.getComputedStyle(current);
+      const rgb = parseRgb(style.backgroundColor);
+      if (rgb && style.backgroundColor !== "rgba(0, 0, 0, 0)" && style.backgroundColor !== "transparent") {
+        return rgb;
+      }
+      current = current.parentElement;
+    }
+    return [255, 255, 255];
+  }
+
+  function applyEssayTone() {
+    const rgb = resolveBackgroundColor(article.parentElement || document.body);
+    applyEssayPalette(rgb);
+  }
+
+  applyEssayTone();
+  window.addEventListener("load", applyEssayTone);
+  window.addEventListener("resize", applyEssayTone);
+})();
+</script>
