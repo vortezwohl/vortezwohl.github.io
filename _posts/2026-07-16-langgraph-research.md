@@ -9,9 +9,7 @@ author:
   - 吴子豪
 ---
 
-# LangGraph 深入调研：用法、应用场景与 ReAct Agent 对比
-
-> 本文基于 LangChain 官方 LangGraph 文档整理，回答三个问题：LangGraph 怎么用、适合什么场景，以及它和普通 ReAct Agent 到底是什么关系。
+基于 LangChain 官方 LangGraph 文档整理，回答三个问题：LangGraph 怎么用、适合什么场景，以及它和普通 ReAct Agent 到底是什么关系。
 
 ## 一、结论先行
 
