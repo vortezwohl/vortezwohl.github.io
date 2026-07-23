@@ -50,7 +50,7 @@ SecurityLingua 的相关工作则来自 LLM jailbreak 防御：安全微调、PP
 
 将原 prompt 写成 $x$，压缩 prompt 写成 $\tilde{x}$，目标 LLM 分别生成 $y$ 和 $\tilde{y}$。初代论文将目标写成：在尽量减小 $\lVert\tilde{x}\rVert$ 的同时，使 $P(y \mid x)$ 与 $P(\tilde{y} \mid \tilde{x})$ 的距离尽可能小，原文以 KL divergence 描述这种行为保持。
 
-压缩率容易产生术语混乱。论文中的 compression rate 通常是 $\tau = |\tilde{x}| / |x|$，而 README 与函数输出常把 `ratio` 写成原长度除以压缩后长度，即 $1 / \tau$。因此“4x 压缩”表示压缩后大约只剩四分之一 token，不是保留四倍 token。
+压缩率容易产生术语混乱。论文中的 compression rate 通常是 $\tau = \|\tilde{x}\| / \|x\|$，而 README 与函数输出常把 `ratio` 写成原长度除以压缩后长度，即 $1 / \tau$。因此“4x 压缩”表示压缩后大约只剩四分之一 token，不是保留四倍 token。
 
 这里的“faithful”也有两层含义：
 
