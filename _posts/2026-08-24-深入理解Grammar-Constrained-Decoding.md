@@ -1,7 +1,7 @@
 ---
 layout: post
 toc: true
-title: "Grammar-Constrained Decoding：给初学者的从直觉到原理教程"
+title: "Grammar-Constrained Decoding：让语言模型输出合法的魔术"
 categories: AI
 tags: [AI, LLM, Structured Generation, Grammar, Decoding, Agent, Function Calling]
 author:
