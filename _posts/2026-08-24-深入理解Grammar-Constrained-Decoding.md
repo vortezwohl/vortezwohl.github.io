@@ -22,7 +22,7 @@ $$
 y_t \sim P_{\mathrm{LM}}(y_t \mid x, y_{<t})
 $$
 
-实现上，模型先输出 logits 向量 $z_t\in\mathbb{R}^{|V|}$，再由 softmax、temperature、top-k、top-p、beam search 或 greedy 规则选出 token。这个分布目标是“下一个 token 在语言和上下文中有多可能”，而不是“这个 token 是否会让最终字符串属于某个外部 grammar”。
+实现上，模型先输出 logits 向量 $z_t\in\mathbb{R}^{\|V\|}$，再由 softmax、temperature、top-k、top-p、beam search 或 greedy 规则选出 token。这个分布目标是“下一个 token 在语言和上下文中有多可能”，而不是“这个 token 是否会让最终字符串属于某个外部 grammar”。
 
 模型可能学会 JSON、SQL 和 Python 的常见写法，却没有一个自动绑定到当前请求的、可证明的外部语法状态。因此同一个 prompt 可能得到：
 
