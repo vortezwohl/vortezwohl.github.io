@@ -1,139 +1,328 @@
 ---
 layout: post
 toc: true
-title: "Grammar-Constrained Decoding：让语言模型输出合法的魔术"
+title: "Grammar-Constrained Decoding：给初学者的从直觉到原理教程"
 categories: AI
 tags: [AI, LLM, Structured Generation, Grammar, Decoding, Agent, Function Calling]
 author:
   - vortezwohl
   - 吴子豪
-excerpt: "Grammar-Constrained Decoding（GCD，语法约束解码）是在大语言模型的自回归解码循环中接入增量解析器：模型继续负责在候选中选择内容，语法引擎则根据当前前缀和 tokenizer 的真实 token 边界，计算仍有可能完成为合法字符串的 token 集合，并在采样前把所有非法 token 的 logit 置为负无穷。本文从普通解码为何不稳定、Prefix(L(G))、FSM/CFG/JSON Schema、subword tokenizer 求交和 mask 数学定义出发，解释 PICARD、Outlines、LM Format Enforcer、llama.cpp GBNF、XGrammar、vLLM 与 OpenAI Structured Outputs 的实现取舍；进一步讨论格式保证与语义正确的边界、grammar-induced distribution shift、Grammar-Aligned Decoding/ASAp、tool-call abstention、性能和 dead-end 风险，并给出 function calling、RAG、信息抽取、SQL、代码、DSL、UI 协议与安全工作流的分层设计和评测清单。"
+excerpt: "这是一篇从零开始理解 Grammar-Constrained Decoding（GCD，语法约束解码）的教程。文章先把大语言模型解释成“根据前文猜下一个词”的自动补词机，再用 JSON 小例子说明为什么提示词不能稳定保证格式；随后用铁路道岔、门卫和地图逐步引出 grammar、合法前缀、parser state、tokenizer、token mask 和状态转移。读者会看到一个 token 如何在采样前被允许或拒绝，理解格式稳定来自什么数学不变式，也会知道 GCD 不保证事实、语义、权限和工具决策。后半部分再介绍 FSM、CFG、JSON Schema、PICARD、Outlines、LM Format Enforcer、llama.cpp、XGrammar、vLLM、Structured Outputs、分布偏移、拒答设计、性能优化、生产分层和评测方法。"
 ---
 
-> 本文是一份面向工程师和研究人员的 GCD 全景讲义。核心结论是：**模型给概率，grammar 给边界；约束发生在采样前，而不是输出后的字符串清洗。** 因此 GCD 可以把“尽量输出 JSON”升级成“无法输出不符合 grammar 的 token”。但它只负责可解析性和结构层约束，不能替代事实核验、业务规则、权限策略、拒答设计和执行前安全门禁。公开资料核验截至 2026 年 8 月；论文中报告的数字属于特定模型、数据集和后端，不能未经复现实验直接泛化。
+> **给第一次接触这个主题的读者：不要一上来背公式。** 这篇文章安排成一堂循序渐进的课。你只需要先记住一句话：**模型负责“从允许的选项里挑哪个”，grammar 负责“哪些选项根本不能出现”。** 后面的数学、解析器、tokenizer 和工程框架，都是在精确描述这句话。
+>
+> 文中的公式全部使用 Markdown 数学格式：行内公式写成 `$...$`，独立公式写成 `$$...$$`。引用使用 `[^n]` 脚注。公开资料核验截至 2026 年 8 月；论文中的性能数字只对其特定实验条件负责。
 
-## 一、先把问题说清楚：普通解码为什么会失稳
+## 0. 阅读引导
 
-### 1.1 自回归模型的默认目标
+如果你完全不懂 GCD，建议按下面的顺序阅读，不要跳到实现框架：
 
-给定输入 $x$ 和已经生成的前缀 $y_{<t}$，语言模型在整个词表 $V$ 上给出下一 token 的分布：
+1. **先懂模型在做什么**：模型不是一次性写完答案，而是一次只猜一个 token。
+2. **再懂格式为什么会错**：模型有概率，没有外部规则的硬门禁。
+3. **再懂 grammar 是什么**：它像一张规定“哪些完整字符串算合法”的地图。
+4. **再懂 parser state**：解析器每读一个字符，都记住自己现在走到地图的哪一格。
+5. **再懂 token 和字符的差别**：模型选择 token，但 grammar 通常描述字符或结构。
+6. **最后看公式和工程**：mask、状态转移、缓存、GPU overlap 都是前面直觉的精确实现。
+
+读完全文，你应该能自己回答五个问题：
+
+- GCD 究竟在模型生成的哪一刻介入？
+- 为什么它能把某些非法格式的概率变成零？
+- tokenizer 为什么会让看似简单的约束变难？
+- “格式合法”为什么不等于“答案正确”？
+- 什么时候值得付出延迟和实现复杂度使用它？
+
+## 1. 第一课：把大语言模型想成一个自动补词机
+
+### 1.1 模型不是“直接输出一段话”
+
+我们平时说“模型回答问题”，容易产生一个错觉：好像模型先在脑中写好完整答案，然后一次性把答案交出来。实际运行方式更像手机输入法的自动补全，只是规模大得多：
+
+1. 读取输入和已经生成的内容；
+2. 在词表中给下一项打分；
+3. 选出一个 token；
+4. 把这个 token 接到末尾；
+5. 再重复一次。
+
+这里的 token 可以是一个字、一个词、半个词、标点，甚至一小段常见字符串。给定输入 $x$ 和前缀 $y_{<t}$，模型每一步都在估计：
 
 $$
-y_t \sim P_{\mathrm{LM}}(y_t \mid x, y_{<t})
+y_t \sim P_{\mathrm{LM}}(y_t\mid x,y_{<t})
 $$
 
-实现上，模型先输出 logits 向量 $z_t\in\mathbb{R}^{\|V\|}$，再由 softmax、temperature、top-k、top-p、beam search 或 greedy 规则选出 token。这个分布目标是“下一个 token 在语言和上下文中有多可能”，而不是“这个 token 是否会让最终字符串属于某个外部 grammar”。
+**人话翻译**：在已经看到的内容后面，词表里的每个候选有多大可能成为下一个 token。
 
-模型可能学会 JSON、SQL 和 Python 的常见写法，却没有一个自动绑定到当前请求的、可证明的外部语法状态。因此同一个 prompt 可能得到：
+模型先产生 logits $z_t$，再转换成概率。logits 只是“分数”，分数越高，通常越容易被选中；它还没有表示任何外部 grammar 的许可：
+
+$$
+P_{\mathrm{LM}}(y_t=v\mid x,y_{<t})=\operatorname{softmax}(z_t)_v
+$$
+
+### 1.2 一个很小的例子
+
+假设我们要求模型只输出下面这种 JSON：
 
 ~~~json
 {"name": "Alice", "age": 20}
 ~~~
 
-也可能得到：
+普通模型可能输出正确版本，也可能输出：
 
 ~~~text
-Here is the JSON:
+当然可以，下面是结果：
 {"name": "Alice", "age": "twenty",}
 ~~~
 
-典型失败包括：
+这段输出对人类也许“看得懂”，但机器会发现至少有四个问题：
 
-- 缺少 required 字段，或者字段出现两次；
-- 逗号、引号、括号不配对；
-- enum 产生集合之外的值；
-- 数字、布尔值和字符串类型混淆；
-- 在 JSON 前后输出解释文本、Markdown 围栏或多余 token；
-- SQL/代码在语法上无法解析；
-- 提前生成 EOS，或者在没有停止条件时无限延长。
+- JSON 前面有解释文字；
+- age 应该是数字，却变成字符串；
+- 末尾有多余逗号；
+- 模型可能漏掉 required 字段，或者提前结束。
 
-提示词、few-shot 和重试可以改变概率质量，却不能从数学上让非法序列的概率严格为零。GCD 的切入点是把外部形式语言直接放进采样环节。
+**关键点**：模型不是“不知道 JSON 长什么样”，而是它每一步只在最大化语言概率，没有被一个外部裁判告知“这条路以后必须还能完成为指定 JSON”。
 
-### 1.2 “格式稳定”究竟指什么
+### 1.3 提示词为什么不是硬保证
 
-需要区分至少四个层级：
+提示词可以说“只输出 JSON，不要解释”，这会提高正确格式的概率。但它仍然只是影响 $P_{\mathrm{LM}}$：
 
-1. **词法层**：字符、转义、空白和 token 边界合法；
-2. **语法层**：字符串能被 JSON、SQL、CFG 或 DSL parser 接受；
-3. **结构层**：对象字段、数组元素、required、enum 和类型符合 schema；
-4. **语义/业务层**：事实有证据、数值合理、动作有权限且确实应该执行。
+- 它不能让非法 token 的概率严格变成零；
+- temperature、采样随机性、长输出和复杂嵌套会重新放大错误；
+- 模型可能把“内容正确”看得比“严格遵守格式”更重要；
+- 当 schema 要求一个模型没有证据的字段时，模型可能编造一个看似合规的值。
 
-GCD 主要覆盖前两层，某些 JSON Schema 后端也覆盖第三层的一部分。第四层必须由独立 validator、检索证据、策略引擎或执行沙箱负责。
+所以我们需要一个不依赖模型自觉的外部机制。这就是 GCD。
 
-## 二、形式语言：解析器真正维护的是什么
+## 2. 第二课：grammar 就是一张“合法字符串地图”
 
-### 2.1 Language 与 grammar
+### 2.1 先不谈代码，只谈“哪些句子算合法”
 
-把允许的完整输出写成一个形式语言 $L$。grammar $G$ 描述的语言记为 $L(G)$。解码时不能只问“当前字符串是不是一个完整合法对象”，因为生成通常停在半个 token、半个字符串或未闭合括号上。真正需要的是**可扩展前缀**：
+把所有允许的完整输出放进一个集合，叫作语言 $L$。这里的“语言”不一定是中文，也可以是 JSON、SQL、Python 或某种工具协议。
+
+例如，下面的规则规定 status 只能是 ok 或 error：
+
+~~~text
+输出必须是：
+{"status": "ok"}
+或
+{"status": "error"}
+~~~
+
+那么合法集合 $L$ 里只有两条完整字符串。grammar $G$ 是描述这个集合的规则，通常写成正则、EBNF、CFG 或 JSON Schema；由 $G$ 描述出的集合记为 $L(G)$。
+
+可以把它想成一张地图：
+
+- 完整合法输出是地图上的终点；
+- 每个字符或 token 是一步；
+- 一条从起点走到终点的路线就是一个合法输出；
+- 走进死胡同的路线不能继续。
+
+### 2.2 为什么要看“合法前缀”
+
+生成到一半时，字符串通常还不是完整 JSON。例如：
+
+~~~text
+{"status": "
+~~~
+
+它缺少值、引号和右括号，看起来“不完整”，但并不应该被判错，因为它仍有机会补成合法结果。
+
+因此 GCD 不问“现在是不是完整终点”，而问“现在是不是仍在通往某个终点的路上”。所有可以继续补全为合法字符串的前缀组成：
 
 $$
 \operatorname{Prefix}(L(G))=\{p\mid\exists s,\;ps\in L(G)\}
 $$
 
-若 $p\in\operatorname{Prefix}(L(G))$，则它虽然可能尚未完成，但至少存在某个后缀 $s$ 可以把它补成合法输出。比如 `{"status": "` 不是完整 JSON，却是合法前缀；`{"status": 1` 在状态枚举 grammar 下则不是合法前缀。
+**逐字翻译**：如果存在某个后缀 $s$，把它接到前缀 $p$ 后面就能得到合法完整字符串，那么 $p$ 就是合法前缀。
 
-这一定义给出了 GCD 的安全边界：候选 token 必须让新前缀仍属于 $\operatorname{Prefix}(L(G))$，而不能只检查 token 本身是否“看起来合法”。
+对上面的例子：
 
-### 2.2 FSM、CFG 与解析栈
+- `{"status": "` 是合法前缀，因为后面可以接 `ok"}`；
+- `{"status": "pend` 不是合法前缀，因为 enum 中没有以 pend 开头的值；
+- `{"status": 123` 不是合法前缀，因为 grammar 规定这里必须是字符串。
 
-不同约束表示对应不同的状态复杂度：
+### 2.3 parser 是“读地图的门卫”
 
-- **正则表达式**可以编译成 NFA/DFA/FSM，适合日期、邮箱、电话号码、固定 ID、有限分类标签；
-- **CFG/EBNF**通过终结符、非终结符和产生式描述嵌套结构，适合 SQL、程序代码、数学表达式、XML 子集和 DSL；
-- **JSON Schema**通常被转换为专用 JSON grammar，并额外维护对象字段集合、required/optional、数组索引、值类型、enum、转义和嵌套栈；
-- **输入依赖 grammar**会根据数据库 schema、检索证据或当前工具上下文动态缩小可生成语言[^1]。
+grammar 只是规则文本，真正执行规则的是 parser（解析器）。parser 不需要每次从头阅读整篇输出；它会维护一个很小的状态，告诉自己：
 
-有限状态约束只需保存一个状态编号；CFG 约束通常还要保存解析栈，状态可以表示为“栈顶符号、剩余产生式、已消费的终结符和局部语义标记”。这也是 CFG 比简单 FSM 更难做高吞吐的原因。
+- 现在是否刚打开了对象；
+- 接下来是在等 key、冒号、value 还是右括号；
+- 哪些 required 字段已经出现；
+- 当前是否正在字符串内部；
+- 当前 enum 已经匹配到哪几个字符；
+- 当前数组或嵌套对象的栈深度是多少。
 
-### 2.3 JSON Schema 不是完整业务规则
+把 parser 想成填写表格的门卫：
 
-Schema 可以表达 type、required、enum、additionalProperties、数组和对象嵌套等结构要求，但不同后端支持的 JSON Schema 只是子集。递归引用、oneOf/条件逻辑、动态依赖字段、复杂数值约束可能被拒绝、近似转换或运行时不支持。
+- 刚进门：只能写左大括号；
+- 看到 key 后：只能写冒号；
+- 看到冒号后：只能写符合该字段类型的 value；
+- 所有 required 字段完成后：才允许右大括号和 EOS。
 
-即使约束引擎接受了：
+这个“门卫此刻站在哪一步”就是 parser state。
 
-~~~json
-{"temperature": 999}
+## 3. 第三课：用一个具体例子走一遍 parser state
+
+### 3.1 目标 grammar
+
+我们定义一个极小的输出协议：
+
+~~~text
+{"status": "ok"} 或 {"status": "error"}
 ~~~
 
-它仍可能违反业务范围。因而要把“语法必须满足”和“业务可以拒绝”分开设计。OpenAI 文档明确区分 JSON mode 与 Structured Outputs：前者重点是可解析 JSON，后者针对受支持的 JSON Schema 子集提供 schema 合规，并用独立字段表达拒答[^4]。
+现在从空输出开始，观察“允许什么”的变化：
 
-## 三、GCD 的核心算法：从 mask 到状态转移
+| 当前前缀 | 门卫状态 | 下一步允许的内容 |
+| --- | --- | --- |
+| 空字符串 | 等待对象开始 | `{` |
+| `{` | 等待固定 key | `"status"` |
+| `{"status"` | 等待冒号 | `:` |
+| `{"status":` | 等待字符串值 | `"ok"` 或 `"error"` 的开头 |
+| `{"status": "o` | enum 已匹配 `o` | 只能继续 `k` |
+| `{"status": "ok"` | 值完成 | `}` |
+| `{"status": "ok"}` | 接受状态 | EOS |
 
-### 3.1 合法 token 集合
+这张表就是 GCD 的直觉核心：**允许集合不是固定的，它随着前缀变化。**
 
-设当前已生成文本前缀为 $p_t$，解析器状态为 $s_t$，token $v$ 经 tokenizer 解码后的字符串为 $\operatorname{decode}(v)$。第 $t$ 步的合法 token 集合定义为：
+### 3.2 模型偏爱非法值怎么办
+
+假设当前前缀是：
+
+~~~text
+{"status": "
+~~~
+
+模型给出三个候选：
+
+| 候选 | 模型原始分数 | grammar 是否允许 |
+| --- | ---: | --- |
+| ok | 8.2 | 是 |
+| error | 7.9 | 是 |
+| pending | 9.1 | 否 |
+
+普通解码可能选 pending，因为它分数最高。GCD 会先把 pending 从候选表中划掉，再让模型在 ok 和 error 中选择。模型依然有选择权，只是选择范围被缩小了。
+
+### 3.3 这个例子中“稳定”到底稳定了什么
+
+它稳定的是：
+
+- 不会出现未知 status 值；
+- 不会在 status 后面写数字；
+- 不会在对象结束前随便 EOS；
+- 不会缺少右引号或右括号。
+
+它没有稳定：
+
+- 用户是否真的应该得到 status=ok；
+- status=ok 是否符合外部事实；
+- 这段 JSON 是否对应正确的业务对象。
+
+这就是“格式正确”和“任务正确”的边界。
+
+## 4. 第四课：token、字符和 tokenizer 为什么让事情变复杂
+
+### 4.1 grammar 常按字符描述，模型却按 token 选择
+
+初学者很容易以为模型每次选择一个字符：`{`、`"`、`a`、`g`。实际上模型的词表可能包含：
+
+~~~text
+" Alice"
+",\n  \"age\""
+~~~
+
+一个 token 可以覆盖多个字符、一个字段，甚至跨越多个 grammar 状态。tokenizer 是把文本切成 token 的规则；BPE、Unigram、SentencePiece 和 byte-level tokenizer 的切法各不相同。
+
+因此，grammar 引擎不能简单地说“下一个字符允许冒号，所以允许所有以冒号开头的 token”。它必须检查 token 解码后的**全部字符**拼接起来是否仍然是合法前缀。
+
+### 4.2 prefix tree 求交：像两位门卫一起放行
+
+LM Format Enforcer 的思路很适合用一个比喻理解：
+
+- 字符 parser 是第一位门卫，知道 grammar 当前允许哪些字符；
+- tokenizer prefix tree（trie）是第二位门卫，知道词表里真实存在哪些完整 token；
+- 只有同时通过两位门卫的 token 才能放行[^3]。
+
+算法可以拆成五步：
+
+1. 从 trie 根节点开始；
+2. 取 token 的第一个字符交给 parser 检查；
+3. 若允许，就沿 trie 继续看下一个字符；
+4. 只要某个字符会让 parser 进入非法状态，就剪掉整条 token 分支；
+5. 走到 token 末尾时，将这个真实 token 加入 allowed 集合。
+
+这解释了三个工程事实：
+
+- 换 tokenizer，allowed token 集合可能变化；
+- 同一个 grammar 在不同模型上可能一个能生成、另一个 dead-end；
+- 空格、换行、Unicode、UTF-8 半字节和特殊 token 必须单独测试。
+
+### 4.3 一个容易踩的坑：字符上可行，token 上不可行
+
+假设 grammar 需要输出字符 `é`，字符级 parser 认为它合法，但某个 byte-level tokenizer 在当前状态下没有可以安全发出的 token，或者只能先发一个会导致非法 UTF-8 的半字节。此时“理论 grammar 可行”不等于“这个模型的 token 词表可行”。
+
+所以实际系统的兼容单位不是单独的 grammar，而是：
+
+$$
+\text{模型} + \text{tokenizer} + \text{grammar backend}
+$$
+
+## 5. 第五课：把直觉翻译成 GCD 的数学算法
+
+### 5.1 第一步：模型先给整张候选表
+
+当前前缀记为 $p_t$，模型对词表 $V$ 中每个 token 给出 logit $z_t(v)$。此时模型还没有受到 grammar 约束。
+
+### 5.2 第二步：解析器计算允许集合
+
+token $v$ 解码成字符串 $\operatorname{decode}(v)$。只有当拼接后的新前缀仍然可以完成为合法输出时，才允许它：
 
 $$
 A(s_t)=\{v\in V\mid p_t+\operatorname{decode}(v)\in\operatorname{Prefix}(L(G))\}
 $$
 
-这里的“合法”是**拼接后仍可完成**，不是 token 自身属于某个字符集合。若 grammar 已进入完整接受状态，EOS 也必须被视为一种特殊的可接受 token；否则模型会在合法对象之后继续写内容。
+**人话翻译**：把词表里的每个候选 token 试着接上去；会把路线带进死胡同的，不放进候选池。
 
-### 3.2 对 logits 做硬屏蔽
-
-模型输出原始 logits $z_t(v)$ 后，约束引擎构造：
+### 5.3 第三步：把不允许的分数改成负无穷
 
 $$
-z'_t(v)=\begin{cases}z_t(v), & v\in A(s_t)\\-\infty, & v\notin A(s_t)\end{cases}
+z'_t(v)=
+\begin{cases}
+ z_t(v), & v\in A(s_t)\\
+ -\infty, & v\notin A(s_t)
+\end{cases}
 $$
 
-随后在 $z'_t$ 上应用采样器：
+为什么是 $-\infty$？因为 softmax 中：
+
+$$
+\exp(-\infty)=0
+$$
+
+所以非法 token 的概率变成严格的零，而不是“概率变小一点”。这一步发生在采样之前，是 GCD 能提供硬格式边界的根本原因。
+
+### 5.4 第四步：在合法候选中照常采样
+
+mask 后的概率是：
 
 $$
 P'(y_t=v\mid p_t)=\frac{\exp z'_t(v)}{\sum_{u\in V}\exp z'_t(u)}
 $$
 
-因为非法 token 的 $\exp(-\infty)=0$，它们在这一步的概率严格为零。temperature、top-k、top-p、重复惩罚和 beam search 都只能在合法集合内继续发挥作用。
+接下来仍可以使用 greedy、temperature、top-k、top-p 或 beam search。区别只有一个：它们看到的词表已经被 grammar 过滤过。
 
-### 3.3 增量状态更新
+### 5.5 第五步：消费 token，更新状态
 
-采样得到 $y_t$ 后，解析器消费其完整解码文本，并执行状态转移：
+选择 token $y_t$ 后，parser 读取它的全部解码字符，并更新状态：
 
 $$
 s_{t+1}=\delta\left(s_t,\operatorname{decode}(y_t)\right)
 $$
 
-重复以下循环：
+然后回到第一步，直到 parser 进入 accepting state，并且 EOS 被允许。
+
+### 5.6 完整伪代码
 
 ~~~text
 state = grammar.start()
@@ -153,106 +342,102 @@ allow EOS only when grammar.accepting(state)
 return prefix
 ~~~
 
-工程实现通常不会真的把完整 prefix 每次重新解析；parser state、token 字节串和栈会增量更新，mask 也可缓存。
+真实系统会缓存 parser state、压缩 mask、增量更新解析栈，不会每一步都从头解析整段文本；但逻辑顺序就是这五步。
 
-### 3.4 为什么格式会变稳定：逐步不变式
+## 6. 第六课：为什么它能保证格式——一个不变式证明
 
-若初始前缀 $p_0$ 属于 $\operatorname{Prefix}(L(G))$，且每步只选择满足
+这部分第一次读可以慢一点。我们只证明“格式路径不会被走坏”。
+
+### 6.1 证明需要的三个前提
+
+1. 初始前缀 $p_0$ 是 grammar 的合法前缀；
+2. parser 正确计算 $A(s_t)$；
+3. 每一步只从 $A(s_t)$ 里选择 token，接受状态才允许 EOS。
+
+### 6.2 逐步不变式
+
+假设第 $t$ 步之前：
+
+$$
+p_t\in\operatorname{Prefix}(L(G))
+$$
+
+因为只允许 $y_t\in A(s_t)$，根据 $A(s_t)$ 的定义：
 
 $$
 p_{t+1}=p_t+\operatorname{decode}(y_t)\in\operatorname{Prefix}(L(G))
 $$
 
-的 token，那么所有中间前缀都不会离开可完成路径。当 parser 进入接受状态，且只允许合法 EOS 时，最终输出 $y$ 满足：
+这说明下一步仍然在“可抵达终点的道路”上。初始时道路合法，每一步都不离开道路，因此所有中间前缀都合法可扩展。
+
+### 6.3 什么时候得到完整合法输出
+
+当 parser 进入 accepting state，表示当前前缀本身已经属于 $L(G)$。如果这时才允许 EOS，那么最终输出满足：
 
 $$
 y\in L(G)
 $$
 
-这就是格式稳定的来源：**非法分支在生成前被置零**，不是生成后用正则替换，也不是模型突然变得更聪明。证明成立的前提是 grammar、parser、tokenizer 和 EOS 处理实现正确；它不自动证明业务语义正确。
+所以稳定性不是玄学，也不是“模型被训练得更听话”，而是一个解码时的候选空间不变式。
 
-## 四、tokenizer 是关键难点：字符语言与 token 词表如何求交
+### 6.4 证明的边界
 
-### 4.1 为什么 token 级过滤不能只看首字符
+这个证明不能替你检查实现是否正确。若 parser 有 bug、tokenizer 解码不一致、特殊 token 漏配、schema 被错误转换或系统在 dead-end 时偷偷放宽 mask，证明前提就失效。即使证明成立，也只说明输出属于 grammar 语言，不说明内容真实或动作安全。
 
-现代模型通常使用 BPE、Unigram 或 byte-level tokenizer。一个 token 可能包含前导空格、多个 JSON 字符或一段 SQL：
+## 7. 第七课：FSM、CFG、JSON Schema 到底有什么区别
 
-~~~text
-" Alice"
-",\\n  \\"age\\""
+### 7.1 正则和 FSM：一张有限状态交通图
+
+正则表达式通常可以编译成有限状态机。机器只需记住有限个状态，例如“已经读了四位年份”“正在等待连字符”“正在读取两位月份”。适合：
+
+- 日期、邮箱、电话号码；
+- 固定格式 ID；
+- 有限分类标签；
+- 简单标记语言。
+
+FSM 的优势是快、状态小、容易缓存；缺点是对任意深度嵌套不自然。
+
+### 7.2 CFG：带解析栈的嵌套地图
+
+上下文无关文法用产生式表达嵌套：
+
+~~~ebnf
+query ::= "SELECT" columns "FROM" table
+columns ::= column ("," column)*
 ~~~
 
-因此不能只检查 token 的第一字符，也不能假定每个 token 对应一个 grammar terminal。必须检查整个 prefix + decode(token) 是否仍在前缀语言中。不同模型、不同 tokenizer，即使使用同一个 JSON Schema，也可能得到不同的合法 token mask。
+SQL、代码、表达式和 DSL 常需要 CFG，因为括号、块、函数调用和优先级可以递归嵌套。CFG parser 通常维护解析栈，开销比 FSM 大，但表达能力更强。
 
-### 4.2 tokenizer prefix tree 求交
+### 7.3 JSON Schema：把结构要求写成机器可读协议
 
-LM Format Enforcer 的典型路线是把 tokenizer 词表构造成 prefix tree（trie），并与字符级 parser 求交[^3]：
+JSON Schema 不只是“JSON 外壳”，它还可以指定：
 
-1. parser 根据当前状态给出允许的下一个字符集合或字符转移；
-2. trie 从根向下遍历 token 的字符路径；
-3. 只保留在每个字符位置都能被 parser 接受的分支；
-4. 遍历到一个完整 token 时，把该 token 加入允许集合；
-5. 选中 token 后，parser 消费其全部字符，进入新状态。
+- 对象有哪些字段；
+- 哪些字段 required；
+- 字段是 string、number、boolean 还是 array；
+- enum 允许哪些值；
+- 是否禁止未知字段；
+- 数组元素和嵌套对象如何组织。
 
-这种求交同时解决了 subword 边界、前导空格、Unicode、byte token 和多个 grammar 边界被一个 token 跨过的问题。它也解释了为什么“模型 + tokenizer + grammar backend”应被视为一个兼容性单元：换 tokenizer 可能改变可生成性、空白风格、mask 大小和 dead-end 位置。
+不同后端会把 schema 编译为内部 grammar。不要误以为所有 JSON Schema 关键字在所有后端中都等价支持；生产前必须验证支持矩阵[^4]。
 
-### 4.3 词法细节与特殊 token
+### 7.4 GBNF、Outlines、PICARD 等名字如何记
 
-生产实现必须显式测试：
+可以用一句话记忆：
 
-- 前导空格和换行是否属于 grammar；
-- JSON 字符串中的转义和 Unicode surrogate；
-- byte-level BPE 的半个 UTF-8 字节；
-- SentencePiece 的词首标记；
-- BOS、EOS、工具调用分隔符和 stop token；
-- tokenizer 是否包含 grammar 要求的每个字节；
-- decode/encode 是否存在不可逆归一化。
+- **PICARD**：把增量 SQL parser 放进生成循环[^6]；
+- **Outlines**：把 regex/JSON/grammar 编译成生成器[^11]；
+- **LM Format Enforcer**：字符 parser 与 tokenizer trie 求交[^3]；
+- **llama.cpp GBNF**：本地模型通过 grammar 文件过滤 token[^2]；
+- **XGrammar**：为 CFG/JSON Schema 和高吞吐服务优化 parser、缓存与 GPU 协同[^7]；
+- **vLLM**：提供 choice、regex、JSON、grammar 等接口，可接 xgrammar 或 guidance[^5]；
+- **OpenAI Structured Outputs**：把服务端 grammar 约束封装成 API[^4]。
 
-任何字符级 parser 的“接受”都必须映射到真实词表中的至少一个 token，否则理论上可行的 grammar 在具体模型上仍会无合法 token。
+## 8. 第八课：GCD 能保证什么，不能保证什么
 
-## 五、从论文到社区实现：主要路线与取舍
+### 8.1 可以保证的“形式事实”
 
-| 实现/系统 | 约束表示 | 核心机制 | 典型适用 |
-| --- | --- | --- | --- |
-| PICARD | 增量 SQL parser | 每步试探 token，拒绝 parser 不接受的 token | text-to-SQL |
-| Outlines | regex、JSON、CFG | 编译生成器/FSM，并在推理时过滤 | Python 离线与服务推理 |
-| LM Format Enforcer | JSON Schema、regex | 字符 parser 与 tokenizer prefix tree 求交 | Transformers、vLLM 集成 |
-| llama.cpp GBNF | GBNF/EBNF | 本地 grammar 文件和运行时 token 过滤 | 本地模型、端侧 JSON/代码 |
-| XGrammar | CFG、JSON Schema | token 预检查、持久化栈、CPU/GPU overlap | 高吞吐推理服务 |
-| vLLM Structured Outputs | choice、regex、JSON、grammar、structural tag | 接入 xgrammar 或 guidance 后端 | 批量在线服务 |
-| OpenAI Structured Outputs | JSON Schema 受限子集 | API 服务端编译 grammar 并执行 mask | 托管 API |
-
-### 5.1 PICARD：解析器直接参与 SQL 解码
-
-PICARD（Parsing Incrementally for Constrained Auto-Regressive Decoding）把 SQL parser 放进自回归循环：对每个候选 token 做增量解析试探，只保留 parser 能接受的候选。它在 Spider、CoSQL 等 text-to-SQL 任务中展示了约束对执行准确率和语法错误率的改善[^6]。其思想很通用，但 parser 必须匹配目标数据库方言；“SQL 语法合法”仍不等于表名存在、权限允许或查询结果正确。
-
-### 5.2 Outlines、LM Format Enforcer 与 llama.cpp
-
-Outlines 把正则、JSON 和 grammar 编译成可复用的生成器，强调 API 易用性和有限状态约束[^11]。LM Format Enforcer 通过 trie 与字符 parser 求交保留空格、字段顺序和可选字段自由度[^3]。llama.cpp 使用 GBNF 描述 JSON、棋谱、特殊 token 区段和自定义语言，适合本地推理[^2]。
-
-它们共同的设计原则是：编译约束一次，解码阶段增量推进；但对递归 grammar、复杂 schema、动态 grammar 和 tokenizer 特性支持不同，不能只比较“是否支持 JSON”。
-
-### 5.3 XGrammar 与服务端后端
-
-XGrammar 面向大词表、复杂 CFG 和高并发服务，核心优化包括：
-
-- 预先检查 context-independent tokens，把不会受当前 parser 状态影响的 token 预处理；
-- 运行时只处理 context-dependent tokens；
-- 使用持久化 parser stack 减少重复构造；
-- 将 CPU grammar 工作与 GPU 推理重叠；
-- 为 batch 中每条请求保存独立状态。
-
-论文报告在特定 grammar-engine 基准上最高约 100 倍加速[^7]，但这不是端到端延迟自动降低 100 倍；真实结果还取决于模型推理占比、batch、schema 复杂度和缓存命中率。vLLM 当前提供 choice、regex、JSON、grammar 和 structural tag 等结构化输出入口，并可使用 xgrammar 或 guidance 后端[^5]。
-
-### 5.4 OpenAI Structured Outputs 与服务端封装
-
-托管 API 把 grammar 编译、tokenizer 对齐和 mask 执行隐藏在服务端。应用方仍需阅读支持的 schema 子集、拒答字段语义、strict 模式、流式输出和错误处理文档[^4]。API 层的“schema 合规”并不意味着它替你完成领域验证或高风险动作审批。
-
-## 六、格式保证的边界：能保证什么，不能保证什么
-
-### 6.1 通常可以强保证的内容
-
-在 parser 与 tokenizer 实现正确、grammar 可满足且没有中途截断的前提下，GCD 可以保证：
+在 grammar 可满足、parser 正确、tokenizer 对齐且没有截断的前提下，GCD 通常可以保证：
 
 - JSON 可解析；
 - 引号、括号、逗号和转义处于合法路径；
@@ -264,12 +449,12 @@ XGrammar 面向大词表、复杂 CFG 和高并发服务，核心优化包括：
 - 工具参数符合受支持 schema；
 - EOS 只在接受状态出现。
 
-### 6.2 不能自动保证的内容
+### 8.2 不能保证的“世界事实”
 
-GCD 不会自动证明：
+GCD 不能自动证明：
 
 - 字段内容真实或有证据；
-- SQL 查到了正确表和正确答案；
+- SQL 查询到了正确表和正确答案；
 - 代码没有 bug、漏洞或资源耗尽；
 - 数字满足业务上下界、币种和单位；
 - 工具调用是否应该发生；
@@ -277,118 +462,182 @@ GCD 不会自动证明：
 - 输出是否符合用户真实意图；
 - 动态权限、租户隔离和状态一致性。
 
-把语义错误塞进 grammar 往往会得到巨大、脆弱且难维护的 grammar；更好的做法是 grammar 保持协议级，业务 validator 负责值域与跨字段关系。
+看下面这个结果：
 
-## 七、被忽略的核心问题：局部 mask 会改变分布
+~~~json
+{"temperature": 999}
+~~~
 
-### 7.1 局部条件化
+它可能完全符合“字段是 number”的 schema，但业务上显然不合理。**语法 validator 只能说“形状对了”，不能说“含义对了”。**
 
-最简单的 token mask 产生的局部分布是：
+## 9. 第九课：为什么“强制格式”有时反而降低答案质量
+
+### 9.1 局部 mask 做了什么
+
+最简单的 GCD 每一步只看当前候选是否合规：
 
 $$
 P_{\mathrm{local}}(y_t=v\mid p_t)\propto P_{\mathrm{LM}}(y_t=v\mid p_t)\mathbf{1}[v\in A(s_t)]
 $$
 
-它只在当前一步把非法 token 的质量归零并重新归一化。理想目标更接近在所有完整合法序列上的条件分布：
+其中指示函数 $\mathbf{1}[\cdot]$ 的意思是：条件为真取 1，否则取 0。
+
+理想情况下，我们想要的是“在所有完整合法答案中，模型原本最偏爱的答案仍然最可能”：
 
 $$
 P_{\mathrm{ideal}}(y\mid x,\;y\in L(G))
 $$
 
-两者不同的原因是：当前合法 token 可能把生成带到一个未来几乎无法完成的分支；另一个当前分数略低的 token 可能拥有大量高质量完成路径。局部 mask 通常没有把“未来可行性”和“后续模型概率”完全纳入当前选择。
+两者不完全相同，因为当前合法 token 的未来可能完全不同：
 
-### 7.2 Grammar-induced distribution shift
+- token A 现在分数高，但会把 parser 带到很窄的死胡同；
+- token B 现在分数稍低，却有很多自然、完整的后续路径。
 
-因此 GCD 可能带来低概率但语法合法的词、不自然空格、被迫字段值、格式化幻觉和拒答下降。Grammar-Aligned Decoding 把这种现象称为 grammar alignment 问题，并提出 ASAp，通过估计未来可完成性，使输出更接近模型分布条件于 grammar 的理想目标[^8]。
+普通局部 mask 未必知道这些未来差异。
 
-工程上至少应记录“原始 top-1 是否被屏蔽”“选中 token 的原始 log-probability”“合法候选数量”和“forced-token ratio”，用来发现约束正在多大程度改变模型行为。
+### 9.2 grammar-induced distribution shift
 
-### 7.3 工具 abstention 的特殊风险
+因此 GCD 可能造成：
 
-工具调用不仅有“调用参数是否合法”，还有“应该调用还是应该直接回答/拒答”。最新预印本 *Repair, Not Improvement: Decomposing Constrained Decoding in Tool-Call Abstention* 报告：约束解码显著修复了工具调用格式，但枚举和停止 token 约束可能改变调用/不调用的决策，在部分条件下总体决策效果下降[^10]。这提醒我们不能用 100% parse rate 代替 tool selection、abstention correctness 和执行安全评测。
+- 低概率但语法合法的词；
+- 不自然空格、字段顺序和标点风格；
+- 被迫填入 schema 要求但证据不足的字段；
+- “格式化幻觉”：结构完整，却让错误内容显得更可信；
+- 拒答下降：grammar 没有 unknown/refuse 出口时，模型只能编造合法值。
 
-## 八、常见应用场景：为什么这些地方经常使用 GCD
+Grammar-Aligned Decoding 研究把这种现象称为 grammar alignment 问题，并提出 ASAp，通过估计未来可完成性，使输出更接近“模型分布条件于 grammar”的理想目标[^8]。
 
-### 8.1 Function calling / tool calling
+工程上应记录：原始 top-1 是否被屏蔽、选中 token 的原始 log-probability、合法候选数量、forced-token ratio 和 dead-end 位置。
 
-~~~json
-{
-  "tool": "search_orders",
-  "arguments": {
-    "user_id": "u123",
-    "limit": 10
-  }
-}
+### 9.3 工具调用中的 abstention
+
+工具调用有两个不同问题：
+
+1. 如果调用，参数格式对不对？
+2. 现在到底应该调用、直接回答，还是拒绝？
+
+GCD 很擅长第一个问题，却可能影响第二个问题。预印本 *Repair, Not Improvement: Decomposing Constrained Decoding in Tool-Call Abstention* 报告：约束明显修复了工具格式，但枚举和停止 token 约束可能改变调用/不调用决策，在部分条件下总体决策效果下降[^10]。
+
+因此不能用 100% parse rate 代替 tool selection accuracy、abstention correctness 和安全执行评测。
+
+## 10. 第十课：一次完整的 GCD 生成，像什么
+
+可以把一次生成想成“机器人在有围栏的迷宫里走路”：
+
+1. **模型**看到当前所在位置，给每条可能道路打分；
+2. **grammar parser**检查每条道路是否仍在合法地图内；
+3. **tokenizer trie**确认这条道路确实对应词表中的一个完整 token；
+4. **mask**关闭越界道路；
+5. **采样器**在剩余道路中按模型分数选择一条；
+6. **状态更新**把机器人移动到下一格；
+7. 到达终点后才允许 EOS。
+
+对应的工程循环是：
+
+~~~text
+GPU：计算 logits
+  ↓
+grammar engine：根据 parser state 计算 allowed token mask
+  ↓
+mask：非法 token 的 logit = -inf
+  ↓
+sampler：temperature / top-k / top-p / beam
+  ↓
+parser：消费选中的 token，更新 state
+  ↓
+接受状态？是则允许 EOS，否则继续
 ~~~
 
-GCD 能把工具名限制在 allowlist，保证参数可解析、required 存在、类型和 enum 正确、未知字段被拒绝。它特别适合数据库查询、订单系统、CRM、UI 操作和 agent 工作流。
+## 11. 第十一课：tokenizer 求交的工程过程
 
-但是否调用工具、调用时机、用户权限、幂等性、金额上限和人工确认仍属于策略层。高风险动作至少要经过 grammar、schema、业务 validator、authorization/policy gate 和执行前确认。
+### 11.1 两个问题必须同时回答
 
-### 8.2 RAG 与信息抽取
+对一个候选 token $v$，系统必须同时回答：
 
-合同、发票、简历、病历、日志和知识库问答常需要稳定返回：
+- grammar 允许它的所有字符按当前状态进入吗？
+- tokenizer 真的把这些字符作为一个完整 token 提供了吗？
 
-~~~json
-{
-  "answer": "...",
-  "citations": ["doc-12", "doc-19"],
-  "uncertainty": "insufficient_evidence"
-}
-~~~
+只有两个答案都为“是”，$v$ 才属于 $A(s_t)$。
 
-GCD 可保证字段和数组形状，降低下游解析成本；但 citation 是否真的支持 answer、amount 是否来自原文、confidence 是否校准，必须由证据对齐、字段级 validator 和独立评测处理。
+### 11.2 trie 求交的逐步过程
 
-### 8.3 Text-to-SQL、代码与 DSL
+1. 从 tokenizer trie 根节点开始；
+2. 取 token 的第一个字符，交给字符 parser；
+3. 若 parser 允许，继续沿 trie 走；
+4. 任意字符导致 grammar 非法，就剪掉整个分支；
+5. 到达一个完整 token 节点时，把 token 放入 allowed 集合；
+6. 选中后消费全部字符并推进 parser。
 
-CFG 可以表示关键字顺序、嵌套、优先级、函数参数和终止条件，适合 text-to-SQL、SQL 修复、JSON 查询语言、配置文件、编译器/接口 DSL、游戏脚本和机器人控制命令。
+这就是为什么不能只检查 token 的第一个字符，也不能把“字符集合”直接当成“token 集合”。
 
-SQL 还需要数据库方言、表/列存在性检查、只读事务、权限隔离和执行计划限制；代码还需要编译、静态分析、测试和沙箱。语法约束只是第一道门。
+### 11.3 必须测试的边界
 
-### 8.4 分类、路由与有限选择
+生产系统必须测试：
 
-当输出只能是 `refund`、`shipping` 或 `technical_support` 时，choice/enum 约束比提示词可靠。生产 enum 应包含 `other`、`unknown`、`insufficient_evidence` 或 `needs_human` 等出口，否则模型在边界样本上会被迫选择一个错误但合法的标签。
+- 前导空格和换行；
+- JSON 字符串转义；
+- Unicode 和 surrogate；
+- byte-level BPE 的半个 UTF-8 字节；
+- SentencePiece 词首标记；
+- BOS、EOS、stop 和工具分隔符；
+- grammar 需要但 tokenizer 不含的字符；
+- encode/decode 的不可逆归一化。
 
-### 8.5 UI、工作流与 agent 协议
+理论上 grammar 可行但词表没有可用 token，就会出现 dead-end。
 
-模型生成组件树、表单定义、工作流节点、状态机事件或 agent message 时，schema/grammar 能保护协议边界：前端只接收已知组件类型，工作流只接受允许的状态转移，消息只携带声明过的字段。权限、状态一致性、资源存在性和版本兼容仍需业务层处理。
+## 12. 第十二课：工程系统怎样把它跑起来
 
-## 九、工程实现：从 grammar 编译到采样循环
+### 12.1 编译阶段
 
-### 9.1 编译阶段
-
-请求到来前或首次使用 schema 时，系统通常：
+首次使用一个 grammar 或 schema 时，通常要：
 
 1. 解析 JSON Schema、regex 或 CFG；
 2. 检查不可达规则、左递归、未定义符号和冲突；
-3. 规范化 grammar，展开或拒绝不支持的 schema 结构；
+3. 规范化 grammar，展开或拒绝不支持的 schema；
 4. 编译成 DFA、解析表、栈机器或后端专用状态；
 5. 根据 tokenizer 做 token 可达性预处理；
-6. 初始化 parser state、mask cache 和 schema/tokenizer 指纹。
+6. 初始化 parser state、mask cache、schema/tokenizer 指纹。
 
-静态 schema 应预编译并缓存；动态 grammar 必须把输入上下文纳入缓存键。缓存键至少包含 model/tokenizer 标识、grammar backend 版本和 schema hash，否则换 tokenizer 或后端后可能复用错误 mask。
+静态 schema 应预编译缓存；动态 grammar 必须把输入上下文纳入缓存键。缓存键至少包含 model/tokenizer 标识、backend 版本和 schema hash。
 
-### 9.2 请求状态与 batch
+### 12.2 每个请求保存什么
 
-每条请求至少维护 parser state 或解析栈、已生成 token 序列、batch/beam 分支索引、EOS/stop/最大长度状态、grammar/backend 版本、tokenizer 指纹和 schema hash。batch 中的请求不能共享可变 parser state；beam search 分叉时必须复制或持久化栈，回溯时恢复对应状态。流式输出还要区分“当前片段已发出”和“完整 grammar 已接受”。
+每条请求至少需要保存：
 
-### 9.3 mask、采样与停止顺序
+- parser state 或解析栈；
+- 已生成 token 和字符/字节前缀；
+- batch/beam 分支索引；
+- EOS、stop 和最大长度状态；
+- grammar/backend 版本；
+- tokenizer 指纹；
+- schema hash。
 
-一个常见循环是：
+batch 中的请求不能共享可变 parser state；beam 分叉时必须复制或持久化栈。流式输出还要区分“中间片段已经发出”和“完整 grammar 已接受”。
 
-1. GPU 计算 logits；
-2. grammar engine 计算 allowed token mask；
-3. 将非法 logits 置为 $-\infty$；
-4. 应用 temperature、top-k/top-p、重复惩罚和采样；
-5. 消费选中 token，推进 parser；
-6. 只有在 accepting state 才开放 EOS/stop；
-7. 记录指标并继续下一步。
+### 12.3 mask 与 top-k/top-p 的顺序
 
-通常先 mask 再做 top-k/top-p，避免 top-k 预先截掉唯一合法 token；但后端可能采用不同顺序，必须以框架实现和回归测试为准。若 allowed 集合为空，应立即报告 grammar_dead_end，而不是放宽 grammar 或无条件采样。
+常见顺序是：
 
-### 9.4 dead-end 的诊断对象
+1. 模型产生 logits；
+2. grammar mask 把非法 token 设为 $-\infty$；
+3. 再做 temperature、top-k、top-p、重复惩罚；
+4. 采样并推进 parser。
 
-无合法 token 的原因包括 grammar 不可满足、tokenizer 缺字符、Unicode/空白归一化不一致、EOS 处理错误、schema 转换丢失分支、特殊 token 漏配或 parser/backend bug。建议返回结构化错误，而非截断成伪完整 JSON：
+通常先做 grammar mask，可以避免 top-k 预先截掉唯一合法 token；但具体后端可能不同，必须以框架实现和回归测试为准。
+
+### 12.4 dead-end：没有任何 token 可以走
+
+如果 allowed 集合为空，常见原因是：
+
+- grammar 不可满足；
+- tokenizer 缺少需要的字符；
+- Unicode 或空白归一化不一致；
+- EOS 处理错误；
+- schema 转换丢分支；
+- 特殊 token 漏配；
+- parser/backend 有 bug。
+
+必须显式失败，不能悄悄关闭 grammar 继续生成：
 
 ~~~json
 {
@@ -401,121 +650,152 @@ SQL 还需要数据库方言、表/列存在性检查、只读事务、权限隔
 }
 ~~~
 
-## 十、性能：约束引擎为什么会成为系统问题
+## 13. 第十三课：为什么约束引擎会影响延迟
 
-每生成一个 token，约束引擎可能需要 parser 状态推进、token 合法性判断、mask 构造和 tokenizer 对齐。复杂 CFG、长 schema、大词表、高并发和长输出会增加 CPU 工作，甚至让 grammar engine 成为 decode 瓶颈。
+每生成一个 token，约束引擎可能要做 parser 状态推进、token 合法性判断、mask 构造和 tokenizer 对齐。复杂 CFG、长 schema、大词表、高并发和长输出会增加 CPU 工作。
 
-常见优化路线：
+常见优化包括：
 
-- token 预检查：把与上下文无关的 token 预先分类；
+- token 预检查：预先分类与上下文无关的 token；
 - 状态缓存：缓存 parser state 到 allowed token 的映射；
 - 持久化解析栈：beam/batch 分支共享不可变栈片段；
-- mask 压缩：使用 bitset、稀疏索引或 GPU-friendly 表示；
+- bitset 或稀疏索引压缩 mask；
 - CPU/GPU overlap：GPU 生成当前 token 时预计算下一状态 mask；
 - schema cache：静态 schema 编译一次，多请求复用；
-- 批处理分桶：按 grammar/backend/长度相近程度组织 batch；
-- 早期失败：在编译期和首 token 阶段发现不可达分支。
+- 按 grammar/backend/长度组织 batch；
+- 编译期和首 token 阶段尽早发现不可达分支。
 
-XGrammar 的 context-independent token 预检查、持久化栈和 GPU overlap 正是针对这些瓶颈设计的[^7]。端到端收益必须同时报告 grammar-engine latency、first-token latency、每 token mask latency、吞吐、batch scaling 和内存，而不能只引用单项 microbenchmark。
+XGrammar 的 context-independent token 预检查、持久化栈和 GPU overlap 正是针对这些瓶颈设计的[^7]。论文报告的约 100 倍是 grammar-engine 基准中的特定结果，不等于所有端到端服务都能提升 100 倍。
 
-## 十一、正确的系统分层：grammar 不等于 validator
+## 14. 第十四课：应用场景，先判断“结构问题”是否值得约束
 
-推荐把结构化生成放在以下流水线上：
+### 14.1 Function calling / tool calling
+
+~~~json
+{
+  "tool": "search_orders",
+  "arguments": {
+    "user_id": "u123",
+    "limit": 10
+  }
+}
+~~~
+
+GCD 可以保证工具名 allowlist、参数可解析、required 存在、类型正确、未知字段被拒绝。它适合数据库查询、订单系统、CRM、UI 操作和 agent 工作流。
+
+但是否调用工具、调用时机、权限、幂等性、金额上限和人工确认仍属于策略层。高风险动作至少经过 grammar、schema、domain validator、policy gate 和执行前确认。
+
+### 14.2 RAG 与信息抽取
+
+合同、发票、简历、病历、日志和知识库问答可以返回：
+
+~~~json
+{
+  "answer": "...",
+  "citations": ["doc-12", "doc-19"],
+  "uncertainty": "insufficient_evidence"
+}
+~~~
+
+GCD 保证字段形状，降低下游解析成本；但 citation 是否支持 answer、金额是否来自原文、confidence 是否校准，仍需证据对齐和独立 validator。
+
+### 14.3 Text-to-SQL、代码和 DSL
+
+CFG 可以表达关键字顺序、嵌套、优先级、函数参数和终止条件，适合 SQL、代码、配置文件、游戏脚本、机器人命令和 API DSL。
+
+SQL 仍需检查数据库方言、表/列存在性、只读事务、权限和执行计划；代码仍需编译、静态分析、测试和沙箱。
+
+### 14.4 分类与路由
+
+当输出只能是 refund、shipping 或 technical_support 时，choice/enum 比提示词可靠。生产 enum 应包含 other、unknown、insufficient_evidence 或 needs_human，否则模型在边界样本上会被迫选一个错误但合法的标签。
+
+### 14.5 UI、工作流与 agent 协议
+
+模型生成组件树、表单、流程节点或状态机事件时，schema/grammar 能保护协议边界；权限、资源存在性、状态一致性和版本兼容仍由业务层负责。
+
+## 15. 第十五课：格式正确为什么不等于任务正确
+
+把系统分成五层最容易理解：
 
 ~~~text
 模型概率
   ↓
-Grammar：前缀是否仍可完成、字符串是否可解析
+Grammar：能否继续组成合法字符串
   ↓
 Schema：字段、类型、enum、required 是否满足
   ↓
-Domain validator：值域、跨字段关系、证据和状态是否合理
+Domain validator：值域、跨字段关系、证据是否合理
   ↓
-Policy gate：权限、租户隔离、风险等级和是否允许动作
-  ↓
-Execution sandbox：只读、限额、超时、幂等、审计
+Policy gate / sandbox：权限、风险、限额、审计和实际执行
 ~~~
 
-以工具调用为例：
+工具调用至少经过：
 
 1. grammar：输出是合法 JSON/工具协议；
 2. schema：工具名、参数类型和 required 正确；
-3. 业务校验：用户有权限、订单存在、金额和时间范围合理；
+3. 业务校验：用户有权限、订单存在、金额合理；
 4. 策略决策：是否应该调用、是否需要人工确认；
 5. 安全执行：沙箱、限额、幂等键、重放保护和审计日志。
 
-失败时应拒绝执行并返回原因，不能因为“模型被 grammar 卡住”就自动放宽 grammar。对于证据不足，schema 应显式允许拒答或不确定状态；把字段标成 required 却没有可靠来源，往往会把不确定性转化成格式化幻觉。
+失败时拒绝执行并返回原因，不能因为“模型被 grammar 卡住”就自动放宽 grammar。对证据不足的情况，schema 应显式允许拒答或不确定状态；否则 required 字段会把不确定性变成格式化幻觉。
 
-## 十二、评测：不能只看 schema compliance
+## 16. 第十六课：如何评测，而不是被“100% 合规”骗到
 
-JSONSchemaBench 使用约 10,000 个真实 JSON Schema，从约束合规效率、约束覆盖度和生成质量三个维度比较 Guidance、Outlines、llama.cpp、XGrammar、OpenAI、Gemini 等系统[^9]。生产评测至少包括四组：
+JSONSchemaBench 使用约 10,000 个真实 JSON Schema，从约束合规效率、约束覆盖度和生成质量三个维度比较多个系统[^9]。生产评测至少有四组：
 
-### 12.1 合规指标
+### 16.1 合规
 
-- parse rate、schema validation rate；
-- required recall、enum violation、unknown property；
-- 类型错误、重复字段、非法 escape；
-- EOS 合法率、dead-end rate、截断率；
-- refusal/abstention 格式正确率。
+parse rate、schema validation rate、required recall、enum violation、unknown property、重复字段、非法 escape、EOS 合法率、dead-end rate、截断率、refusal 格式正确率。
 
-### 12.2 任务质量指标
+### 16.2 任务质量
 
-- task accuracy、exact match；
-- SQL execution accuracy、编译通过率和单元测试通过率；
-- 抽取字段 precision/recall、事实性和 groundedness；
-- citation entailment、拒答正确率；
-- tool selection accuracy、参数正确率和危险动作拦截率。
+task accuracy、exact match、SQL execution accuracy、编译和单元测试通过率、抽取 precision/recall、事实性、groundedness、citation entailment、拒答正确率、tool selection accuracy 和危险动作拦截率。
 
-### 12.3 性能指标
+### 16.3 性能
 
-- grammar compile latency；
-- first-token latency；
-- 每 token mask latency；
-- 端到端 p50/p95/p99 延迟；
-- tokens/s、请求吞吐和 batch scaling；
-- CPU/GPU 占用、内存、cache hit rate。
+grammar compile latency、first-token latency、每 token mask latency、端到端 p50/p95/p99、tokens/s、吞吐、batch scaling、CPU/GPU、内存和 cache hit rate。
 
-### 12.4 分布与自然度指标
+### 16.4 分布与自然度
 
-- token log-probability；
-- forced-token ratio；
-- 原始 top-1 被屏蔽比例；
-- 选中 token 与原始 top-1 的分数差；
-- 近似 KL、长度偏差、字段顺序偏差和空白风格；
-- 约束前后拒答率、幻觉率和人工偏好。
+token log-probability、forced-token ratio、原始 top-1 被屏蔽比例、选中 token 与原始 top-1 的分数差、近似 KL、长度/字段顺序偏差、空白风格、拒答率、幻觉率和人工偏好。
 
-“100% schema compliant 但任务准确率下降”不能判定为成功。约束效果必须和质量、自然度、拒答与性能一起看。
+**100% schema compliant 但任务准确率下降，不叫成功。**
 
-## 十三、与其他策略的关系
+## 17. 第十七课：三分钟复习卡片
 
-| 方案 | 主要保证 | 优点 | 局限 |
-| --- | --- | --- | --- |
-| Prompt engineering | 概率性格式倾向 | 灵活、无运行时 parser | 没有硬保证 |
-| JSON mode | 可解析 JSON | 接入简单 | 不保证给定 schema |
-| GCD/Structured Outputs | grammar/schema 合规 | 生成时阻断非法 token | parser 成本、分布失真、schema 子集 |
-| Parse + retry | 事后修复 | 可叠加已有 API | 浪费 token，语义问题仍在 |
-| Fine-tuning | 输出风格和领域适配 | 可学习复杂习惯 | 训练、更新、遗忘和数据成本 |
-| Domain validator | 业务合法性 | 能阻止危险值和状态错误 | 不能替代 grammar |
-| Compiler/type checker | 程序级合法性 | 对代码、SQL 很强 | 只适用于可执行形式 |
+### 17.1 一句话版
 
-稳妥的组合通常是：
+GCD 在模型每一步采样前运行 grammar parser，把所有会导致非法前缀的 token 的 logit 设为 $-\infty$，因此模型只能在合法候选中选择。
+
+### 17.2 四个关键词版
+
+- **模型**：给每个 token 概率；
+- **grammar**：定义哪些完整字符串合法；
+- **parser state**：记录当前前缀走到规则的哪一步；
+- **mask**：把不允许的 token 概率变成零。
+
+### 17.3 一个公式版
 
 $$
-\text{Prompt}+\text{Grammar}+\text{Schema Validator}+\text{Domain Validator}+\text{Policy Gate}+\text{Retry/Fallback}
+A(s_t)=\{v\in V\mid p_t+\operatorname{decode}(v)\in\operatorname{Prefix}(L(G))\}
 $$
 
-不要把 grammar 当成唯一可靠性层，也不要让 parse retry 掩盖 grammar 设计不完整。
+只要记得这句话就够了：**把 token 接上去以后，如果还存在某种补全方法能得到合法完整输出，就允许；否则拒绝。**
 
-## 十四、生产清单与故障复盘
+### 17.4 一个边界版
+
+GCD 保证“像不像合法协议”，不保证“协议里的内容是否真实、合理、获授权、值得执行”。
+
+## 18. 第十八课：生产清单
 
 ### Schema 设计
 
-- 分离“语法必须满足”和“业务可以拒绝”；
-- 为不确定、无证据、无需动作提供显式出口；
+- 分离语法必须满足与业务可以拒绝；
+- 为不确定、无证据、无需动作提供出口；
 - 限制递归深度、数组长度、字符串长度和总 token 数；
-- 只使用目标 backend 明确支持的 schema 子集；
+- 只使用目标 backend 支持的 schema 子集；
 - 动态依赖字段交给 domain validator；
-- 对高风险工具定义最小参数集合和安全默认值。
+- 高风险工具使用最小参数集合和安全默认值。
 
 ### 解码与运行时
 
@@ -523,44 +803,15 @@ $$
 - 明确 EOS、stop、最大长度和空白策略；
 - 静态 schema 预编译；
 - 缓存键包含 model、tokenizer、backend、schema hash；
-- batch/beam 为每条分支维护独立 parser state；
+- batch/beam 维护独立 parser state；
 - allowed token 为空时返回可诊断错误；
-- 流式 API 不把中间未闭合片段标记为最终成功。
+- 流式 API 不把未闭合片段标为最终成功。
 
 ### 可观测性
 
-至少记录 parser state 或栈摘要、每步合法 token 数和屏蔽比例、原始 top-1 是否被屏蔽、选中 token 的原始概率、forced-token ratio、dead-end 位置、schema/tokenizer/backend 版本，以及 domain validator、policy gate 和执行结果。
+记录 parser state、每步合法 token 数、屏蔽比例、原始 top-1 是否被屏蔽、选中 token 原始概率、forced-token ratio、dead-end 位置、schema/tokenizer/backend 版本、业务失败原因和执行结果。
 
-### 故障复盘顺序
-
-1. 先确认是 tokenizer、grammar、采样顺序还是业务 validator 失败；
-2. 保存失败前缀、parser state、schema hash 和 logits 摘要；
-3. 用最小 grammar 重现；
-4. 修复后同时回归合规、任务质量和性能；
-5. 不要在 dead-end 后自动放宽约束并继续执行高风险动作。
-
-## 十五、研究前沿与开放问题
-
-1. **从格式正确走向分布正确**：局部 mask 不是理想条件采样，需要未来可行性估计和 grammar alignment[^8]。
-2. **从单请求约束走向高吞吐服务**：parser cache、持久化栈、batch 调度和 GPU overlap 成为系统问题[^5][^7]。
-3. **从静态 schema 走向输入依赖 grammar**：数据库 schema、检索证据和工具上下文会动态决定可行输出空间[^1]。
-4. **从 JSON 到可靠 abstention**：工具调用需要同时评测“调用、拒绝调用、请求澄清”三个分支，不能只看参数格式[^10]。
-5. **从简单 demo 到真实基准**：复杂度、覆盖度、效率、自然度和任务质量必须同时测[^9]。
-6. **从 grammar 到可证明协议**：未来系统会组合 grammar、类型系统、权限策略、执行沙箱和审计，把“能生成”推进到“能安全执行”。
-
-## 十六、最终心智模型
-
-- **模型给概率，grammar 给边界**：模型仍负责在合法候选中选择内容。
-- **约束发生在采样前**：非法 token 的 logit 被置为 $-\infty$，不是生成后清洗。
-- **前缀可完成性是核心**：判断的是 $p+\operatorname{decode}(v)$ 是否仍在 $\operatorname{Prefix}(L(G))$。
-- **tokenizer 是一等公民**：字符 parser 与 subword 词表必须求交。
-- **格式保证不等于任务正确**：schema、业务、事实、权限和安全仍需独立验证。
-- **拒答是 grammar 设计的一部分**：没有 unknown、refuse 或 insufficient_evidence，约束可能把不确定性变成幻觉。
-- **性能是系统问题**：编译、mask、缓存、batch 和 GPU overlap 决定生产可用性。
-
-最准确的比喻是：GCD 是“解码层的形式协议执行器”。它把结构化输出从软约定升级为硬边界，但不替代模型本身的知识与推理，也不替代证据检索、业务规则、权限控制、拒答机制和人类责任边界。
-
-## 参考文献
+## 19. 参考文献与进一步阅读
 
 [^1]: Saibo Geng, Martin Josifoski, Maxime Peyrard, Robert West. *Grammar-Constrained Decoding for Structured NLP Tasks without Finetuning*. EMNLP 2023. [arXiv:2305.13971](https://arxiv.org/abs/2305.13971).
 
