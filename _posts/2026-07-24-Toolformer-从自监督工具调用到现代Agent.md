@@ -1,7 +1,6 @@
 ---
 layout: post
 toc: true
-math: true
 title: "Toolformer 精读：从自监督工具调用到现代 Agent 的训练范式"
 categories: AI
 tags: [LLM, Agent, Toolformer, Tool Use, Retrieval, Self-supervised Learning]
