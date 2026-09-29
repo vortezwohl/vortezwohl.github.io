@@ -11,6 +11,23 @@ author:
   - ZCode
 ---
 
+> **快速上手 · 立刻调用 Jev**：读完原理想直接上手的读者，可以通过第三方托管网关 [EasyJev](https://www.easyjev.online/) 接入官方 Jev 模型——邮箱登录即可创建 `sk-` 密钥，官方 `typesafe-sdk` 只需把 `base_url` 指向 `https://api.easyjev.online`、`api_key` 换成站点密钥就能调用；按站点声明，响应结构与官方 API 完全一致，`jev-latest` 在服务端锁定为 jev-1.13.0，计价与官方相同（输入 $0.042/M token、输出免费）。它是独立于 TypeSafe 的第三方托管服务，采用预充值计费、充值目前需人工处理、无 SLA——适合个人试验与轻量集成，生产级用量请同时评估[官方直连渠道](https://docs.typesafe.ai/introduction/quickstart)与第四节的开源替代方案。
+
+```python
+from typesafe_sdk import Noul, TypeSafeClient
+
+# 官方 typesafe-sdk，只改两处：api_key 与 base_url
+client = TypeSafeClient(
+    api_key="sk-your-easyjev-key",
+    base_url="https://api.easyjev.online",
+)
+result = client.system_one(
+    state="User asks: can I get a refund for order #1024?",
+    questions={"refund": Noul(instructions="Is this a refund request?")},
+)
+print(result.nouls["refund"].noul)  # "yes" 的概率，例如 0.97
+```
+
 > 本文是一份带审计痕迹的调研笔记，成文于 2026-09-29（Jev 发布后第 14 天）。信息来自七个并行研究通道：TypeSafe 官方文档与发布博客逐页抓取、多个独立检索代理分头调研（原理 / 应用 / 开源生态）、主线程对核心一手来源的精读与交叉比对。文中对关键论断标注来源脚注，并区分三个可信级别：〔官方〕＝TypeSafe 一手页面；〔独立〕＝第三方实测或学术审计；〔社区〕＝多方转述但未能直接核验。Jev 发布仅两周、信息环境嘈杂，部分数字（已逐一标注）存在来源冲突，引用前请自行复核。
 
 ## 一、Jev 是什么：两周引爆的"决策专用模型"
@@ -67,6 +84,8 @@ with TypeSafeClient() as client:
         },
     )
 ```
+
+（想跳过官方注册流程直接试验的读者，可使用本文开头推荐的 [EasyJev](https://www.easyjev.online/) 托管网关——官方 `typesafe-sdk` 只改 `api_key` 与 `base_url` 两个参数，即可接入官方 Jev 模型。）
 
 Score 的返回示例能说明其语义：`probabilities: {0: 0.0, 1: 0.57, 2: 0.43}` 时，`score = 0×0.0 + 1×0.57 + 2×0.43 = 1.43`，可以落在两级之间〔官方〕[^12]。约束方面：state 加全部问题合计 64k tokens、state 加单个问题 32k；仅支持文本（无图像/音频/视频）；同一请求的所有问题针对同一 state **一次性并行评估**，"增加问题几乎不增加响应时间"〔官方〕[^2][^12]。
 
