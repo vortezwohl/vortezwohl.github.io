@@ -2,7 +2,7 @@
 layout: post
 toc: true
 title: "OpenPronounce 深度研究：开源音素级发音评估"
-excerpt: "OpenPronounce 是 PhpMetrics 作者 Jean-François Lépine 开源的音素级发音评估引擎：输入一段录音和目标句子，在纯 CPU 上返回 0-100 分、逐词误读清单（IPA 音素+置信度）、转写与音高能量曲线，MIT 协议、无 API 计费、语音不出本机，直接对标 Azure Speech、SpeechAce 与 ELSA 的商业接口。本文从仓库代码入手全面深挖：拆解双 Wav2Vec2 底座（317M 参数的词级 ASR 与 espeak 音素识别模型，编码器复用省一半内存）、六步评估流水线、刻意弃用语言模型以暴露错音的设计、CTC 后验置信度加权的逐词误读判定、TTS 合成参考音加 DTW 的声学距离，以及在 speechocean762 五百条人工评分语料上的网格搜索校准——句级 Spearman 0.65、说话人级 0.83，并解释作者为何不取语料最优权重而保产品敏感度；算力专题给出完整账本：零训练成本、约 2.4GB 模型资产、CPU 单句约 3 秒、GPU 可选可关；另覆盖多语言机制的真实边界、与学术基线 GOP/GOPT 的横向定位、五类局限的代码级归因，以及"自监督基础模型+经典算法+常数校准"方法论对其他语音任务的迁移价值，是语言学习 App 与 EdTech 自托管选型的完整认知地图。"
+excerpt: "OpenPronounce 是 PhpMetrics 作者 Jean-François Lépine 开源的音素级发音评估引擎：输入一段录音和目标句子，在纯 CPU 上返回 0-100 分、逐词误读清单（IPA 音素+置信度）、转写与音高能量曲线，MIT 协议、无 API 计费、语音不出本机，直接对标 Azure Speech、SpeechAce 与 ELSA 的商业接口。本文从仓库代码入手全面深挖：拆解双 Wav2Vec2 底座（317M 参数的词级 ASR 与 espeak 音素识别模型，编码器复用省一半内存）、六步评估流水线、刻意弃用语言模型以暴露错音的设计、CTC 后验置信度加权的逐词误读判定、TTS 合成参考音加 DTW 的声学距离，以及在 speechocean762 五百条人工评分语料上的网格搜索校准——句级 Spearman 0.65、说话人级 0.83，并解释作者为何不取语料最优权重而保产品敏感度；算力专题给出完整账本：零训练成本、约 2.4GB 模型资产、CPU 单句约 3 秒、GPU 可选可关；另覆盖多语言机制的真实边界、与学术基线 GOP/GOPT 的横向定位、五类局限的代码级归因，以及“自监督基础模型+经典算法+常数校准”方法论对其他语音任务的迁移价值，是语言学习 App 与 EdTech 自托管选型的完整认知地图。"
 categories: AI
 tags: [AI, SpeechProcessing, Wav2Vec2, PronunciationAssessment, EdTech, OpenSource]
 author:
