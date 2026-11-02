@@ -1,0 +1,9 @@
+# 帖23 NIH BioArt Source - Free high quality science illustrations
+- URL: https://www.reddit.com/r/labrats/comments/1gff0cp/
+- r/labrats | 2024-10-30 | score:38 | ratio:1 | 评论:5(实抓4, moreLeft:0) | 作者:interlukin | flair:
+- 正文: Link: https://bioart.niaid.nih.gov Just found it about this today and it looks pretty awesome, so wanted to share it with the community! Currently only in beta, but excited to see how it’ll grow.
+
+[2024-10-31|Worried_Baby_1434|11] Please check out my website too: [BioDraws](https://biodraws.com/) I have also been trying to create a similar website for a few months: [BioDraws](https://biodraws.com/). It doesn't have a big collection like NIH, but it is trying to build it up slowly as it was built by a single person from scratch, from illustrations to website building. All of the vector icons are under CC-by-SA. I wasn't planning to announce for a few months until I had made good collections. But I am not sure if I should develop it further or not with the NIH announcement. Please check it out. If you have any questions, let me know.
+  [2024-11-07|Steamed_Momo|1] You have done a great job. It is looking really awesome. I think you should continue. I wish I could help but my life is super busy. There is still no good website that provide most of the life sciences illustrations.
+[2024-10-31|4DGeneTransfer|3] Another one that I used during my PhD is [Servier Medical Art](https://smart.servier.com/). The SVGs allowed you to easily customize them in Inkscape/Illustrator. Even though biorender has become ubiquitous (and convenient), it's sometimes nice to see some custom art for graphics, even if they are also derived from a template originally.
+[2024-12-11|Klutzy-Show-5832|1] Also check out [https://scidraw.io/](https://scidraw.io/)

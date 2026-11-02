@@ -1,0 +1,20 @@
+# 帖06 BioRender auto-renewed for 7 months on an account I logged into exactly once
+- URL: https://www.reddit.com/r/labrats/comments/1vx4lkk/biorender_autorenewed_for_7_months_on_an_account/
+- r/labrats | 2026-08-24 | score:0 | ratio:0.14 | 评论:16(实抓15, moreLeft:0) | 作者:lakekat | flair:
+- 正文: I started a **BioRender** free trial on Feb 7 2026 with my university email. Made one test figure that very first day, don't like it and **never opened it again**. I assumed the trial would just expire. Trial converted to a $39/month subscription and renewed on schedule for seven months. I noticed today. Total: around $273. I send mail and support team only cancelled my subscription, removed ard, refunded the most recent month's $39. **They won't refund the other $234 — their policy only considers the most recent charge, and say they owe nothing more.** That is company whose entire user base is students and that bothers me. Silently bill for months on accounts their own systems show as completely inactive, with email reminders into institutional inboxes that are already drowning in spam mails. \-Has anyone here gotten a refund beyond the most recent month? If so, what worked? Do you have any suggestion to reimburse the money? 26.08.2026 : I got my 156 USD back.
+
+[2026-08-24|[deleted]|30] [删除/移除]
+[2026-08-24|CarnivalCelebration|19] this one’s on you, pal
+  [2026-08-24|lakekat|-6] Partly. I should have cancelled. But you should have checked isn't the answer anyway. System have zero logins, zero exports after the very first day for seven consecutive month. When I asked, refused because their policy only considers most recent charge. Most of us are managing lab work, teaching, and deadlines. Reviewing everything a card statement isn't realistic, and a business model that quietly relies on that isn't something I'd call the customer's fault.
+[2026-08-24|laziestphilosopher|12] You gotta keep track of what you sign up for. They will not be returning any other money and I’m surprised they returned the most recent $39 honestly.
+  [2026-08-24|lakekat|-6] You should have checked isn't the answer anyway. System have zero logins, zero exports after the very first day for seven consecutive month. You cannot check everything in your bill. İf you have evidence you don't use the service and justified demand answer should not be this way.
+    [2026-08-24|parade1070|6] You're acting like it's impossible to look at your own credit card bill every week but it's not. I and millions of others do it every month.
+    [2026-08-24|laziestphilosopher|1] Most people do in fact review their credit card bill at least once a month. I’m sorry you wasted the money but this one is definitely on you and not the company.
+[2026-08-24|Illustrious-Owl2428|9] When you sign up for free trials and give them your cc info, they are going to auto renew. That’s why they ask for your cc. It’s on you to cancel before your trial period ends. Doesn’t matter how much you use it.
+[2026-08-24|You_Stole_My_Hot_Dog|7] Consider this a lesson. Any trial run for any software/app/service that requires a credit card uses this tactic. You agreed to these terms when you signed up.
+  [2026-08-24|lakekat|-2] I dont need any lesson neither constitution nor you. Its not the point. OK?
+[2026-08-24|omgu8mynewt|7] Oops, be glad it was only $40 a month. Probably a good idea to keep a closer eye on your bank statements in future
+  [2026-08-24|lakekat|-3] I dont need to be glad, you do whatsoever. 280 USD is not important for me, you keep checking in your free time. OK?
+[2026-08-24|parade1070|6] Insane to think a trial that you gave your credit card to would just go away. You are not entitled to 7 months of refunds just because you neglected the subscription.
+[2026-08-24|SlenderSmurf|3] never give your credit card to someone if you don't want to give them money
+[2026-08-26|lakekat|1] I got my money back. Chase your rights.

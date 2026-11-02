@@ -1,0 +1,9 @@
+# 帖53 Tools for making publication-quality membrane diagrams with SVG export
+- URL: https://www.reddit.com/r/Biochemistry/comments/1r9gopy/
+- r/Biochemistry | 2026-02-20 | score:5 | ratio:1 | 评论:4(实抓4, moreLeft:0) | 作者:h-h-h-h | flair:
+- 正文: I’ve been looking for an open source app to make membrane figures for papers that exports clean vectors instead of fixed templates. Found this: https://huggingface.co/spaces/el-bastos/membrana Curious if anyone here uses similar tools or has better alternatives.
+
+[2026-02-20|A_Siani_PhD|2] [BioRender](https://www.biorender.com/) sounds exactly like what you're looking for. The free version works really well, but if you're planning to use it for a publication, you need the paid version for licensing purposes. So, long story short: \- If you're a student working on an assignment, the free version is absolutely fine. \- If you're a researcher trying to publish a paper, patent, etc.; then you'll need the paid version. Your institution might already have a subscription if it's quite research-active, check with them!
+  [2026-02-20|h-h-h-h|1] Biorender doesn't generate vector graphics and has predefined membranes
+    [2026-02-20|A_Siani_PhD|1] Sorry, I missed that part of your original post. Yea, you're right! If you can't find the software you're looking for, you could potentially do it manually in Power Point using a combination of shapes (e.g. circles and lines for phospholipids) and icons - those are all vectors, and if you group them you should be able to manipulate them as a single vector image and export as SVG. But it's a faff and you'd have to put in a fair amount of work to make it look presentable.
+      [2026-02-20|h-h-h-h|1] Perhaps you should check the one I've found. The point is NOT to draw it manually.

@@ -1,0 +1,20 @@
+# 帖44 A Python package for conveniently creating publication-quality reaction energy diagrams (reaction level diagrams)
+- URL: https://www.reddit.com/r/Chempros/comments/1shshh0/
+- r/Chempros | 2026-04-10 | score:390 | ratio:1 | 评论:16(实抓15, moreLeft:0) | 作者:Illustrious_Egg_3141 | flair:Computational
+- 正文: Creating reaction energy diagrams with Matplotlib or other software manually is usually very time-consuming. Therefore, I created a Python package which can handle path drawing, numbering and layout automatically and has other useful features like image insertion or difference bars. It also features multiple drawing styles. Since it is based on Matplotlib, it remains fully customizable while still speeding up diagram construction significantly. A minimal working example could look like this: dia = EnergyDiagram() dia.draw_path(x_data=[0, 1, 2, 3], y_data=[0, -13, 75, 20], color="blue") dia.add_numbers_auto() dia.set_xlabels(["Reactant", "IM", "TS", "Product"]) dia.show() The package is available on PyPi and can be installed with pip: `pip install chemdiagrams` You can find the links to the project here: GitHub: [https://github.com/Tonner-Zech-Group/chem-diagrams](https://github.com/Tonner-Zech-Group/chem-diagrams) PyPi: [https://pypi.org/project/chemdiagrams/](https://pypi.org/project/chemdiagrams/) Documentation: [https://tonner-zech-group.github.io/chem-diagrams/](https://tonner-zech-group.github.io/chem-diagrams/) I would love to get any feedback!
+
+[2026-04-10|GraniteStater69|33] Hated making these by hand. This is sweet
+  [2026-04-10|Zriter|8] I did those by plotting in Origin. It is an outstanding alternative Better still: ![gif](giphy|8VSaCyIdcnbuE)
+[2026-04-10|relentless_beasting|10] This looks fantastic. Kudos, OP.
+[2026-04-10|Enigmatic_Baker|9] This shit is great. Those ai app chuds should bow down and worship you.
+[2026-04-10|lalochezia1|3] Gibbs-tastic dude!
+[2026-04-10|snchzls|3] Featuring penguinone. 🐧
+[2026-04-10|crapaud_dindon|3] Very nice thank you for sharing
+[2026-04-11|FalconX88|2] nice but can it "split" a pathway? a lot of the time they diverge at some point or there are two different transition states going from one intermediate to the next.
+  [2026-04-11|Illustrious_Egg_3141|6] I guess you are thinking of something like this? Yes, since you have access to all matplotlib objects, you can do it. Source code: from chemdiagrams import EnergyDiagram dia = EnergyDiagram() dia.draw_path( [0,1,2,3], [0,-10,30,10], color="blue", path_name="blue path" ) dia.draw_path( [1,2,3], [-10,40,10], color="red", path_name="red path" ) dia.add_numbers_auto() dia.lines["red path"].plateaus["1.0"].remove() dia.lines["red path"].plateaus["3.0"].remove() dia.numbers["red path"]["1.0"].remove() dia.numbers["red path"]["3.0"].remove() dia.legend(fontsize=6) dia.show() https://preview.redd.it/bcoj6uqqxkug1.png?width=438&amp;format=png&amp;auto=webp&amp;s=6708b7078735e7f807d2a0a73aebf425d7db6b…[截断]
+[2026-04-11|crotamine|1] Great stuff, I’m going to be giving this a try!
+[2026-04-11|nopenopechem|1] I love this. Thanks so much for building this. AI is really aiding us in getting research done and making beautiful pictures as computational/theoretical chemists!
+[2026-04-13|featherstudio|1] Wow really cool
+[2026-04-21|Raven-on-Reddit|1] Is it possible to have part of the axis title in italics? I want the axis title to be E / kJ mol^-1 with the E in italics and the rest in normal font.
+  [2026-04-22|Illustrious_Egg_3141|1] Absolutely, you can already see in the image that the E at the y axis is in italics.
+    [2026-04-22|Raven-on-Reddit|1] I am new to Python, but your program is really intuitive, so I managed to make several nice graphs with it. Thank you so much! However I did not find out how to make text in italics. Can you please give comprehensive instructions on that?
