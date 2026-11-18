@@ -318,7 +318,7 @@ Holodeck（CVPR 2024）的核心发现是：LLM 提语义约束、确定性求�
 
 [^12]: ahujasid. *BlenderMCP*（GitHub：MCP 工具 `execute_blender_code / look / get_scene_info / generate_3d / search_assets / import_asset` 等 9 个；粗粒度工具 + AI 自写 Python 的混合架构；多视角渲染自检）. <https://github.com/ahujasid/blender-mcp>
 
-[^13]: Google. *three-live*（GitHub：AI-first Native 3D；LLM 直接生成 15–30 行 Three.js 代码→Rust Boa/QuickJS 沙箱编译→GLB→Filament/RealityKit/WebGL2；`editScene` 编译失败自动修复；MCP 工具 `validate/render/convert/from_image/gym`；视觉反馈闭环 REFERENCE|RENDER|OVERLAY）. <https://github.com/google/three-live>
+[^13]: Google. *three-live*（GitHub：AI-first Native 3D；LLM 直接生成 15–30 行 Three.js 代码→Rust Boa/QuickJS 沙箱编译→GLB→Filament/RealityKit/WebGL2；`editScene` 编译失败自动修复；MCP 工具 `validate/render/convert/from_image/gym`；视觉反馈闭环 REFERENCE\|RENDER\|OVERLAY）. <https://github.com/google/three-live>
 
 [^14]: gd3kr. *BlenderGPT*（GitHub：GPT-4/3.5 英语指令→bpy Python 脚本→Blender 场景，代码生成流原型）. <https://github.com/gd3kr/BlenderGPT>
 
